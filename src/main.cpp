@@ -4,7 +4,7 @@
 #include "raylib.h"
 #include<iostream>
 int main() {
-    InitWindow(800, 600, "Dungeon Crawler");   // 创建 800x600 窗口
+    InitWindow(800, 600, "arknights-go");      // 创建 800x600 窗口
     SetTargetFPS(60);                          // 限制帧率为 60
 
     while (!WindowShouldClose()) {             // 主循环：窗口不关闭就一直运行
