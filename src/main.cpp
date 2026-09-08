@@ -2,7 +2,7 @@
 // Created by 34844 on 2026/9/8.
 //
 #include "raylib.h"
-
+#include<iostream>
 int main() {
     InitWindow(800, 600, "Dungeon Crawler");   // 创建 800x600 窗口
     SetTargetFPS(60);                          // 限制帧率为 60
@@ -13,7 +13,7 @@ int main() {
         DrawText("Hello, my game!", 300, 280, 24, DARKGRAY);
         EndDrawing();
     }
-
+    std::cout<<"hello";
     CloseWindow();
     return 0;
 }
