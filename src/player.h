@@ -5,13 +5,14 @@
 #include <vector>
 
 class AudioSystem;
+class CharacterArt;
 class UiFont;
 
 class Player {
 public:
     void Reset();
     void Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& audio);
-    void Draw() const;
+    void Draw(const CharacterArt& art) const;
     void DrawHud(const UiFont& font, const char* operatorName) const;
 
     bool TakeDamage(Vector2 damageSource);
@@ -31,6 +32,9 @@ private:
     int facingDirection_ = 1;
     int jumpCount_ = 0;
     float jumpHoldTimer_ = 0.0F;
+    float animationTime_ = 0.0F;
+    float attackAnimationTime_ = 0.0F;
+    bool firing_ = false;
 
     int health_ = kMaxHealth;
     float hurtInvincibilityTimer_ = 0.0F;

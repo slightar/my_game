@@ -1,9 +1,11 @@
 #include "player.h"
 
 #include "audio_system.h"
+#include "character_art.h"
 #include "ui_font.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
 
@@ -32,6 +34,9 @@ void Player::Reset() {
     facingDirection_ = 1;
     jumpCount_ = 0;
     jumpHoldTimer_ = 0.0F;
+    animationTime_ = 0.0F;
+    attackAnimationTime_ = 0.0F;
+    firing_ = false;
     health_ = kMaxHealth;
     hurtInvincibilityTimer_ = 0.0F;
     dodgeCharges_ = kMaxDodgeCharges;
@@ -46,6 +51,7 @@ void Player::Reset() {
 
 void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& audio) {
     hurtInvincibilityTimer_ = std::max(0.0F, hurtInvincibilityTimer_ - deltaTime);
+    animationTime_ += deltaTime;
     if (IsDead()) {
         return;
     }
@@ -150,7 +156,7 @@ void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& 
         dodgeTimer_ <= 0.0F) {
         const float direction = static_cast<float>(facingDirection_);
         bullets.push_back({
-            {position_.x + direction * (kRadius + 24.0F), position_.y - 2.0F},
+            {position_.x + direction * (kRadius + 24.0F), position_.y - 30.0F},
             {direction * kBulletSpeed, 0.0F}, kBulletLifetime, 4.0F, 1});
         --ammo_;
         shotCooldown_ = kFireInterval;
@@ -164,22 +170,51 @@ void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& 
         reloadTimer_ = kReloadDuration;
         audio.PlayReload();
     }
+
+    firing_ = IsKeyDown(KEY_J) && !reloading_ && ammo_ > 0 &&
+              dodgeTimer_ <= 0.0F;
+    if (firing_) {
+        attackAnimationTime_ += deltaTime;
+    } else {
+        attackAnimationTime_ = 0.0F;
+    }
 }
 
-void Player::Draw() const {
+void Player::Draw(const CharacterArt& art) const {
+    const bool airborne = position_.y + kRadius < GameConfig::kFloorY - 0.5F;
+    ChibiAnimation animation = ChibiAnimation::Idle;
+    if (dodgeTimer_ > 0.0F) {
+        animation = ChibiAnimation::Dodge;
+    } else if (airborne) {
+        animation = ChibiAnimation::Jump;
+    } else if (std::abs(velocity_.x) > 1.0F) {
+        animation = ChibiAnimation::Run;
+    }
+    const float walkBob = !airborne && std::abs(velocity_.x) > 1.0F
+                              ? std::abs(std::sin(animationTime_ * 11.0F)) * 3.0F
+                              : 0.0F;
+    const Vector2 feetPosition{position_.x,
+                               position_.y + kRadius - walkBob};
+
     if (dodgeTimer_ > 0.0F) {
         for (int trail = 1; trail <= 3; ++trail) {
-            DrawCircleV(
-                {position_.x - static_cast<float>(dodgeDirection_ * trail) * 18.0F,
-                 position_.y},
-                kRadius - static_cast<float>(trail * 3), Fade(BLACK, 0.16F));
+            const Vector2 trailPosition{
+                position_.x - static_cast<float>(dodgeDirection_ * trail) * 18.0F,
+                position_.y + kRadius};
+            if (art.HasBattleChibi()) {
+                art.DrawBattleChibi(trailPosition, facingDirection_, 120.0F,
+                                    BattleChibiAnimation::Idle,
+                                    animationTime_, Fade(WHITE, 0.11F));
+            } else if (art.HasChibi()) {
+                art.DrawChibi(trailPosition, facingDirection_, 106.0F,
+                              animation, animationTime_, Fade(WHITE, 0.11F));
+            } else {
+                DrawCircleV({trailPosition.x, trailPosition.y - kRadius},
+                            kRadius - static_cast<float>(trail * 3),
+                            Fade(BLACK, 0.16F));
+            }
         }
     }
-
-    const Vector2 gunStart{position_.x, position_.y - 2.0F};
-    const Vector2 gunEnd{position_.x + static_cast<float>(facingDirection_) * 48.0F,
-                         position_.y - 2.0F};
-    DrawLineEx(gunStart, gunEnd, 9.0F, DARKGRAY);
 
     if (IsInvincible()) {
         DrawCircleV(position_, kRadius + 7.0F, dodgeTimer_ > 0.0F ? SKYBLUE : ORANGE);
@@ -187,7 +222,25 @@ void Player::Draw() const {
 
     const bool blinkOff = hurtInvincibilityTimer_ > 0.0F &&
                           static_cast<int>(hurtInvincibilityTimer_ * 14.0F) % 2 == 0;
-    DrawCircleV(position_, kRadius, blinkOff ? Fade(BLACK, 0.3F) : BLACK);
+    if (art.HasBattleChibi()) {
+        art.DrawBattleChibi(
+            feetPosition, facingDirection_, 120.0F,
+            firing_ ? BattleChibiAnimation::Attack
+                    : BattleChibiAnimation::Idle,
+            firing_ ? attackAnimationTime_ : animationTime_,
+            blinkOff ? Fade(WHITE, 0.3F) : WHITE);
+    } else if (art.HasChibi()) {
+        art.DrawChibi(feetPosition, facingDirection_,
+                      106.0F, animation, animationTime_,
+                      blinkOff ? Fade(WHITE, 0.3F) : WHITE);
+    } else {
+        const Vector2 gunStart{position_.x, position_.y - 2.0F};
+        const Vector2 gunEnd{
+            position_.x + static_cast<float>(facingDirection_) * 48.0F,
+            position_.y - 2.0F};
+        DrawLineEx(gunStart, gunEnd, 9.0F, DARKGRAY);
+        DrawCircleV(position_, kRadius, blinkOff ? Fade(BLACK, 0.3F) : BLACK);
+    }
 }
 
 void Player::DrawHud(const UiFont& font, const char* operatorName) const {

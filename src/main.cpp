@@ -9,6 +9,7 @@
 int main() {
     SetConfigFlags(FLAG_FULLSCREEN_MODE | FLAG_VSYNC_HINT);
     InitWindow(GameConfig::kScreenWidth, GameConfig::kScreenHeight, "arknights-go");
+    SetExitKey(KEY_NULL);
     PrepareGameWindowInput(GetWindowHandle());
     InitAudioDevice();
     SetTargetFPS(60);

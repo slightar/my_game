@@ -16,6 +16,7 @@ FetchContent_MakeAvailable(raylib)
 add_executable(my_game
         src/main.cpp
         src/game.cpp
+        src/character_art.cpp
         src/player.cpp
         src/boss.cpp
         src/audio_system.cpp
@@ -23,6 +24,11 @@ add_executable(my_game
         src/ui_font.cpp
         src/platform_input.cpp)
 target_link_libraries(my_game PRIVATE raylib)
+
+add_custom_command(TARGET my_game POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_SOURCE_DIR}/assets
+                $<TARGET_FILE_DIR:my_game>/assets)
 
 if (WIN32)
     target_link_libraries(my_game PRIVATE imm32)

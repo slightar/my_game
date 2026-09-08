@@ -10,6 +10,8 @@ void Game::Reset() {
     bullets_.clear();
     player_.Reset();
     boss_.Reset();
+    paused_ = false;
+    pauseSelection_ = 0;
 }
 
 void Game::Update(float deltaTime) {
@@ -17,6 +19,31 @@ void Game::Update(float deltaTime) {
         if (mainMenu_.Update() == MenuAction::StartBattle) {
             Reset();
             inBattle_ = true;
+        }
+        return;
+    }
+
+    if (IsKeyPressed(KEY_ESCAPE)) {
+        paused_ = !paused_;
+        pauseSelection_ = 0;
+        return;
+    }
+
+    if (paused_) {
+        if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) {
+            pauseSelection_ = std::max(0, pauseSelection_ - 1);
+        }
+        if (IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) {
+            pauseSelection_ = std::min(1, pauseSelection_ + 1);
+        }
+        if (IsKeyPressed(KEY_ENTER)) {
+            if (pauseSelection_ == 0) {
+                paused_ = false;
+            } else {
+                paused_ = false;
+                inBattle_ = false;
+                mainMenu_.OpenHome();
+            }
         }
         return;
     }
@@ -48,6 +75,40 @@ void Game::Update(float deltaTime) {
     }
 }
 
+void Game::DrawPauseMenu() const {
+    DrawRectangle(0, 0, GameConfig::kScreenWidth, GameConfig::kScreenHeight,
+                  Fade(BLACK, 0.68F));
+    const Rectangle panel{410.0F, 176.0F, 460.0F, 370.0F};
+    DrawRectangleRec(panel, Color{31, 36, 42, 248});
+    DrawRectangleLinesEx(panel, 3.0F, Color{0, 156, 211, 255});
+    DrawRectangle(static_cast<int>(panel.x), static_cast<int>(panel.y),
+                  static_cast<int>(panel.width), 8, Color{255, 91, 18, 255});
+
+    const char* title = "行动暂停";
+    const float titleWidth = uiFont_.Measure(title, 42.0F);
+    uiFont_.Draw(title, 640.0F - titleWidth / 2.0F, 220.0F,
+                 42.0F, RAYWHITE);
+
+    const Rectangle options[2] = {
+        {470.0F, 310.0F, 340.0F, 65.0F},
+        {470.0F, 395.0F, 340.0F, 65.0F}};
+    const char* labels[2] = {"继续作战", "返回主页"};
+    for (int index = 0; index < 2; ++index) {
+        const bool selected = pauseSelection_ == index;
+        DrawRectangleRec(options[index],
+                         selected ? Color{0, 156, 211, 255}
+                                  : Color{62, 69, 76, 255});
+        DrawRectangleLinesEx(options[index], selected ? 3.0F : 1.0F,
+                             selected ? RAYWHITE : Fade(RAYWHITE, 0.35F));
+        const float labelWidth = uiFont_.Measure(labels[index], 25.0F);
+        uiFont_.Draw(labels[index],
+                     options[index].x + (options[index].width - labelWidth) / 2.0F,
+                     options[index].y + 18.0F, 25.0F, RAYWHITE);
+    }
+    uiFont_.Draw("W/S 选择   Enter 确认   Esc 继续",
+                 486.0F, 496.0F, 18.0F, Fade(RAYWHITE, 0.72F));
+}
+
 void Game::UpdateBullets(float deltaTime) {
     for (Bullet& bullet : bullets_) {
         bullet.position.x += bullet.velocity.x * deltaTime;
@@ -75,7 +136,7 @@ void Game::UpdateBullets(float deltaTime) {
 
 void Game::Draw() const {
     if (!inBattle_) {
-        mainMenu_.Draw(uiFont_);
+        mainMenu_.Draw(uiFont_, characterArt_);
         return;
     }
 
@@ -94,7 +155,7 @@ void Game::Draw() const {
     }
 
     boss_.Draw(uiFont_);
-    player_.Draw();
+    player_.Draw(characterArt_);
     player_.DrawHud(uiFont_, mainMenu_.SelectedOperatorName());
     boss_.DrawHud(uiFont_);
 
@@ -113,5 +174,9 @@ void Game::Draw() const {
                      static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
                          restartWidth / 2.0F,
                      360.0F, 24.0F, RAYWHITE);
+    }
+
+    if (paused_) {
+        DrawPauseMenu();
     }
 }

@@ -1,5 +1,6 @@
 #include "main_menu.h"
 
+#include "character_art.h"
 #include "game_types.h"
 #include "ui_font.h"
 
@@ -106,19 +107,19 @@ MenuAction MainMenu::Update() {
     return MenuAction::None;
 }
 
-void MainMenu::Draw(const UiFont& font) const {
+void MainMenu::Draw(const UiFont& font, const CharacterArt& art) const {
     switch (page_) {
         case Page::Splash:
             DrawSplash(font);
             break;
         case Page::Home:
-            DrawHome(font);
+            DrawHome(font, art);
             break;
         case Page::StageSelect:
             DrawStageSelect(font);
             break;
         case Page::OperatorSelect:
-            DrawOperatorSelect(font);
+            DrawOperatorSelect(font, art);
             break;
     }
 }
@@ -166,10 +167,15 @@ void MainMenu::DrawSplash(const UiFont& font) const {
     DrawRectangle(640 - 150, 620, 300, 6, kOrange);
 }
 
-void MainMenu::DrawHome(const UiFont& font) const {
+void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
     DrawBackground(font, "主页");
 
-    DrawOperatorSilhouette({315.0F, 480.0F}, 1.25F, Fade(BLACK, 0.82F));
+    if (art.HasPortrait()) {
+        DrawRectangle(48, 82, 478, 585, Fade(BLACK, 0.8F));
+        art.DrawPortrait({77.0F, 82.0F, 390.0F, 585.0F});
+    } else {
+        DrawOperatorSilhouette({315.0F, 480.0F}, 1.25F, Fade(BLACK, 0.82F));
+    }
     DrawRectangle(52, 555, 460, 112, Fade(BLACK, 0.72F));
     DrawRectangle(52, 555, 8, 112, kBlue);
     font.Draw("当前出战", 82.0F, 574.0F, 20.0F, Fade(RAYWHITE, 0.65F));
@@ -203,7 +209,7 @@ void MainMenu::DrawStageSelect(const UiFont& font) const {
               22.0F, RAYWHITE);
 }
 
-void MainMenu::DrawOperatorSelect(const UiFont& font) const {
+void MainMenu::DrawOperatorSelect(const UiFont& font, const CharacterArt& art) const {
     DrawBackground(font, "干员 / 出战选择");
     font.Draw("选择一名出战干员", 72.0F, 112.0F, 30.0F, RAYWHITE);
 
@@ -223,8 +229,20 @@ void MainMenu::DrawOperatorSelect(const UiFont& font) const {
         }
     }
 
-    DrawOperatorSilhouette({244.0F, 405.0F}, 0.72F, kInk);
-    font.Draw("能天使", 102.0F, 208.0F, 34.0F, kInk);
+    if (art.HasPortrait()) {
+        DrawRectangle(97, 190, 295, 338, BLACK);
+        art.DrawPortrait({132.0F, 190.0F, 225.0F, 338.0F});
+        if (art.HasChibi()) {
+            DrawCircle(348, 472, 51, Fade(kBlue, 0.22F));
+            art.DrawChibi({348.0F, 521.0F}, 1, 105.0F,
+                          ChibiAnimation::Wave,
+                          static_cast<float>(GetTime()));
+        }
+    } else {
+        DrawOperatorSilhouette({244.0F, 405.0F}, 0.72F, kInk);
+    }
+    font.Draw("能天使", 102.0F, 208.0F, 34.0F,
+              art.HasPortrait() ? RAYWHITE : kInk);
     font.Draw("已选择", 304.0F, 216.0F, 18.0F, kOrange);
     font.Draw("高速射击 / 弹匣容量 35", 102.0F, 496.0F, 18.0F,
               Color{69, 75, 80, 255});
