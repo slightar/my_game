@@ -3,6 +3,7 @@
 #include "audio_system.h"
 #include "boss.h"
 #include "game_types.h"
+#include "main_menu.h"
 #include "player.h"
 #include "ui_font.h"
 
@@ -21,8 +22,9 @@ private:
 
     AudioSystem audio_;
     UiFont uiFont_;
+    MainMenu mainMenu_;
     Player player_;
     Boss boss_;
     std::vector<Bullet> bullets_;
-    bool started_ = false;
+    bool inBattle_ = false;
 };

@@ -19,6 +19,7 @@ add_executable(my_game
         src/player.cpp
         src/boss.cpp
         src/audio_system.cpp
+        src/main_menu.cpp
         src/ui_font.cpp
         src/platform_input.cpp)
 target_link_libraries(my_game PRIVATE raylib)

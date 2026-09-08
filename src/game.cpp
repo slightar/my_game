@@ -13,9 +13,10 @@ void Game::Reset() {
 }
 
 void Game::Update(float deltaTime) {
-    if (!started_) {
-        if (IsKeyPressed(KEY_ENTER)) {
-            started_ = true;
+    if (!inBattle_) {
+        if (mainMenu_.Update() == MenuAction::StartBattle) {
+            Reset();
+            inBattle_ = true;
         }
         return;
     }
@@ -23,6 +24,10 @@ void Game::Update(float deltaTime) {
     if (player_.IsDead() || boss_.IsDefeated()) {
         if (IsKeyPressed(KEY_ENTER)) {
             Reset();
+        }
+        if (IsKeyPressed(KEY_BACKSPACE)) {
+            inBattle_ = false;
+            mainMenu_.OpenHome();
         }
         return;
     }
@@ -69,6 +74,11 @@ void Game::UpdateBullets(float deltaTime) {
 }
 
 void Game::Draw() const {
+    if (!inBattle_) {
+        mainMenu_.Draw(uiFont_);
+        return;
+    }
+
     ClearBackground({24, 27, 34, 255});
     DrawRectangleRec(GameConfig::kRoom, {222, 225, 229, 255});
     DrawRectangleLinesEx(GameConfig::kRoom, 5.0F, {88, 94, 105, 255});
@@ -85,25 +95,10 @@ void Game::Draw() const {
 
     boss_.Draw(uiFont_);
     player_.Draw();
-    player_.DrawHud(uiFont_);
+    player_.DrawHud(uiFont_, mainMenu_.SelectedOperatorName());
     boss_.DrawHud(uiFont_);
 
-    if (!started_) {
-        DrawRectangle(0, 0, GameConfig::kScreenWidth, GameConfig::kScreenHeight,
-                      Fade(BLACK, 0.68F));
-        const char* title = "ARKNIGHTS-GO";
-        const float titleWidth = uiFont_.Measure(title, 52.0F);
-        uiFont_.Draw(title,
-                     static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
-                         titleWidth / 2.0F,
-                     275.0F, 52.0F, RAYWHITE);
-        const char* prompt = "按回车键开始游戏";
-        const float promptWidth = uiFont_.Measure(prompt, 28.0F);
-        uiFont_.Draw(prompt,
-                     static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
-                         promptWidth / 2.0F,
-                     350.0F, 28.0F, SKYBLUE);
-    } else if (player_.IsDead() || boss_.IsDefeated()) {
+    if (player_.IsDead() || boss_.IsDefeated()) {
         DrawRectangle(0, 0, GameConfig::kScreenWidth, GameConfig::kScreenHeight,
                       Fade(BLACK, 0.58F));
         const char* title = player_.IsDead() ? "任务失败" : "弑君者已击败";
@@ -112,7 +107,7 @@ void Game::Draw() const {
                      static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
                          titleWidth / 2.0F,
                      290.0F, 46.0F, player_.IsDead() ? RED : SKYBLUE);
-        const char* restart = "按回车键重新开始";
+        const char* restart = "Enter 重新开始   Backspace 返回主页";
         const float restartWidth = uiFont_.Measure(restart, 24.0F);
         uiFont_.Draw(restart,
                      static_cast<float>(GameConfig::kScreenWidth) / 2.0F -

@@ -190,7 +190,9 @@ void Player::Draw() const {
     DrawCircleV(position_, kRadius, blinkOff ? Fade(BLACK, 0.3F) : BLACK);
 }
 
-void Player::DrawHud(const UiFont& font) const {
+void Player::DrawHud(const UiFont& font, const char* operatorName) const {
+    const char* operatorText = TextFormat("当前干员：%s", operatorName);
+    font.Draw(operatorText, 72.0F, 42.0F, 18.0F, RAYWHITE);
     DrawRectangle(70, 70, 420, 150, Fade(BLACK, 0.72F));
     font.Draw("A/D 移动   W/K/空格 二段跳", 88.0F, 82.0F, 17.0F, RAYWHITE);
     font.Draw("按住 J 射击并锁定朝向   R 换弹", 88.0F, 108.0F, 17.0F, RAYWHITE);

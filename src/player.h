@@ -12,7 +12,7 @@ public:
     void Reset();
     void Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& audio);
     void Draw() const;
-    void DrawHud(const UiFont& font) const;
+    void DrawHud(const UiFont& font, const char* operatorName) const;
 
     bool TakeDamage(Vector2 damageSource);
     [[nodiscard]] Vector2 Position() const;

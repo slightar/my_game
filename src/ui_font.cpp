@@ -4,9 +4,12 @@ namespace {
 
 constexpr const char* kUiGlyphs =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-    " /+-.:……"
+    " /+-.:……，："
     "移动空格二段跳按住射击并锁定朝向换弹闪避生命冲锋枪中"
-    "任务失败弑君者已击败回车键重新开始游戏挥砍突袭空中斩飞镖";
+    "任务失败弑君者已击败回车键重新开始游戏挥砍突袭空中斩飞镖"
+    "罗德岛战术终端系统接入主页当前出战能天使选择关卡行动干员"
+    "角色或方向确认档案近卫交锋目标可部署尚未开放返回一名高速"
+    "弹匣容量开发查看";
 
 const char* FindFontPath() {
     if (FileExists("assets/fonts/ui.ttf")) {
