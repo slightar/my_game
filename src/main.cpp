@@ -13,7 +13,6 @@ int main() {
         DrawText("Hello, my game!", 300, 280, 24, DARKGRAY);
         EndDrawing();
     }
-    std::cout<<"hello";
     CloseWindow();
     return 0;
 }
