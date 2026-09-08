@@ -1,18 +1,31 @@
-//
-// Created by 34844 on 2026/9/8.
-//
-#include "raylib.h"
-#include<iostream>
-int main() {
-    InitWindow(800, 600, "arknights-go");      // 创建 800x600 窗口
-    SetTargetFPS(60);                          // 限制帧率为 60
+#include "game.h"
 
-    while (!WindowShouldClose()) {             // 主循环：窗口不关闭就一直运行
-        BeginDrawing();
-        ClearBackground(RAYWHITE);
-        DrawText("Hello, my game!", 300, 280, 24, DARKGRAY);
-        EndDrawing();
+#include "game_types.h"
+#include "platform_input.h"
+#include "raylib.h"
+
+#include <algorithm>
+
+int main() {
+    SetConfigFlags(FLAG_FULLSCREEN_MODE | FLAG_VSYNC_HINT);
+    InitWindow(GameConfig::kScreenWidth, GameConfig::kScreenHeight, "arknights-go");
+    PrepareGameWindowInput(GetWindowHandle());
+    InitAudioDevice();
+    SetTargetFPS(60);
+
+    {
+        Game game;
+        while (!WindowShouldClose()) {
+            const float deltaTime = std::min(GetFrameTime(), 1.0F / 30.0F);
+            game.Update(deltaTime);
+
+            BeginDrawing();
+            game.Draw();
+            EndDrawing();
+        }
     }
+
+    CloseAudioDevice();
     CloseWindow();
     return 0;
 }

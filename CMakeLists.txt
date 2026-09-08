@@ -13,7 +13,16 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(raylib)
 
-add_executable(my_game src/main.cpp
+add_executable(my_game
         src/main.cpp
-        src/main.cpp)
+        src/game.cpp
+        src/player.cpp
+        src/boss.cpp
+        src/audio_system.cpp
+        src/ui_font.cpp
+        src/platform_input.cpp)
 target_link_libraries(my_game PRIVATE raylib)
+
+if (WIN32)
+    target_link_libraries(my_game PRIVATE imm32)
+endif()
