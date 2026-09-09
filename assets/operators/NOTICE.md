@@ -1,8 +1,7 @@
-# 能天使素材说明
+# 干员素材说明
 
-本目录中的 `exusiai_portrait.png`、`exusiai_chibi.png`、
-`exusiai_battle.png`、`exusiai_skill_2.png` 与 `exusiai_skill_3.png` 为《明日方舟》
-能天使相关美术资源，仅用于本项目的个人学习、课程作业与非商业同人展示。
+本目录中的能天使与德克萨斯角色立绘、小人、技能图标和特效为《明日方舟》
+相关美术资源，仅用于本项目的个人学习、课程作业与非商业同人展示。
 
 - 角色与原始美术版权归鹰角网络（Hypergryph）及相关权利方所有。
 - 本项目不以任何形式出售这些素材，也不主张对原始美术拥有权利。
@@ -15,6 +14,17 @@
   离线渲染为透明逐帧精灵表，包含待机、射击与撤退动作。
 - `exusiai_skill_2.png` 与 `exusiai_skill_3.png` 来源：ArknightsResource
   收录的能天使“扫射模式”和“过载模式”游戏技能图标。
+- `texas_portrait.png`、`texas_skill_e.png` 与 `texas_skill_q.png` 来源：
+  ArknightsResource 收录的德克萨斯立绘、缄默德克萨斯二技能图标及
+  德克萨斯二技能图标。
+- `texas_chibi.png` 来源：Arknights-Codex-Pets 对德克萨斯官方基建
+  Spine 模型的透明逐帧转换，用作本项目的局内角色动画。
+- `texas_skill2_battle.png` 由 ArknightsResource 收录的缄默德克萨斯官方
+  战斗 Spine 模型 `char_1028_texas2` 离线渲染，包含二技能
+  `Skill_2_Idle`、`Skill_2_Loop` 与 `Skill_2_End` 动画帧。
+- `texas_skill2_aura.png`、`texas_skill2_slash_a.png`、
+  `texas_skill2_slash_b.png` 与 `texas_skill2_burst.png` 提取自用户本机安装的
+  《明日方舟》客户端，仅用于本非商业学习项目中的二技能特效还原。
 - 上述来源不授予本项目对官方素材的再分发或商业使用权。若公开发布项目，需根据
   权利方规则重新确认授权范围，并优先让使用者自行取得素材。
 
@@ -26,3 +36,4 @@
 - https://prts.wiki/w/%E8%83%BD%E5%A4%A9%E4%BD%BF/spine
 - https://github.com/nuke777/Arknights-SD-Viewer
 - https://github.com/fexli/ArknightsResource/tree/main/skills
+- https://github.com/fexli/ArknightsResource/tree/main/spine/char_1028_texas2

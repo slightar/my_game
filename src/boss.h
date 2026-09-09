@@ -21,6 +21,8 @@ public:
     void DrawHud(const UiFont& font) const;
 
     void TakeDamage(float damage);
+    void Stun(float duration);
+    bool DestroyProjectileAt(Vector2 position, float radius);
     [[nodiscard]] Vector2 Position() const;
     [[nodiscard]] float Radius() const;
     [[nodiscard]] bool AttackHits(Rectangle playerHitbox,
@@ -73,6 +75,7 @@ private:
     int nextRangedAttack_ = 0;
     float animationTime_ = 0.0F;
     float rushTeleportTargetX_ = 0.0F;
+    float stunTimer_ = 0.0F;
     Texture2D battleSprite_{};
     std::vector<Dart> darts_;
 };

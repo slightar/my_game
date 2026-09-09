@@ -35,9 +35,26 @@ constexpr float kBarrageCooldownDuration = 12.0F;
 constexpr float kOverloadDuration = 4.0F;
 constexpr float kOverloadCooldownDuration = 16.0F;
 
+constexpr float kTexasAttackInterval = 0.32F;
+constexpr float kTexasMeleeRange = 112.0F;
+constexpr float kTexasRainMeleeRange = 142.0F;
+constexpr float kSwordWaveSpeed = 780.0F;
+constexpr float kSwordWaveRechargeDuration = 2.4F;
+constexpr float kSwordRainDuration = 1.35F;
+constexpr float kSwordRainCooldownDuration = 14.0F;
+constexpr float kSwordRainSpawnInterval = 0.12F;
+constexpr float kSwordRainStunDuration = 0.42F;
+constexpr float kTexasMeleeDamage = 1.9F;
+constexpr float kTexasRainHitDamage = 1.45F;
+constexpr float kTexasSwordWaveDamage = 1.45F;
+constexpr float kTexasSwordRainDamage = 1.55F;
+constexpr float kTexasRainEnterDuration = 0.62F;
+constexpr float kTexasRainExitDuration = 0.28F;
+
 }  // namespace
 
-void Player::Reset() {
+void Player::Reset(OperatorKind operatorKind) {
+    operatorKind_ = operatorKind;
     position_ = {240.0F, GameConfig::kFloorY - kHitboxHeight / 2.0F};
     velocity_ = {};
     facingDirection_ = 1;
@@ -57,40 +74,51 @@ void Player::Reset() {
     shotCooldown_ = 0.0F;
     reloadTimer_ = 0.0F;
     reloading_ = false;
+    swordWaveCharges_ = kMaxSwordWaveCharges;
+    swordWaveRechargeTimer_ = 0.0F;
+    texasRainMode_ = false;
+    texasRainBurstTimer_ = 0.0F;
+    texasAttackEffectTimer_ = 0.0F;
+    swordRainTimer_ = 0.0F;
+    swordRainCooldown_ = 0.0F;
+    swordRainSpawnTimer_ = 0.0F;
     barrageTimer_ = 0.0F;
     barrageCooldown_ = 0.0F;
     overloadTimer_ = 0.0F;
     overloadCooldown_ = 0.0F;
 }
 
-void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& audio) {
+void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
+                    std::vector<Bullet>& bullets, AudioSystem& audio) {
     hurtInvincibilityTimer_ = std::max(0.0F, hurtInvincibilityTimer_ - deltaTime);
     animationTime_ += deltaTime;
     if (IsDead()) {
         return;
     }
 
-    if (barrageTimer_ > 0.0F) {
+    if (operatorKind_ == OperatorKind::Exusiai && barrageTimer_ > 0.0F) {
         barrageTimer_ = std::max(0.0F, barrageTimer_ - deltaTime);
         if (barrageTimer_ <= 0.0F) {
             barrageCooldown_ = kBarrageCooldownDuration;
         }
-    } else {
+    } else if (operatorKind_ == OperatorKind::Exusiai) {
         barrageCooldown_ = std::max(0.0F, barrageCooldown_ - deltaTime);
     }
-    if (overloadTimer_ > 0.0F) {
+    if (operatorKind_ == OperatorKind::Exusiai && overloadTimer_ > 0.0F) {
         overloadTimer_ = std::max(0.0F, overloadTimer_ - deltaTime);
         if (overloadTimer_ <= 0.0F) {
             overloadCooldown_ = kOverloadCooldownDuration;
         }
-    } else {
+    } else if (operatorKind_ == OperatorKind::Exusiai) {
         overloadCooldown_ = std::max(0.0F, overloadCooldown_ - deltaTime);
     }
-    if (IsKeyPressed(KEY_E) && barrageTimer_ <= 0.0F &&
+    if (operatorKind_ == OperatorKind::Exusiai && IsKeyPressed(KEY_E) &&
+        barrageTimer_ <= 0.0F &&
         barrageCooldown_ <= 0.0F) {
         barrageTimer_ = kBarrageDuration;
     }
-    if (IsKeyPressed(KEY_Q) && overloadTimer_ <= 0.0F &&
+    if (operatorKind_ == OperatorKind::Exusiai && IsKeyPressed(KEY_Q) &&
+        overloadTimer_ <= 0.0F &&
         overloadCooldown_ <= 0.0F) {
         overloadTimer_ = kOverloadDuration;
     }
@@ -179,6 +207,10 @@ void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& 
     }
 
     shotCooldown_ = std::max(0.0F, shotCooldown_ - deltaTime);
+    if (operatorKind_ == OperatorKind::Texas) {
+        UpdateTexasCombat(deltaTime, enemyPosition, enemyRadius, bullets);
+        return;
+    }
     if (IsKeyPressed(KEY_R) && ammo_ < kMagazineCapacity && !reloading_) {
         reloading_ = true;
         reloadTimer_ = kReloadDuration;
@@ -257,6 +289,108 @@ void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& 
     }
 }
 
+void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
+                               float enemyRadius,
+                               std::vector<Bullet>& bullets) {
+    texasAttackEffectTimer_ =
+        std::max(0.0F, texasAttackEffectTimer_ - deltaTime);
+    texasRainBurstTimer_ =
+        std::max(0.0F, texasRainBurstTimer_ - deltaTime);
+
+    if (swordWaveCharges_ < kMaxSwordWaveCharges) {
+        swordWaveRechargeTimer_ -= deltaTime;
+        while (swordWaveRechargeTimer_ <= 0.0F &&
+               swordWaveCharges_ < kMaxSwordWaveCharges) {
+            ++swordWaveCharges_;
+            swordWaveRechargeTimer_ += kSwordWaveRechargeDuration;
+        }
+        if (swordWaveCharges_ >= kMaxSwordWaveCharges) {
+            swordWaveRechargeTimer_ = 0.0F;
+        }
+    }
+
+    if (IsKeyPressed(KEY_E) && texasRainBurstTimer_ <= 0.0F) {
+        texasRainMode_ = !texasRainMode_;
+        texasRainBurstTimer_ = texasRainMode_ ? kTexasRainEnterDuration
+                                              : kTexasRainExitDuration;
+    }
+
+    if (swordRainTimer_ > 0.0F) {
+        swordRainTimer_ = std::max(0.0F, swordRainTimer_ - deltaTime);
+        swordRainSpawnTimer_ -= deltaTime;
+        while (swordRainSpawnTimer_ <= 0.0F && swordRainTimer_ > 0.0F) {
+            const float randomX = static_cast<float>(GetRandomValue(-130, 130));
+            bullets.push_back({
+                {std::clamp(enemyPosition.x + randomX,
+                            GameConfig::kRoom.x + 25.0F,
+                            GameConfig::kRoom.x + GameConfig::kRoom.width - 25.0F),
+                 GameConfig::kRoom.y + 18.0F},
+                {static_cast<float>(GetRandomValue(-35, 35)), 920.0F},
+                0.82F, 15.0F, kTexasSwordRainDamage, BulletKind::FallingSword,
+                DamageType::Arts, false, kSwordRainStunDuration});
+            swordRainSpawnTimer_ += kSwordRainSpawnInterval;
+        }
+        if (swordRainTimer_ <= 0.0F) {
+            swordRainCooldown_ = kSwordRainCooldownDuration;
+        }
+    } else {
+        swordRainCooldown_ = std::max(0.0F, swordRainCooldown_ - deltaTime);
+    }
+    if (IsKeyPressed(KEY_Q) && swordRainTimer_ <= 0.0F &&
+        swordRainCooldown_ <= 0.0F) {
+        swordRainTimer_ = kSwordRainDuration;
+        swordRainSpawnTimer_ = 0.0F;
+    }
+
+    if (IsKeyDown(KEY_J) && shotCooldown_ <= 0.0F && dodgeTimer_ <= 0.0F) {
+        const float direction = static_cast<float>(facingDirection_);
+        const float range = texasRainMode_ ? kTexasRainMeleeRange
+                                           : kTexasMeleeRange;
+        const float deltaX = enemyPosition.x - position_.x;
+        const bool enemyInMeleeRange =
+            deltaX * direction >= -enemyRadius &&
+            std::abs(deltaX) <= range + enemyRadius &&
+            std::abs(enemyPosition.y - position_.y) <= 100.0F;
+
+        if (texasRainMode_ || enemyInMeleeRange) {
+            const int strikeCount = texasRainMode_ ? 2 : 1;
+            for (int strike = 0; strike < strikeCount; ++strike) {
+                bullets.push_back({
+                    {position_.x + direction * range * 0.54F,
+                     position_.y - 8.0F + static_cast<float>(strike) * 12.0F},
+                    {}, 0.12F + static_cast<float>(strike) * 0.035F,
+                    range * 0.53F,
+                    texasRainMode_ ? kTexasRainHitDamage : kTexasMeleeDamage,
+                    BulletKind::MeleeSlash,
+                    texasRainMode_ ? DamageType::Arts : DamageType::Physical,
+                    false, 0.0F,
+                    texasRainMode_ ? static_cast<float>(strike) * 0.10F
+                                   : 0.0F,
+                    strike});
+            }
+        } else if (swordWaveCharges_ > 0) {
+            bullets.push_back({
+                {position_.x + direction * 48.0F, position_.y - 7.0F},
+                {direction * kSwordWaveSpeed, 0.0F},
+                1.35F, 13.0F, kTexasSwordWaveDamage, BulletKind::SwordWave,
+                DamageType::Physical, true, 0.0F});
+            --swordWaveCharges_;
+            if (swordWaveRechargeTimer_ <= 0.0F) {
+                swordWaveRechargeTimer_ = kSwordWaveRechargeDuration;
+            }
+        }
+        shotCooldown_ = kTexasAttackInterval;
+        texasAttackEffectTimer_ = 0.19F;
+    }
+
+    firing_ = texasAttackEffectTimer_ > 0.0F;
+    if (firing_) {
+        attackAnimationTime_ += deltaTime;
+    } else {
+        attackAnimationTime_ = 0.0F;
+    }
+}
+
 void Player::UpdateDefeatAnimation(float deltaTime) {
     defeatAnimationTime_ += deltaTime;
 }
@@ -280,6 +414,47 @@ void Player::Draw(const CharacterArt& art) const {
     const Vector2 feetPosition{position_.x,
                                position_.y + kHitboxHeight / 2.0F - walkBob};
 
+    if (operatorKind_ == OperatorKind::Texas &&
+        (texasRainMode_ || texasRainBurstTimer_ > 0.0F)) {
+        const bool transitioning = texasRainBurstTimer_ > 0.0F;
+        const float transitionDuration = texasRainMode_
+                                             ? kTexasRainEnterDuration
+                                             : kTexasRainExitDuration;
+        const float transitionProgress = transitioning
+            ? 1.0F - texasRainBurstTimer_ / transitionDuration
+            : 1.0F;
+        const float pulse = 0.5F + 0.5F * std::sin(animationTime_ * 7.5F);
+        DrawEllipse(static_cast<int>(position_.x),
+                    static_cast<int>(GameConfig::kFloorY + 1.0F),
+                    84.0F + pulse * 5.0F, 14.0F + pulse * 2.0F,
+                    Fade(Color{132, 7, 18, 255},
+                         texasRainMode_ ? 0.17F : 0.08F));
+        DrawEllipse(static_cast<int>(position_.x),
+                    static_cast<int>(GameConfig::kFloorY),
+                    64.0F, 10.0F, Fade(BLACK, 0.28F));
+
+        for (int streak = 0; streak < 5; ++streak) {
+            const float phase = std::fmod(
+                animationTime_ * 1.35F + static_cast<float>(streak) * 0.213F,
+                1.0F);
+            const float streakX = position_.x - 58.0F +
+                                  static_cast<float>(streak) * 29.0F;
+            const float streakY = GameConfig::kFloorY - phase * 105.0F;
+            const float alpha = std::sin(phase * PI) *
+                                (texasRainMode_ ? 0.34F : 0.14F);
+            DrawLineEx({streakX - 5.0F, streakY - 13.0F},
+                       {streakX + 5.0F, streakY + 9.0F},
+                       4.0F, Fade(BLACK, alpha));
+            DrawLineEx({streakX - 4.0F, streakY - 12.0F},
+                       {streakX + 4.0F, streakY + 8.0F},
+                       1.5F, Fade(Color{236, 30, 44, 255}, alpha));
+        }
+
+        art.DrawTexasSkill2Aura(position_, facingDirection_, animationTime_,
+                                texasRainMode_, transitioning,
+                                std::clamp(transitionProgress, 0.0F, 1.0F));
+    }
+
     if (airborne) {
         const float heightAboveFloor = GameConfig::kFloorY -
                                        (position_.y + kHitboxHeight / 2.0F);
@@ -296,11 +471,18 @@ void Player::Draw(const CharacterArt& art) const {
             const Vector2 trailPosition{
                 position_.x - static_cast<float>(dodgeDirection_ * trail) * 18.0F,
                 position_.y + kHitboxHeight / 2.0F};
-            if (art.HasBattleChibi()) {
+            if (operatorKind_ == OperatorKind::Texas &&
+                art.HasChibi(OperatorKind::Texas)) {
+                art.DrawChibi(OperatorKind::Texas, trailPosition,
+                              facingDirection_, 106.0F,
+                              ChibiAnimation::Dodge, animationTime_,
+                              Fade(WHITE, 0.11F));
+            } else if (operatorKind_ != OperatorKind::Texas &&
+                       art.HasBattleChibi()) {
                 art.DrawBattleChibi(trailPosition, facingDirection_, 120.0F,
                                     BattleChibiAnimation::Idle,
                                     animationTime_, Fade(WHITE, 0.11F));
-            } else if (art.HasChibi()) {
+            } else if (operatorKind_ != OperatorKind::Texas && art.HasChibi()) {
                 art.DrawChibi(trailPosition, facingDirection_, 106.0F,
                               animation, animationTime_, Fade(WHITE, 0.11F));
             } else {
@@ -324,7 +506,28 @@ void Player::Draw(const CharacterArt& art) const {
 
     const bool blinkOff = hurtInvincibilityTimer_ > 0.0F &&
                           static_cast<int>(hurtInvincibilityTimer_ * 14.0F) % 2 == 0;
-    if (art.HasBattleChibi()) {
+    if (operatorKind_ == OperatorKind::Texas &&
+        (texasRainMode_ || texasRainBurstTimer_ > 0.0F) &&
+        art.HasTexasSkill2Battle()) {
+        const bool ending = !texasRainMode_;
+        const float skillAnimationTime =
+            ending ? 0.18F - texasRainBurstTimer_
+                   : (firing_ ? attackAnimationTime_ : animationTime_);
+        art.DrawTexasSkill2Battle(
+            feetPosition, facingDirection_, 120.0F,
+            texasRainMode_ && firing_, ending, skillAnimationTime,
+            IsDead() ? Fade(WHITE, 0.28F)
+                     : (blinkOff ? Fade(WHITE, 0.3F) : WHITE));
+    } else if (operatorKind_ == OperatorKind::Texas &&
+        art.HasChibi(OperatorKind::Texas)) {
+        const ChibiAnimation texasAnimation =
+            firing_ ? ChibiAnimation::Wave : animation;
+        art.DrawChibi(OperatorKind::Texas, feetPosition, facingDirection_,
+                      112.0F, texasAnimation,
+                      firing_ ? attackAnimationTime_ : animationTime_,
+                      IsDead() ? Fade(WHITE, 0.28F)
+                               : (blinkOff ? Fade(WHITE, 0.3F) : WHITE));
+    } else if (operatorKind_ != OperatorKind::Texas && art.HasBattleChibi()) {
         const BattleChibiAnimation battleAnimation =
             IsDead() ? BattleChibiAnimation::Defeated
                      : (firing_ ? BattleChibiAnimation::Attack
@@ -335,19 +538,32 @@ void Player::Draw(const CharacterArt& art) const {
             IsDead() ? defeatAnimationTime_
                      : (firing_ ? attackAnimationTime_ : animationTime_),
             !IsDead() && blinkOff ? Fade(WHITE, 0.3F) : WHITE);
-    } else if (art.HasChibi()) {
+    } else if (operatorKind_ != OperatorKind::Texas && art.HasChibi()) {
         art.DrawChibi(feetPosition, facingDirection_,
                       106.0F, animation, animationTime_,
                       blinkOff ? Fade(WHITE, 0.3F) : WHITE);
     } else {
-        const Vector2 gunStart{position_.x, position_.y - 10.0F};
-        const Vector2 gunEnd{
+        const Vector2 weaponStart{position_.x, position_.y - 10.0F};
+        const Vector2 weaponEnd{
             position_.x + static_cast<float>(facingDirection_) * 48.0F,
             position_.y - 10.0F};
-        DrawLineEx(gunStart, gunEnd, 9.0F, DARKGRAY);
+        DrawLineEx(weaponStart, weaponEnd,
+                   operatorKind_ == OperatorKind::Texas ? 5.0F : 9.0F,
+                   operatorKind_ == OperatorKind::Texas ? RAYWHITE : DARKGRAY);
         const Rectangle body{position_.x - 16.0F, position_.y - 28.0F,
                              32.0F, 62.0F};
         DrawRectangleRec(body, blinkOff ? Fade(BLACK, 0.3F) : BLACK);
+    }
+
+    if (operatorKind_ == OperatorKind::Texas && texasRainBurstTimer_ > 0.0F) {
+        const float transitionDuration = texasRainMode_
+                                             ? kTexasRainEnterDuration
+                                             : kTexasRainExitDuration;
+        const float transitionProgress =
+            1.0F - texasRainBurstTimer_ / transitionDuration;
+        art.DrawTexasSkill2TransitionOverlay(
+            position_, facingDirection_, texasRainMode_,
+            std::clamp(transitionProgress, 0.0F, 1.0F));
     }
 }
 
@@ -357,7 +573,10 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
     font.Draw(operatorText, 72.0F, 42.0F, 18.0F, RAYWHITE);
     DrawRectangle(70, 70, 420, 150, Fade(BLACK, 0.72F));
     font.Draw("A/D 移动   W/K/空格 二段跳", 88.0F, 82.0F, 17.0F, RAYWHITE);
-    font.Draw("按住 J 射击并锁定朝向   R 换弹", 88.0F, 108.0F, 17.0F, RAYWHITE);
+    font.Draw(operatorKind_ == OperatorKind::Texas
+                  ? "按住 J 近战/剑气并锁定朝向"
+                  : "按住 J 射击并锁定朝向   R 换弹",
+              88.0F, 108.0F, 17.0F, RAYWHITE);
     font.Draw("S/L/Shift 闪避", 88.0F, 134.0F, 17.0F, RAYWHITE);
 
     font.Draw("生命", 88.0F, 170.0F, 18.0F, RAYWHITE);
@@ -383,31 +602,59 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
     constexpr float ammoPanelHeight = 302.0F;
     DrawRectangleRec({ammoPanelX, ammoPanelY, ammoPanelWidth, ammoPanelHeight},
                      Fade(BLACK, 0.76F));
-    font.Draw("冲锋枪", ammoPanelX + 21.0F, ammoPanelY + 10.0F,
-              16.0F, RAYWHITE);
-    font.Draw("弹匣", ammoPanelX + 37.0F, ammoPanelY + 34.0F,
-              16.0F, Fade(RAYWHITE, 0.72F));
-    const Rectangle ammoBar{ammoPanelX + 38.0F, ammoPanelY + 66.0F,
-                            32.0F, 188.0F};
-    DrawRectangleRec(ammoBar, Color{61, 66, 74, 255});
-    const float ammoRatio = static_cast<float>(ammo_) /
-                            static_cast<float>(kMagazineCapacity);
-    const float ammoFillHeight = ammoBar.height * ammoRatio;
-    DrawRectangleRec({ammoBar.x, ammoBar.y + ammoBar.height - ammoFillHeight,
-                      ammoBar.width, ammoFillHeight},
-                     reloading_ ? ORANGE : SKYBLUE);
-    DrawRectangleLinesEx(ammoBar, 2.0F, RAYWHITE);
-    const char* ammoText = TextFormat("%02i/%02i", ammo_, kMagazineCapacity);
-    const float ammoTextWidth = font.Measure(ammoText, 17.0F);
-    font.Draw(ammoText,
-              ammoPanelX + (ammoPanelWidth - ammoTextWidth) / 2.0F,
-              ammoPanelY + 268.0F, 17.0F, RAYWHITE);
+    if (operatorKind_ == OperatorKind::Texas) {
+        font.Draw("剑气", ammoPanelX + 37.0F, ammoPanelY + 12.0F,
+                  17.0F, RAYWHITE);
+        for (int charge = 0; charge < kMaxSwordWaveCharges; ++charge) {
+            const float y = ammoPanelY + 238.0F -
+                            static_cast<float>(charge) * 34.0F;
+            const Rectangle segment{ammoPanelX + 31.0F, y, 46.0F, 25.0F};
+            DrawRectangleRec(segment,
+                             charge < swordWaveCharges_
+                                 ? Color{221, 235, 244, 255}
+                                 : Color{55, 61, 69, 255});
+            DrawRectangleLinesEx(segment, 2.0F, RAYWHITE);
+        }
+        if (swordWaveCharges_ < kMaxSwordWaveCharges) {
+            const float restoreRatio = std::clamp(
+                1.0F - swordWaveRechargeTimer_ / kSwordWaveRechargeDuration,
+                0.0F, 1.0F);
+            DrawRectangle(static_cast<int>(ammoPanelX + 18.0F),
+                          static_cast<int>(ammoPanelY + 274.0F), 72, 6,
+                          Color{55, 61, 69, 255});
+            DrawRectangle(static_cast<int>(ammoPanelX + 18.0F),
+                          static_cast<int>(ammoPanelY + 274.0F),
+                          static_cast<int>(72.0F * restoreRatio), 6, RAYWHITE);
+        }
+    } else {
+        font.Draw("冲锋枪", ammoPanelX + 21.0F, ammoPanelY + 10.0F,
+                  16.0F, RAYWHITE);
+        font.Draw("弹匣", ammoPanelX + 37.0F, ammoPanelY + 34.0F,
+                  16.0F, Fade(RAYWHITE, 0.72F));
+        const Rectangle ammoBar{ammoPanelX + 38.0F, ammoPanelY + 66.0F,
+                                32.0F, 188.0F};
+        DrawRectangleRec(ammoBar, Color{61, 66, 74, 255});
+        const float ammoRatio = static_cast<float>(ammo_) /
+                                static_cast<float>(kMagazineCapacity);
+        const float ammoFillHeight = ammoBar.height * ammoRatio;
+        DrawRectangleRec({ammoBar.x,
+                          ammoBar.y + ammoBar.height - ammoFillHeight,
+                          ammoBar.width, ammoFillHeight},
+                         reloading_ ? ORANGE : SKYBLUE);
+        DrawRectangleLinesEx(ammoBar, 2.0F, RAYWHITE);
+        const char* ammoText = TextFormat("%02i/%02i", ammo_, kMagazineCapacity);
+        const float ammoTextWidth = font.Measure(ammoText, 17.0F);
+        font.Draw(ammoText,
+                  ammoPanelX + (ammoPanelWidth - ammoTextWidth) / 2.0F,
+                  ammoPanelY + 268.0F, 17.0F, RAYWHITE);
+    }
 
-    const auto drawSkillIcon = [&font, &art](float x, const char* key,
+    const auto drawSkillIcon = [&font, &art, this](float x, const char* key,
                                        const char* name, float activeTimer,
                                        float cooldownTimer,
                                        float cooldownDuration, Color color,
-                                       int skillIndex) {
+                                       int skillIndex,
+                                       bool showActiveTimer = true) {
         constexpr float size = 86.0F;
         const Rectangle icon{x, 552.0F, size, size};
         const bool active = activeTimer > 0.0F;
@@ -418,8 +665,8 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
                                             : Color{39, 44, 52, 242}));
         const Rectangle artwork{icon.x + 3.0F, icon.y + 3.0F,
                                 icon.width - 6.0F, icon.height - 6.0F};
-        if (art.HasSkillIcon(skillIndex)) {
-            art.DrawSkillIcon(skillIndex, artwork,
+        if (art.HasSkillIcon(operatorKind_, skillIndex)) {
+            art.DrawSkillIcon(operatorKind_, skillIndex, artwork,
                               coolingDown ? Color{150, 150, 150, 255}
                                           : WHITE);
         } else {
@@ -452,7 +699,7 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
                           icon.width - 4.0F, 22.0F},
                          Fade(BLACK, 0.62F));
         font.Draw(name, icon.x + 8.0F, icon.y + 65.0F, 14.0F, RAYWHITE);
-        if (active || coolingDown) {
+        if ((active && showActiveTimer) || coolingDown) {
             const float timer = active ? activeTimer : cooldownTimer;
             const char* timerText = TextFormat("%.1f", timer);
             const float timerWidth = font.Measure(timerText, 17.0F);
@@ -463,12 +710,21 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
                       icon.y + 6.0F, 17.0F, RAYWHITE);
         }
     };
-    drawSkillIcon(1064.0F, "E", "扫射", barrageTimer_, barrageCooldown_,
-                  kBarrageCooldownDuration, SKYBLUE, 0);
-    drawSkillIcon(1156.0F, "Q", "过载", overloadTimer_, overloadCooldown_,
-                  kOverloadCooldownDuration, ORANGE, 1);
+    if (operatorKind_ == OperatorKind::Texas) {
+        drawSkillIcon(1064.0F, "E", texasRainMode_ ? "阵雨连绵" : "初始",
+                      texasRainMode_ ? 1.0F : 0.0F, 0.0F, 1.0F,
+                      Color{207, 45, 48, 255}, 0, false);
+        drawSkillIcon(1156.0F, "Q", "剑雨", swordRainTimer_,
+                      swordRainCooldown_, kSwordRainCooldownDuration,
+                      Color{230, 235, 242, 255}, 1);
+    } else {
+        drawSkillIcon(1064.0F, "E", "扫射", barrageTimer_, barrageCooldown_,
+                      kBarrageCooldownDuration, SKYBLUE, 0);
+        drawSkillIcon(1156.0F, "Q", "过载", overloadTimer_, overloadCooldown_,
+                      kOverloadCooldownDuration, ORANGE, 1);
+    }
 
-    if (reloading_) {
+    if (operatorKind_ == OperatorKind::Exusiai && reloading_) {
         const char* reloadText = "换弹中……";
         const float reloadWidth = font.Measure(reloadText, 24.0F);
         font.Draw(reloadText, ammoPanelX + ammoPanelWidth / 2.0F -
@@ -529,4 +785,8 @@ bool Player::IsInvincible() const {
 
 bool Player::DefeatAnimationFinished() const {
     return defeatAnimationTime_ >= 0.92F;
+}
+
+OperatorKind Player::Kind() const {
+    return operatorKind_;
 }

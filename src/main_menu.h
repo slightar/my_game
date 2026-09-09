@@ -1,4 +1,5 @@
 #pragma once
+#include "game_types.h"
 #include "raylib.h"
 
 class UiFont;
@@ -17,6 +18,7 @@ public:
     void OpenHome();
 
     [[nodiscard]] const char* SelectedOperatorName() const;
+    [[nodiscard]] OperatorKind SelectedOperator() const;
 
 private:
     enum class Page {
@@ -35,4 +37,5 @@ private:
     Page page_ = Page::Splash;
     int homeSelection_ = 0;
     int operatorCursor_ = 0;
+    OperatorKind selectedOperator_ = OperatorKind::Exusiai;
 };

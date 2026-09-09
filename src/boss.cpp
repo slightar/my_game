@@ -33,7 +33,7 @@ constexpr float kEnragedRecoverDuration = 0.16F;
 constexpr std::array<float, 3> kDartAngles{-0.24F, 0.0F, 0.24F};
 constexpr int kSpriteColumns = 10;
 constexpr int kSpriteRows = 6;
-constexpr float kSpriteHeight = 142.0F;
+constexpr float kSpriteHeight = 120.0F;
 
 std::string AssetPath(const char* relativePath) {
     return (std::filesystem::path(GetApplicationDirectory()) / relativePath).string();
@@ -72,6 +72,7 @@ void Boss::Reset() {
     nextRangedAttack_ = 0;
     animationTime_ = 0.0F;
     rushTeleportTargetX_ = position_.x;
+    stunTimer_ = 0.0F;
     darts_.clear();
 }
 
@@ -83,6 +84,10 @@ void Boss::Update(float deltaTime, Vector2 playerPosition,
     }
 
     UpdateDarts(deltaTime);
+    if (stunTimer_ > 0.0F) {
+        stunTimer_ = std::max(0.0F, stunTimer_ - deltaTime);
+        return;
+    }
     stateTimer_ -= deltaTime;
     switch (state_) {
         case State::Idle:
@@ -378,7 +383,10 @@ void Boss::DrawBattleSprite() const {
         kSpriteHeight};
     DrawTexturePro(battleSprite_, source, destination,
                    {spriteWidth / 2.0F, kSpriteHeight}, 0.0F,
-                   state_ == State::Defeated ? Fade(WHITE, 0.88F) : WHITE);
+                   state_ == State::Defeated
+                       ? Fade(WHITE, 0.88F)
+                       : (stunTimer_ > 0.0F ? Color{170, 215, 255, 255}
+                                            : WHITE));
 }
 
 void Boss::DrawFallbackBody() const {
@@ -429,6 +437,25 @@ void Boss::TakeDamage(float damage) {
     }
 }
 
+void Boss::Stun(float duration) {
+    if (state_ != State::Defeated) {
+        stunTimer_ = std::max(stunTimer_, duration);
+    }
+}
+
+bool Boss::DestroyProjectileAt(Vector2 position, float radius) {
+    const auto hit = std::find_if(darts_.begin(), darts_.end(),
+                                  [position, radius](const Dart& dart) {
+        return CheckCollisionCircles(position, radius, dart.position,
+                                     kDartRadius);
+    });
+    if (hit == darts_.end()) {
+        return false;
+    }
+    darts_.erase(hit);
+    return true;
+}
+
 Vector2 Boss::Position() const { return position_; }
 float Boss::Radius() const { return kRadius; }
 bool Boss::AttackHits(Rectangle playerHitbox, Rectangle projectileHitbox) {
@@ -443,6 +470,10 @@ bool Boss::AttackHits(Rectangle playerHitbox, Rectangle projectileHitbox) {
         return true;
     }
 
+    if (stunTimer_ > 0.0F) {
+        return false;
+    }
+
     if (state_ == State::Melee) {
         const Vector2 hitboxCenter{
             position_.x + static_cast<float>(facingDirection_) * kMeleeReach,
@@ -453,7 +484,8 @@ bool Boss::AttackHits(Rectangle playerHitbox, Rectangle projectileHitbox) {
     return false;
 }
 bool Boss::CanDealContactDamage() const {
-    return state_ != State::RushTeleportOut &&
+    return stunTimer_ <= 0.0F &&
+           state_ != State::RushTeleportOut &&
            state_ != State::RushTeleportIn &&
            state_ != State::Defeated;
 }

@@ -10,8 +10,9 @@ class UiFont;
 
 class Player {
 public:
-    void Reset();
-    void Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& audio);
+    void Reset(OperatorKind operatorKind = OperatorKind::Exusiai);
+    void Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
+                std::vector<Bullet>& bullets, AudioSystem& audio);
     void UpdateDefeatAnimation(float deltaTime);
     void Draw(const CharacterArt& art) const;
     void DrawHud(const UiFont& font, const CharacterArt& art,
@@ -25,6 +26,7 @@ public:
     [[nodiscard]] bool IsDead() const;
     [[nodiscard]] bool IsInvincible() const;
     [[nodiscard]] bool DefeatAnimationFinished() const;
+    [[nodiscard]] OperatorKind Kind() const;
 
 private:
     static constexpr float kHitboxWidth = 38.0F;
@@ -32,6 +34,10 @@ private:
     static constexpr int kMaxHealth = 3;
     static constexpr int kMagazineCapacity = 35;
     static constexpr int kMaxDodgeCharges = 1;
+    static constexpr int kMaxSwordWaveCharges = 6;
+
+    void UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
+                           float enemyRadius, std::vector<Bullet>& bullets);
 
     Vector2 position_{};
     Vector2 velocity_{};
@@ -55,6 +61,16 @@ private:
     float shotCooldown_ = 0.0F;
     float reloadTimer_ = 0.0F;
     bool reloading_ = false;
+
+    OperatorKind operatorKind_ = OperatorKind::Exusiai;
+    int swordWaveCharges_ = kMaxSwordWaveCharges;
+    float swordWaveRechargeTimer_ = 0.0F;
+    bool texasRainMode_ = false;
+    float texasRainBurstTimer_ = 0.0F;
+    float texasAttackEffectTimer_ = 0.0F;
+    float swordRainTimer_ = 0.0F;
+    float swordRainCooldown_ = 0.0F;
+    float swordRainSpawnTimer_ = 0.0F;
 
     float barrageTimer_ = 0.0F;
     float barrageCooldown_ = 0.0F;

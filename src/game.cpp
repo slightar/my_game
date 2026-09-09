@@ -9,7 +9,7 @@ Game::Game() {
 
 void Game::Reset() {
     bullets_.clear();
-    player_.Reset();
+    player_.Reset(mainMenu_.SelectedOperator());
     boss_.Reset();
     paused_ = false;
     pauseSelection_ = 0;
@@ -72,7 +72,7 @@ void Game::Update(float deltaTime) {
         return;
     }
 
-    player_.Update(deltaTime, bullets_, audio_);
+    player_.Update(deltaTime, boss_.Position(), boss_.Radius(), bullets_, audio_);
     boss_.Update(deltaTime, player_.Position(), player_.FacingDirection());
     UpdateBullets(deltaTime);
 
@@ -129,14 +129,28 @@ void Game::DrawPauseMenu() const {
 
 void Game::UpdateBullets(float deltaTime) {
     for (Bullet& bullet : bullets_) {
+        if (bullet.activationDelay > 0.0F) {
+            bullet.activationDelay =
+                std::max(0.0F, bullet.activationDelay - deltaTime);
+            continue;
+        }
         bullet.position.x += bullet.velocity.x * deltaTime;
         bullet.position.y += bullet.velocity.y * deltaTime;
         bullet.lifetime -= deltaTime;
+
+        if (bullet.destroysEnemyProjectile &&
+            boss_.DestroyProjectileAt(bullet.position, bullet.radius + 7.0F)) {
+            bullet.lifetime = 0.0F;
+            continue;
+        }
 
         if (!boss_.IsDefeated() &&
             CheckCollisionCircles(bullet.position, bullet.radius,
                                   boss_.Position(), boss_.Radius())) {
             boss_.TakeDamage(bullet.damage);
+            if (bullet.stunDuration > 0.0F) {
+                boss_.Stun(bullet.stunDuration);
+            }
             audio_.PlayBossHit();
             bullet.lifetime = 0.0F;
         }
@@ -169,6 +183,71 @@ void Game::Draw() const {
                   {112, 119, 130, 255});
 
     for (const Bullet& bullet : bullets_) {
+        if (bullet.activationDelay > 0.0F) {
+            continue;
+        }
+        if (bullet.kind == BulletKind::MeleeSlash) {
+            if (characterArt_.HasTexasSkill2Effects()) {
+                characterArt_.DrawTexasSkill2Slash(
+                    bullet.position, player_.FacingDirection(),
+                    bullet.visualVariant == 1,
+                    bullet.damageType == DamageType::Arts,
+                    bullet.lifetime, bullet.radius);
+                continue;
+            }
+            const Color slashColor = bullet.damageType == DamageType::Arts
+                                         ? Color{237, 42, 57, 255}
+                                         : Color{215, 230, 240, 255};
+            DrawCircleV(bullet.position, bullet.radius,
+                        Fade(slashColor, 0.08F));
+            DrawLineEx({bullet.position.x - bullet.radius * 0.75F,
+                        bullet.position.y - bullet.radius * 0.58F},
+                       {bullet.position.x + bullet.radius * 0.75F,
+                        bullet.position.y + bullet.radius * 0.58F},
+                       13.0F, Fade(BLACK, 0.72F));
+            DrawLineEx({bullet.position.x - bullet.radius * 0.72F,
+                        bullet.position.y - bullet.radius * 0.55F},
+                       {bullet.position.x + bullet.radius * 0.72F,
+                        bullet.position.y + bullet.radius * 0.55F},
+                       8.0F, Fade(slashColor, 0.86F));
+            if (bullet.damageType == DamageType::Arts) {
+                DrawLineEx({bullet.position.x - bullet.radius * 0.68F,
+                            bullet.position.y + bullet.radius * 0.62F},
+                           {bullet.position.x + bullet.radius * 0.68F,
+                            bullet.position.y - bullet.radius * 0.62F},
+                           11.0F, Fade(BLACK, 0.68F));
+                DrawLineEx({bullet.position.x - bullet.radius * 0.64F,
+                            bullet.position.y + bullet.radius * 0.58F},
+                           {bullet.position.x + bullet.radius * 0.64F,
+                            bullet.position.y - bullet.radius * 0.58F},
+                           6.0F, Fade(RED, 0.78F));
+            }
+            continue;
+        }
+        if (bullet.kind == BulletKind::SwordWave) {
+            const float direction = bullet.velocity.x >= 0.0F ? 1.0F : -1.0F;
+            DrawLineEx({bullet.position.x - direction * 14.0F,
+                        bullet.position.y - 28.0F},
+                       {bullet.position.x + direction * 9.0F,
+                        bullet.position.y},
+                       7.0F, Fade(RAYWHITE, 0.88F));
+            DrawLineEx({bullet.position.x + direction * 9.0F,
+                        bullet.position.y},
+                       {bullet.position.x - direction * 14.0F,
+                        bullet.position.y + 28.0F},
+                       7.0F, Fade(SKYBLUE, 0.82F));
+            continue;
+        }
+        if (bullet.kind == BulletKind::FallingSword) {
+            DrawLineEx({bullet.position.x, bullet.position.y - 34.0F},
+                       {bullet.position.x, bullet.position.y + 22.0F},
+                       7.0F, RAYWHITE);
+            DrawLineEx({bullet.position.x - 12.0F, bullet.position.y - 7.0F},
+                       {bullet.position.x + 12.0F, bullet.position.y - 7.0F},
+                       5.0F, Color{95, 174, 231, 255});
+            DrawCircleV(bullet.position, 22.0F, Fade(SKYBLUE, 0.12F));
+            continue;
+        }
         const float speed = std::sqrt(bullet.velocity.x * bullet.velocity.x +
                                       bullet.velocity.y * bullet.velocity.y);
         const Vector2 direction = speed > 0.0F

@@ -105,7 +105,10 @@ MenuAction MainMenu::Update() {
             }
             if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressed(KEY_ESCAPE)) {
                 page_ = Page::Home;
-            } else if (IsKeyPressed(KEY_ENTER) && operatorCursor_ == 0) {
+            } else if (IsKeyPressed(KEY_ENTER) && operatorCursor_ <= 1) {
+                selectedOperator_ = operatorCursor_ == 0
+                                        ? OperatorKind::Exusiai
+                                        : OperatorKind::Texas;
                 page_ = Page::Home;
             }
             break;
@@ -135,7 +138,11 @@ void MainMenu::OpenHome() {
 }
 
 const char* MainMenu::SelectedOperatorName() const {
-    return "能天使";
+    return selectedOperator_ == OperatorKind::Texas ? "德克萨斯" : "能天使";
+}
+
+OperatorKind MainMenu::SelectedOperator() const {
+    return selectedOperator_;
 }
 
 void MainMenu::DrawBackground(const UiFont& font, const char* section) const {
@@ -176,9 +183,9 @@ void MainMenu::DrawSplash(const UiFont& font) const {
 void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
     DrawBackground(font, "主页");
 
-    if (art.HasPortrait()) {
+    if (art.HasPortrait(selectedOperator_)) {
         DrawRectangle(48, 82, 478, 585, Fade(BLACK, 0.8F));
-        art.DrawPortrait({77.0F, 82.0F, 390.0F, 585.0F});
+        art.DrawPortrait(selectedOperator_, {77.0F, 82.0F, 390.0F, 585.0F});
     } else {
         DrawOperatorSilhouette({315.0F, 480.0F}, 1.25F, Fade(BLACK, 0.82F));
     }
@@ -204,7 +211,8 @@ void MainMenu::DrawStageSelect(const UiFont& font) const {
     DrawMenuCard(font, {76.0F, 175.0F, 660.0F, 295.0F},
                  "1-1  近卫交锋", "目标：击败弑君者", true, true);
     DrawRectangle(112, 386, 580, 48, kBlue);
-    font.Draw("可部署干员：能天使", 136.0F, 398.0F, 20.0F, RAYWHITE);
+    font.Draw(TextFormat("可部署干员：%s", SelectedOperatorName()),
+              136.0F, 398.0F, 20.0F, RAYWHITE);
 
     DrawMenuCard(font, {785.0F, 175.0F, 410.0F, 128.0F},
                  "1-2", "尚未开放", false, true);
@@ -225,7 +233,7 @@ void MainMenu::DrawOperatorSelect(const UiFont& font, const CharacterArt& art) c
         {864.0F, 180.0F, 345.0F, 370.0F}};
     for (int index = 0; index < 3; ++index) {
         const bool selected = operatorCursor_ == index;
-        DrawRectangleRec(cards[index], index == 0 ? kPaper : Color{55, 60, 64, 245});
+        DrawRectangleRec(cards[index], index < 2 ? kPaper : Color{55, 60, 64, 245});
         DrawRectangleLinesEx(cards[index], selected ? 5.0F : 2.0F,
                              selected ? kBlue : Fade(RAYWHITE, 0.24F));
         if (selected) {
@@ -249,12 +257,30 @@ void MainMenu::DrawOperatorSelect(const UiFont& font, const CharacterArt& art) c
     }
     font.Draw("能天使", 102.0F, 208.0F, 34.0F,
               art.HasPortrait() ? RAYWHITE : kInk);
-    font.Draw("已选择", 304.0F, 216.0F, 18.0F, kOrange);
     font.Draw("高速射击 / 弹匣容量 35", 102.0F, 496.0F, 18.0F,
               Color{69, 75, 80, 255});
 
-    font.Draw("干员 02", 500.0F, 208.0F, 31.0F, Fade(RAYWHITE, 0.52F));
-    font.Draw("开发中", 587.0F, 345.0F, 25.0F, Fade(RAYWHITE, 0.42F));
+    if (art.HasPortrait(OperatorKind::Texas)) {
+        DrawRectangle(493, 190, 295, 338, BLACK);
+        art.DrawPortrait(OperatorKind::Texas,
+                         {508.0F, 190.0F, 265.0F, 338.0F});
+        if (art.HasChibi(OperatorKind::Texas)) {
+            DrawCircle(744, 472, 51, Fade(kOrange, 0.22F));
+            art.DrawChibi(OperatorKind::Texas, {744.0F, 521.0F}, 1,
+                          105.0F, ChibiAnimation::Wave,
+                          static_cast<float>(GetTime()));
+        }
+    } else {
+        DrawOperatorSilhouette({640.0F, 405.0F}, 0.72F, kInk);
+    }
+    font.Draw("德克萨斯", 498.0F, 208.0F, 31.0F, RAYWHITE);
+    font.Draw("近战 / 剑气 / 剑雨", 498.0F, 496.0F, 18.0F,
+              Color{69, 75, 80, 255});
+    if (selectedOperator_ == OperatorKind::Exusiai) {
+        font.Draw("已选择", 304.0F, 216.0F, 18.0F, kOrange);
+    } else {
+        font.Draw("已选择", 700.0F, 216.0F, 18.0F, kOrange);
+    }
     font.Draw("干员 03", 896.0F, 208.0F, 31.0F, Fade(RAYWHITE, 0.52F));
     font.Draw("开发中", 983.0F, 345.0F, 25.0F, Fade(RAYWHITE, 0.42F));
 
