@@ -27,6 +27,13 @@ constexpr float kBulletSpeed = 1050.0F;
 constexpr float kBulletLifetime = 1.4F;
 constexpr float kBulletSpreadRadians = 0.06F;
 constexpr float kBulletRadius = 7.5F;
+constexpr float kOverloadFanStepRadians = 0.10F;
+constexpr float kBarrageLaneSpacing = 18.0F;
+
+constexpr float kBarrageDuration = 6.0F;
+constexpr float kBarrageCooldownDuration = 12.0F;
+constexpr float kOverloadDuration = 4.0F;
+constexpr float kOverloadCooldownDuration = 16.0F;
 
 }  // namespace
 
@@ -38,6 +45,7 @@ void Player::Reset() {
     jumpHoldTimer_ = 0.0F;
     animationTime_ = 0.0F;
     attackAnimationTime_ = 0.0F;
+    defeatAnimationTime_ = 0.0F;
     firing_ = false;
     health_ = kMaxHealth;
     hurtInvincibilityTimer_ = 0.0F;
@@ -49,6 +57,10 @@ void Player::Reset() {
     shotCooldown_ = 0.0F;
     reloadTimer_ = 0.0F;
     reloading_ = false;
+    barrageTimer_ = 0.0F;
+    barrageCooldown_ = 0.0F;
+    overloadTimer_ = 0.0F;
+    overloadCooldown_ = 0.0F;
 }
 
 void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& audio) {
@@ -56,6 +68,31 @@ void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& 
     animationTime_ += deltaTime;
     if (IsDead()) {
         return;
+    }
+
+    if (barrageTimer_ > 0.0F) {
+        barrageTimer_ = std::max(0.0F, barrageTimer_ - deltaTime);
+        if (barrageTimer_ <= 0.0F) {
+            barrageCooldown_ = kBarrageCooldownDuration;
+        }
+    } else {
+        barrageCooldown_ = std::max(0.0F, barrageCooldown_ - deltaTime);
+    }
+    if (overloadTimer_ > 0.0F) {
+        overloadTimer_ = std::max(0.0F, overloadTimer_ - deltaTime);
+        if (overloadTimer_ <= 0.0F) {
+            overloadCooldown_ = kOverloadCooldownDuration;
+        }
+    } else {
+        overloadCooldown_ = std::max(0.0F, overloadCooldown_ - deltaTime);
+    }
+    if (IsKeyPressed(KEY_E) && barrageTimer_ <= 0.0F &&
+        barrageCooldown_ <= 0.0F) {
+        barrageTimer_ = kBarrageDuration;
+    }
+    if (IsKeyPressed(KEY_Q) && overloadTimer_ <= 0.0F &&
+        overloadCooldown_ <= 0.0F) {
+        overloadTimer_ = kOverloadDuration;
     }
 
     float moveDirection = 0.0F;
@@ -159,14 +196,45 @@ void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& 
     if (IsKeyDown(KEY_J) && !reloading_ && ammo_ > 0 && shotCooldown_ <= 0.0F &&
         dodgeTimer_ <= 0.0F) {
         const float direction = static_cast<float>(facingDirection_);
-        const float spread = static_cast<float>(GetRandomValue(-1000, 1000)) /
-                             1000.0F * kBulletSpreadRadians;
-        bullets.push_back({
-            {position_.x + direction * (kHitboxWidth / 2.0F + 30.0F),
-             position_.y - 16.0F},
-            {direction * std::cos(spread) * kBulletSpeed,
-             std::sin(spread) * kBulletSpeed},
-            kBulletLifetime, kBulletRadius, 1});
+        const Vector2 muzzle{
+            position_.x + direction * (kHitboxWidth / 2.0F + 30.0F),
+            position_.y - 16.0F};
+        const bool barrageActive = barrageTimer_ > 0.0F;
+        const bool overloadActive = overloadTimer_ > 0.0F;
+        float bulletDamage = 1.0F;
+        if (barrageActive) {
+            bulletDamage *= 0.6F;
+        }
+        if (overloadActive) {
+            bulletDamage *= 0.5F;
+        }
+        const int fanCount = overloadActive ? 5 : 1;
+        const int laneCount = barrageActive ? 2 : 1;
+        const float randomSpread =
+            overloadActive ? 0.0F
+                           : static_cast<float>(GetRandomValue(-1000, 1000)) /
+                                 1000.0F * kBulletSpreadRadians;
+
+        for (int fanIndex = 0; fanIndex < fanCount; ++fanIndex) {
+            const float fanOffset =
+                static_cast<float>(fanIndex - fanCount / 2) *
+                kOverloadFanStepRadians;
+            const float angle = fanOffset + randomSpread;
+            const Vector2 velocity{direction * std::cos(angle) * kBulletSpeed,
+                                   std::sin(angle) * kBulletSpeed};
+            const Vector2 perpendicular{-velocity.y / kBulletSpeed,
+                                        velocity.x / kBulletSpeed};
+            for (int laneIndex = 0; laneIndex < laneCount; ++laneIndex) {
+                const float laneOffset =
+                    (static_cast<float>(laneIndex) -
+                     static_cast<float>(laneCount - 1) / 2.0F) *
+                    kBarrageLaneSpacing;
+                bullets.push_back({
+                    {muzzle.x + perpendicular.x * laneOffset,
+                     muzzle.y + perpendicular.y * laneOffset},
+                    velocity, kBulletLifetime, kBulletRadius, bulletDamage});
+            }
+        }
         --ammo_;
         shotCooldown_ = kFireInterval;
         audio.PlayGunshot(ammo_);
@@ -189,6 +257,10 @@ void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& 
     }
 }
 
+void Player::UpdateDefeatAnimation(float deltaTime) {
+    defeatAnimationTime_ += deltaTime;
+}
+
 void Player::Draw(const CharacterArt& art) const {
     const bool airborne = position_.y + kHitboxHeight / 2.0F <
                           GameConfig::kFloorY - 0.5F;
@@ -203,28 +275,10 @@ void Player::Draw(const CharacterArt& art) const {
     const bool moving = !airborne && std::abs(velocity_.x) > 1.0F;
     const float walkWave = std::sin(animationTime_ * 14.0F);
     const float walkBob = moving
-                              ? std::abs(walkWave) * 5.0F
+                              ? std::abs(walkWave) * 1.5F
                               : 0.0F;
     const Vector2 feetPosition{position_.x,
                                position_.y + kHitboxHeight / 2.0F - walkBob};
-
-    float rotation = 0.0F;
-    float horizontalScale = 1.0F;
-    float verticalScale = 1.0F;
-    if (dodgeTimer_ > 0.0F) {
-        rotation = -static_cast<float>(facingDirection_) * 11.0F;
-        horizontalScale = 1.09F;
-        verticalScale = 0.91F;
-    } else if (airborne) {
-        const bool rising = velocity_.y < 0.0F;
-        rotation = static_cast<float>(facingDirection_) * (rising ? -7.0F : 6.0F);
-        horizontalScale = rising ? 0.94F : 1.06F;
-        verticalScale = rising ? 1.08F : 0.95F;
-    } else if (moving) {
-        rotation = walkWave * 3.3F;
-        horizontalScale = 1.0F + std::abs(walkWave) * 0.025F;
-        verticalScale = 1.0F - std::abs(walkWave) * 0.035F;
-    }
 
     if (airborne) {
         const float heightAboveFloor = GameConfig::kFloorY -
@@ -258,7 +312,7 @@ void Player::Draw(const CharacterArt& art) const {
         }
     }
 
-    if (IsInvincible()) {
+    if (IsInvincible() && !IsDead()) {
         Rectangle aura = Hitbox();
         aura.x -= 7.0F;
         aura.y -= 7.0F;
@@ -271,13 +325,16 @@ void Player::Draw(const CharacterArt& art) const {
     const bool blinkOff = hurtInvincibilityTimer_ > 0.0F &&
                           static_cast<int>(hurtInvincibilityTimer_ * 14.0F) % 2 == 0;
     if (art.HasBattleChibi()) {
+        const BattleChibiAnimation battleAnimation =
+            IsDead() ? BattleChibiAnimation::Defeated
+                     : (firing_ ? BattleChibiAnimation::Attack
+                                : BattleChibiAnimation::Idle);
         art.DrawBattleChibi(
             feetPosition, facingDirection_, 120.0F,
-            firing_ ? BattleChibiAnimation::Attack
-                    : BattleChibiAnimation::Idle,
-            firing_ ? attackAnimationTime_ : animationTime_,
-            blinkOff ? Fade(WHITE, 0.3F) : WHITE,
-            rotation, horizontalScale, verticalScale);
+            battleAnimation,
+            IsDead() ? defeatAnimationTime_
+                     : (firing_ ? attackAnimationTime_ : animationTime_),
+            !IsDead() && blinkOff ? Fade(WHITE, 0.3F) : WHITE);
     } else if (art.HasChibi()) {
         art.DrawChibi(feetPosition, facingDirection_,
                       106.0F, animation, animationTime_,
@@ -319,22 +376,110 @@ void Player::DrawHud(const UiFont& font, const char* operatorName) const {
         DrawRectangleLinesEx(segment, 2.0F, RAYWHITE);
     }
 
-    const char* ammoText = TextFormat("冲锋枪  %02i / %02i", ammo_, kMagazineCapacity);
-    const float textWidth = font.Measure(ammoText, 30.0F);
-    DrawRectangle(GameConfig::kScreenWidth - static_cast<int>(textWidth) - 76,
-                  72, static_cast<int>(textWidth) + 38, 52,
-                  Fade(BLACK, 0.78F));
+    constexpr float ammoPanelX = 70.0F;
+    constexpr float ammoPanelY = 234.0F;
+    constexpr float ammoPanelWidth = 108.0F;
+    constexpr float ammoPanelHeight = 302.0F;
+    DrawRectangleRec({ammoPanelX, ammoPanelY, ammoPanelWidth, ammoPanelHeight},
+                     Fade(BLACK, 0.76F));
+    font.Draw("冲锋枪", ammoPanelX + 21.0F, ammoPanelY + 10.0F,
+              16.0F, RAYWHITE);
+    font.Draw("弹匣", ammoPanelX + 37.0F, ammoPanelY + 34.0F,
+              16.0F, Fade(RAYWHITE, 0.72F));
+    const Rectangle ammoBar{ammoPanelX + 38.0F, ammoPanelY + 66.0F,
+                            32.0F, 188.0F};
+    DrawRectangleRec(ammoBar, Color{61, 66, 74, 255});
+    const float ammoRatio = static_cast<float>(ammo_) /
+                            static_cast<float>(kMagazineCapacity);
+    const float ammoFillHeight = ammoBar.height * ammoRatio;
+    DrawRectangleRec({ammoBar.x, ammoBar.y + ammoBar.height - ammoFillHeight,
+                      ammoBar.width, ammoFillHeight},
+                     reloading_ ? ORANGE : SKYBLUE);
+    DrawRectangleLinesEx(ammoBar, 2.0F, RAYWHITE);
+    const char* ammoText = TextFormat("%02i/%02i", ammo_, kMagazineCapacity);
+    const float ammoTextWidth = font.Measure(ammoText, 17.0F);
     font.Draw(ammoText,
-              static_cast<float>(GameConfig::kScreenWidth) - textWidth - 57.0F,
-              82.0F, 30.0F, RAYWHITE);
+              ammoPanelX + (ammoPanelWidth - ammoTextWidth) / 2.0F,
+              ammoPanelY + 268.0F, 17.0F, RAYWHITE);
+
+    const auto drawSkillIcon = [&font](float x, const char* key,
+                                       const char* name, float activeTimer,
+                                       float cooldownTimer,
+                                       float cooldownDuration, Color color,
+                                       bool fanIcon) {
+        constexpr float size = 86.0F;
+        const Rectangle icon{x, 552.0F, size, size};
+        const bool active = activeTimer > 0.0F;
+        const bool coolingDown = !active && cooldownTimer > 0.0F;
+        DrawRectangleRec(icon, active ? Fade(color, 0.82F)
+                                     : (coolingDown
+                                            ? Color{25, 29, 35, 248}
+                                            : Color{39, 44, 52, 242}));
+        DrawRectangleLinesEx(icon, active ? 4.0F : 2.0F,
+                             active ? color : RAYWHITE);
+
+        const Color graphicColor = coolingDown ? Fade(RAYWHITE, 0.32F)
+                                               : RAYWHITE;
+        if (fanIcon) {
+            const Vector2 origin{icon.x + 23.0F, icon.y + 42.0F};
+            for (int ray = -2; ray <= 2; ++ray) {
+                const float angle = static_cast<float>(ray) * 0.20F;
+                const Vector2 end{origin.x + std::cos(angle) * 43.0F,
+                                  origin.y + std::sin(angle) * 43.0F};
+                DrawLineEx(origin, end, 3.0F, graphicColor);
+                DrawCircleV(end, 3.5F, color);
+            }
+        } else {
+            for (int lane = 0; lane < 2; ++lane) {
+                const float y = icon.y + 34.0F + static_cast<float>(lane) * 16.0F;
+                DrawLineEx({icon.x + 22.0F, y}, {icon.x + 65.0F, y},
+                           5.0F, graphicColor);
+                DrawCircleV({icon.x + 67.0F, y}, 5.0F, color);
+            }
+        }
+
+        DrawRectangleRec({icon.x + 5.0F, icon.y + 5.0F, 22.0F, 22.0F},
+                         Fade(BLACK, 0.72F));
+        font.Draw(key, icon.x + 10.0F, icon.y + 6.0F, 17.0F, RAYWHITE);
+        if (coolingDown) {
+            const float progress = std::clamp(
+                1.0F - cooldownTimer / cooldownDuration, 0.0F, 1.0F);
+            const Vector2 center{icon.x + size / 2.0F,
+                                 icon.y + size / 2.0F};
+            DrawRing(center, 35.0F, 40.0F, -90.0F,
+                     -90.0F + progress * 360.0F, 48, color);
+            const float handAngle = (-90.0F + progress * 360.0F) * DEG2RAD;
+            const Vector2 handEnd{center.x + std::cos(handAngle) * 32.0F,
+                                  center.y + std::sin(handAngle) * 32.0F};
+            DrawLineEx(center, handEnd, 4.0F, color);
+            DrawCircleV(center, 4.0F, RAYWHITE);
+        }
+        DrawRectangleRec({icon.x + 2.0F, icon.y + 62.0F,
+                          icon.width - 4.0F, 22.0F},
+                         Fade(BLACK, 0.62F));
+        font.Draw(name, icon.x + 8.0F, icon.y + 65.0F, 14.0F, RAYWHITE);
+        if (active || coolingDown) {
+            const float timer = active ? activeTimer : cooldownTimer;
+            const char* timerText = TextFormat("%.1f", timer);
+            const float timerWidth = font.Measure(timerText, 17.0F);
+            DrawRectangleRec({icon.x + icon.width - timerWidth - 11.0F,
+                              icon.y + 5.0F, timerWidth + 7.0F, 22.0F},
+                             Fade(BLACK, 0.72F));
+            font.Draw(timerText, icon.x + icon.width - timerWidth - 8.0F,
+                      icon.y + 6.0F, 17.0F, RAYWHITE);
+        }
+    };
+    drawSkillIcon(1064.0F, "E", "扫射", barrageTimer_, barrageCooldown_,
+                  kBarrageCooldownDuration, SKYBLUE, false);
+    drawSkillIcon(1156.0F, "Q", "过载", overloadTimer_, overloadCooldown_,
+                  kOverloadCooldownDuration, ORANGE, true);
 
     if (reloading_) {
         const char* reloadText = "换弹中……";
         const float reloadWidth = font.Measure(reloadText, 24.0F);
-        font.Draw(reloadText,
-                  static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
-                      reloadWidth / 2.0F,
-                  82.0F, 24.0F, MAROON);
+        font.Draw(reloadText, ammoPanelX + ammoPanelWidth / 2.0F -
+                                  reloadWidth / 2.0F,
+                  ammoPanelY + ammoPanelHeight + 7.0F, 20.0F, ORANGE);
     }
 }
 
@@ -343,6 +488,15 @@ bool Player::TakeDamage(Vector2 damageSource) {
         return false;
     }
     --health_;
+    if (IsDead()) {
+        defeatAnimationTime_ = 0.0F;
+        hurtInvincibilityTimer_ = 0.0F;
+        dodgeTimer_ = 0.0F;
+        firing_ = false;
+        velocity_ = {};
+        position_.y = GameConfig::kFloorY - kHitboxHeight / 2.0F;
+        return true;
+    }
     hurtInvincibilityTimer_ = kHurtInvincibilityDuration;
     velocity_.x = (position_.x >= damageSource.x ? 1.0F : -1.0F) * 430.0F;
     velocity_.y = -260.0F;
@@ -359,10 +513,26 @@ Rectangle Player::Hitbox() const {
             kHitboxWidth, kHitboxHeight};
 }
 
+Rectangle Player::ProjectileHitbox() const {
+    constexpr float width = 24.0F;
+    constexpr float height = 36.0F;
+    return {position_.x - width / 2.0F,
+            position_.y - height / 2.0F,
+            width, height};
+}
+
+int Player::FacingDirection() const {
+    return facingDirection_;
+}
+
 bool Player::IsDead() const {
     return health_ <= 0;
 }
 
 bool Player::IsInvincible() const {
     return dodgeTimer_ > 0.0F || hurtInvincibilityTimer_ > 0.0F;
+}
+
+bool Player::DefeatAnimationFinished() const {
+    return defeatAnimationTime_ >= 0.92F;
 }

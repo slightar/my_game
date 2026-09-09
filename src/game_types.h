@@ -16,5 +16,5 @@ struct Bullet {
     Vector2 velocity{};
     float lifetime = 0.0F;
     float radius = 4.0F;
-    int damage = 1;
+    float damage = 1.0F;
 };

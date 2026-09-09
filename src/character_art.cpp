@@ -13,7 +13,7 @@ std::string AssetPath(const char* relativePath) {
 constexpr int kChibiColumns = 8;
 constexpr int kChibiRows = 11;
 constexpr int kBattleColumns = 12;
-constexpr int kBattleRows = 2;
+constexpr int kBattleRows = 3;
 
 struct AnimationStrip {
     int row;
@@ -136,9 +136,7 @@ void CharacterArt::DrawChibi(Vector2 feetPosition, int facingDirection,
 
 void CharacterArt::DrawBattleChibi(Vector2 feetPosition, int facingDirection,
                                    float height, BattleChibiAnimation animation,
-                                   float animationTime, Color tint,
-                                   float rotation, float horizontalScale,
-                                   float verticalScale) const {
+                                   float animationTime, Color tint) const {
     if (!HasBattleChibi()) {
         return;
     }
@@ -155,15 +153,18 @@ void CharacterArt::DrawBattleChibi(Vector2 feetPosition, int facingDirection,
         constexpr int kRaisedGunFrameCount = 6;
         frame = kRaisedGunFirstFrame +
                 static_cast<int>(animationTime * 18.0F) % kRaisedGunFrameCount;
+    } else if (animation == BattleChibiAnimation::Defeated) {
+        row = 2;
+        frame = std::min(static_cast<int>(animationTime * 12.0F),
+                         kBattleColumns - 1);
     }
 
-    const float width = height * frameWidth / frameHeight * horizontalScale;
-    const float drawnHeight = height * verticalScale;
+    const float width = height * frameWidth / frameHeight;
     const Rectangle source{frameWidth * static_cast<float>(frame),
                            frameHeight * static_cast<float>(row),
                            facingDirection < 0 ? -frameWidth : frameWidth,
                            frameHeight};
-    const Rectangle destination{feetPosition.x, feetPosition.y, width, drawnHeight};
+    const Rectangle destination{feetPosition.x, feetPosition.y, width, height};
     DrawTexturePro(battleChibi_, source, destination,
-                   {width / 2.0F, drawnHeight}, rotation, tint);
+                   {width / 2.0F, height}, 0.0F, tint);
 }

@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <filesystem>
+#include <string>
 
 namespace {
 
@@ -16,6 +18,9 @@ constexpr float kMeleeWindupDuration = 0.22F;
 constexpr float kMeleeDuration = 0.18F;
 constexpr float kMeleeReach = 64.0F;
 constexpr float kRushWindupDuration = 0.34F;
+constexpr float kRushTeleportOutDuration = 0.24F;
+constexpr float kRushTeleportInDuration = 0.2F;
+constexpr float kRushTeleportBehindDistance = 150.0F;
 constexpr float kRushDuration = 0.82F;
 constexpr float kRushSpeed = 1040.0F;
 constexpr float kAirWindupDuration = 0.44F;
@@ -26,6 +31,13 @@ constexpr float kDartRadius = 10.0F;
 constexpr float kRecoverDuration = 0.28F;
 constexpr float kEnragedRecoverDuration = 0.16F;
 constexpr std::array<float, 3> kDartAngles{-0.24F, 0.0F, 0.24F};
+constexpr int kSpriteColumns = 10;
+constexpr int kSpriteRows = 6;
+constexpr float kSpriteHeight = 142.0F;
+
+std::string AssetPath(const char* relativePath) {
+    return (std::filesystem::path(GetApplicationDirectory()) / relativePath).string();
+}
 
 Vector2 Lerp(Vector2 start, Vector2 end, float amount) {
     return {start.x + (end.x - start.x) * amount,
@@ -33,6 +45,21 @@ Vector2 Lerp(Vector2 start, Vector2 end, float amount) {
 }
 
 }  // namespace
+
+Boss::Boss() {
+    const std::string spritePath =
+        AssetPath("assets/enemies/crownslayer_battle.png");
+    if (FileExists(spritePath.c_str())) {
+        battleSprite_ = LoadTexture(spritePath.c_str());
+        SetTextureFilter(battleSprite_, TEXTURE_FILTER_BILINEAR);
+    }
+}
+
+Boss::~Boss() {
+    if (IsTextureValid(battleSprite_)) {
+        UnloadTexture(battleSprite_);
+    }
+}
 
 void Boss::Reset() {
     position_ = {1030.0F, GameConfig::kFloorY - kRadius};
@@ -43,10 +70,14 @@ void Boss::Reset() {
     facingDirection_ = -1;
     health_ = kMaxHealth;
     nextRangedAttack_ = 0;
+    animationTime_ = 0.0F;
+    rushTeleportTargetX_ = position_.x;
     darts_.clear();
 }
 
-void Boss::Update(float deltaTime, Vector2 playerPosition) {
+void Boss::Update(float deltaTime, Vector2 playerPosition,
+                  int playerFacingDirection) {
+    animationTime_ += deltaTime;
     if (state_ == State::Defeated) {
         return;
     }
@@ -62,7 +93,7 @@ void Boss::Update(float deltaTime, Vector2 playerPosition) {
                 } else {
                     switch (nextRangedAttack_) {
                         case 0:
-                            StartRush(playerPosition);
+                            StartRush(playerPosition, playerFacingDirection);
                             break;
                         case 1:
                             StartAirSlash(playerPosition);
@@ -86,14 +117,34 @@ void Boss::Update(float deltaTime, Vector2 playerPosition) {
             position_.x += static_cast<float>(facingDirection_) * 170.0F * deltaTime;
             if (stateTimer_ <= 0.0F) {
                 state_ = State::Recover;
+                animationTime_ = 0.0F;
                 stateTimer_ = health_ <= kMaxHealth / 2
                                   ? kEnragedRecoverDuration
                                   : kRecoverDuration;
             }
             break;
+        case State::RushTeleportOut:
+            if (stateTimer_ <= 0.0F) {
+                position_.x = rushTeleportTargetX_;
+                position_.y = GameConfig::kFloorY - kRadius;
+                facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
+                state_ = State::RushTeleportIn;
+                animationTime_ = 0.0F;
+                stateTimer_ = kRushTeleportInDuration;
+            }
+            break;
+        case State::RushTeleportIn:
+            facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
+            if (stateTimer_ <= 0.0F) {
+                state_ = State::Rush;
+                animationTime_ = 0.0F;
+                stateTimer_ = kRushDuration;
+            }
+            break;
         case State::RushWindup:
             if (stateTimer_ <= 0.0F) {
                 state_ = State::Rush;
+                animationTime_ = 0.0F;
                 stateTimer_ = kRushDuration;
             }
             break;
@@ -106,6 +157,7 @@ void Boss::Update(float deltaTime, Vector2 playerPosition) {
             position_.x = clampedX;
             if (stateTimer_ <= 0.0F || hitWall) {
                 state_ = State::Recover;
+                animationTime_ = 0.0F;
                 stateTimer_ = health_ <= kMaxHealth / 2
                                   ? kEnragedRecoverDuration
                                   : kRecoverDuration;
@@ -115,6 +167,7 @@ void Boss::Update(float deltaTime, Vector2 playerPosition) {
         case State::AirSlashWindup:
             if (stateTimer_ <= 0.0F) {
                 state_ = State::AirSlash;
+                animationTime_ = 0.0F;
                 stateTimer_ = kAirSlashDuration;
             }
             break;
@@ -125,6 +178,7 @@ void Boss::Update(float deltaTime, Vector2 playerPosition) {
             if (stateTimer_ <= 0.0F) {
                 position_ = slashTarget_;
                 state_ = State::Recover;
+                animationTime_ = 0.0F;
                 stateTimer_ = health_ <= kMaxHealth / 2
                                   ? kEnragedRecoverDuration
                                   : kRecoverDuration;
@@ -136,6 +190,7 @@ void Boss::Update(float deltaTime, Vector2 playerPosition) {
             if (stateTimer_ <= 0.0F) {
                 LaunchDarts();
                 state_ = State::Recover;
+                animationTime_ = 0.0F;
                 stateTimer_ = health_ <= kMaxHealth / 2
                                   ? kEnragedRecoverDuration
                                   : kRecoverDuration;
@@ -144,6 +199,7 @@ void Boss::Update(float deltaTime, Vector2 playerPosition) {
         case State::Recover:
             if (stateTimer_ <= 0.0F) {
                 state_ = State::Idle;
+                animationTime_ = 0.0F;
                 stateTimer_ = health_ <= kMaxHealth / 2
                                   ? kEnragedIdleDuration
                                   : kIdleDuration;
@@ -158,14 +214,28 @@ void Boss::StartMelee(Vector2 playerPosition) {
     facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
     position_.y = GameConfig::kFloorY - kRadius;
     state_ = State::MeleeWindup;
+    animationTime_ = 0.0F;
     stateTimer_ = kMeleeWindupDuration;
 }
 
-void Boss::StartRush(Vector2 playerPosition) {
+void Boss::StartRush(Vector2 playerPosition, int playerFacingDirection) {
     facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
     position_.y = GameConfig::kFloorY - kRadius;
-    state_ = State::RushWindup;
-    stateTimer_ = kRushWindupDuration;
+    if (health_ <= kMaxHealth / 2) {
+        const float left = GameConfig::kRoom.x + 28.0F + kRadius;
+        const float right = GameConfig::kRoom.x + GameConfig::kRoom.width -
+                            28.0F - kRadius;
+        rushTeleportTargetX_ = std::clamp(
+            playerPosition.x - static_cast<float>(playerFacingDirection) *
+                                   kRushTeleportBehindDistance,
+            left, right);
+        state_ = State::RushTeleportOut;
+        stateTimer_ = kRushTeleportOutDuration;
+    } else {
+        state_ = State::RushWindup;
+        stateTimer_ = kRushWindupDuration;
+    }
+    animationTime_ = 0.0F;
 }
 
 void Boss::StartAirSlash(Vector2 playerPosition) {
@@ -180,6 +250,7 @@ void Boss::StartAirSlash(Vector2 playerPosition) {
                     GameConfig::kFloorY - kRadius};
     position_ = slashStart_;
     state_ = State::AirSlashWindup;
+    animationTime_ = 0.0F;
     stateTimer_ = kAirWindupDuration;
 }
 
@@ -187,6 +258,7 @@ void Boss::StartDartVolley(Vector2 playerPosition) {
     facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
     position_.y = GameConfig::kFloorY - kRadius;
     state_ = State::DartWindup;
+    animationTime_ = 0.0F;
     stateTimer_ = kDartWindupDuration;
 }
 
@@ -235,62 +307,81 @@ void Boss::DrawDarts() const {
     }
 }
 
-void Boss::Draw(const UiFont& font) const {
-    DrawDarts();
-
-    if (state_ == State::Defeated) {
-        DrawCircleV(position_, kRadius, Fade(DARKPURPLE, 0.28F));
+void Boss::DrawBattleSprite() const {
+    if (!IsTextureValid(battleSprite_)) {
+        DrawFallbackBody();
         return;
     }
 
-    if (state_ == State::MeleeWindup) {
-        const float direction = static_cast<float>(facingDirection_);
-        DrawLineEx({position_.x + direction * 22.0F, position_.y - 6.0F},
-                   {position_.x + direction * 96.0F, position_.y - 6.0F},
-                   10.0F, Fade(ORANGE, 0.55F));
-        font.Draw("挥砍", position_.x - 24.0F, position_.y - 72.0F, 20.0F, ORANGE);
-    }
-    if (state_ == State::Melee) {
-        const float direction = static_cast<float>(facingDirection_);
-        DrawLineEx({position_.x + direction * 12.0F, position_.y - 22.0F},
-                   {position_.x + direction * 102.0F, position_.y + 24.0F},
-                   18.0F, Fade(RED, 0.72F));
-    }
-
-    if (state_ == State::RushWindup) {
-        const float endX = facingDirection_ > 0
-                               ? GameConfig::kRoom.x + GameConfig::kRoom.width - 30.0F
-                               : GameConfig::kRoom.x + 30.0F;
-        DrawLineEx({position_.x, GameConfig::kFloorY - 6.0F},
-                   {endX, GameConfig::kFloorY - 6.0F}, 8.0F, Fade(RED, 0.55F));
-        font.Draw("突袭", position_.x - 24.0F, position_.y - 72.0F, 20.0F, RED);
-    }
-    if (state_ == State::AirSlashWindup) {
-        DrawLineEx(slashStart_, slashTarget_, 9.0F, Fade(RED, 0.55F));
-        DrawCircleV(slashTarget_, 18.0F, Fade(RED, 0.35F));
-        font.Draw("空中斩", position_.x - 28.0F, position_.y - 62.0F, 18.0F, RED);
-    }
-    if (state_ == State::DartWindup) {
-        const Vector2 origin{
-            position_.x + static_cast<float>(facingDirection_) * 30.0F,
-            position_.y - 24.0F};
-        for (const float angle : kDartAngles) {
-            const Vector2 target{
-                origin.x + static_cast<float>(facingDirection_) *
-                               std::cos(angle) * 190.0F,
-                origin.y + std::sin(angle) * 190.0F};
-            DrawLineEx(origin, target, 4.0F, Fade(ORANGE, 0.48F));
-        }
-        font.Draw("飞镖", position_.x - 24.0F, position_.y - 72.0F,
-                  20.0F, ORANGE);
-    }
-    if (state_ == State::Melee || state_ == State::Rush ||
-        state_ == State::AirSlash) {
-        DrawCircleV({position_.x - static_cast<float>(facingDirection_) * 28.0F,
-                     position_.y - 4.0F},
-                    kRadius - 6.0F, Fade(PURPLE, 0.24F));
+    int row = 0;
+    bool loops = true;
+    float framesPerSecond = 10.0F;
+    switch (state_) {
+        case State::Rush:
+            row = 1;  // Move
+            break;
+        case State::MeleeWindup:
+        case State::Melee:
+        case State::DartWindup:
+            row = 2;  // Attack
+            framesPerSecond = 24.0F;
+            loops = false;
+            break;
+        case State::AirSlash:
+            row = 2;  // Attack
+            framesPerSecond = 34.0F;
+            loops = false;
+            break;
+        case State::RushTeleportOut:
+            row = 3;  // Disappear
+            framesPerSecond = 20.0F;
+            loops = false;
+            break;
+        case State::RushTeleportIn:
+        case State::AirSlashWindup:
+            row = 4;  // Appear
+            framesPerSecond = 20.0F;
+            loops = false;
+            break;
+        case State::RushWindup:
+            row = 2;  // Attack preparation
+            framesPerSecond = 24.0F;
+            loops = false;
+            break;
+        case State::Defeated:
+            row = 5;  // Die
+            loops = false;
+            break;
+        case State::Idle:
+        case State::Recover:
+        default:
+            row = 0;  // Idle
+            break;
     }
 
+    int frame = static_cast<int>(animationTime_ * framesPerSecond);
+    frame = loops ? frame % kSpriteColumns
+                  : std::min(frame, kSpriteColumns - 1);
+    const float frameWidth = static_cast<float>(battleSprite_.width) /
+                             static_cast<float>(kSpriteColumns);
+    const float frameHeight = static_cast<float>(battleSprite_.height) /
+                              static_cast<float>(kSpriteRows);
+    const float spriteWidth = kSpriteHeight * frameWidth / frameHeight;
+    const Rectangle source{frameWidth * static_cast<float>(frame),
+                           frameHeight * static_cast<float>(row),
+                           facingDirection_ < 0 ? -frameWidth : frameWidth,
+                           frameHeight};
+    const Rectangle destination{
+        position_.x,
+        position_.y + kRadius + kSpriteHeight * 0.13F,
+        spriteWidth,
+        kSpriteHeight};
+    DrawTexturePro(battleSprite_, source, destination,
+                   {spriteWidth / 2.0F, kSpriteHeight}, 0.0F,
+                   state_ == State::Defeated ? Fade(WHITE, 0.88F) : WHITE);
+}
+
+void Boss::DrawFallbackBody() const {
     DrawCircleV(position_, kRadius + 5.0F, BLACK);
     DrawCircleV(position_, kRadius, DARKPURPLE);
     DrawRectangle(static_cast<int>(position_.x) - 21,
@@ -299,6 +390,17 @@ void Boss::Draw(const UiFont& font) const {
     DrawLineEx({position_.x + direction * 18.0F, position_.y + 5.0F},
                {position_.x + direction * 62.0F, position_.y + 30.0F},
                7.0F, LIGHTGRAY);
+}
+
+void Boss::Draw(const UiFont& font) const {
+    DrawDarts();
+
+    if (state_ == State::Defeated) {
+        DrawBattleSprite();
+        return;
+    }
+
+    DrawBattleSprite();
     font.Draw("弑君者", position_.x - 25.0F, position_.y - 50.0F, 14.0F, MAROON);
 }
 
@@ -307,7 +409,7 @@ void Boss::DrawHud(const UiFont& font) const {
     constexpr int height = 22;
     const int x = GameConfig::kScreenWidth / 2 - width / 2;
     const int y = GameConfig::kScreenHeight - 44;
-    const float ratio = static_cast<float>(health_) / static_cast<float>(kMaxHealth);
+    const float ratio = health_ / kMaxHealth;
     DrawRectangle(x, y, width, height, Color{55, 58, 67, 255});
     DrawRectangle(x, y, static_cast<int>(static_cast<float>(width) * ratio), height, MAROON);
     DrawRectangleLines(x, y, width, height, RAYWHITE);
@@ -315,25 +417,26 @@ void Boss::DrawHud(const UiFont& font) const {
               18.0F, RAYWHITE);
 }
 
-void Boss::TakeDamage(int damage) {
+void Boss::TakeDamage(float damage) {
     if (state_ == State::Defeated) {
         return;
     }
-    health_ = std::max(0, health_ - damage);
-    if (health_ == 0) {
+    health_ = std::max(0.0F, health_ - damage);
+    if (health_ <= 0.0F) {
         state_ = State::Defeated;
+        animationTime_ = 0.0F;
         darts_.clear();
     }
 }
 
 Vector2 Boss::Position() const { return position_; }
 float Boss::Radius() const { return kRadius; }
-bool Boss::AttackHits(Rectangle playerHitbox) {
+bool Boss::AttackHits(Rectangle playerHitbox, Rectangle projectileHitbox) {
     const auto dartHit = std::find_if(
         darts_.begin(), darts_.end(),
-        [playerHitbox](const Dart& dart) {
+        [projectileHitbox](const Dart& dart) {
             return CheckCollisionCircleRec(dart.position, kDartRadius,
-                                           playerHitbox);
+                                           projectileHitbox);
         });
     if (dartHit != darts_.end()) {
         darts_.erase(dartHit);
@@ -348,5 +451,10 @@ bool Boss::AttackHits(Rectangle playerHitbox) {
     }
 
     return false;
+}
+bool Boss::CanDealContactDamage() const {
+    return state_ != State::RushTeleportOut &&
+           state_ != State::RushTeleportIn &&
+           state_ != State::Defeated;
 }
 bool Boss::IsDefeated() const { return state_ == State::Defeated; }

@@ -1,21 +1,35 @@
 #include "ui_font.h"
 
+#include <filesystem>
+#include <string>
+
 namespace {
 
 constexpr const char* kUiGlyphs =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
     " /+-.:……，："
-    "移动空格二段跳按住射击并锁定朝向换弹闪避生命冲锋枪中"
-    "任务失败弑君者已击败回车键重新开始游戏挥砍突袭空中斩飞镖"
-    "罗德岛战术终端系统接入主页当前出战能天使选择关卡行动干员"
-    "角色或方向确认档案近卫交锋目标可部署尚未开放返回一名高速"
-    "弹匣容量开发查看";
+    "按案败避标镖并部查朝车冲出弹当档岛德定动端段二发返方放飞"
+    "锋干高格关换挥回或击继键交角接近进君卡开砍看可空量罗名命"
+    "目能前枪确认任容入色闪尚射生失使始弑署术速锁天跳停统突退"
+    "卫未务袭戏系匣向新行续选页一移已游员暂择斩战者中终重主住作"
+    "扫模式过载冷却就绪效";
+
+constexpr int kFontAtlasSize = 128;
 
 const char* FindFontPath() {
-    if (FileExists("assets/fonts/ui.ttf")) {
-        return "assets/fonts/ui.ttf";
+    static const std::string bundledPath =
+        (std::filesystem::path(GetApplicationDirectory()) /
+         "assets/fonts/ui.ttf").string();
+    if (FileExists(bundledPath.c_str())) {
+        return bundledPath.c_str();
     }
 #ifdef _WIN32
+    if (FileExists("C:/Windows/Fonts/NotoSansSC-VF.ttf")) {
+        return "C:/Windows/Fonts/NotoSansSC-VF.ttf";
+    }
+    if (FileExists("C:/Windows/Fonts/msyh.ttf")) {
+        return "C:/Windows/Fonts/msyh.ttf";
+    }
     if (FileExists("C:/Windows/Fonts/simhei.ttf")) {
         return "C:/Windows/Fonts/simhei.ttf";
     }
@@ -33,13 +47,15 @@ UiFont::UiFont() : font_(GetFontDefault()) {
 
     int glyphCount = 0;
     int* codepoints = LoadCodepoints(kUiGlyphs, &glyphCount);
-    const Font loadedFont = LoadFontEx(fontPath, 64, codepoints, glyphCount);
+    const Font loadedFont =
+        LoadFontEx(fontPath, kFontAtlasSize, codepoints, glyphCount);
     UnloadCodepoints(codepoints);
 
     if (loadedFont.texture.id != 0 &&
         loadedFont.texture.id != GetFontDefault().texture.id) {
         font_ = loadedFont;
         ownsFont_ = true;
+        SetTextureFilter(font_.texture, TEXTURE_FILTER_BILINEAR);
     }
 }
 

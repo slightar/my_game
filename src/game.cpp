@@ -53,25 +53,35 @@ void Game::Update(float deltaTime) {
     }
 
     if (player_.IsDead() || boss_.IsDefeated()) {
-        if (IsKeyPressed(KEY_ENTER)) {
-            Reset();
+        if (player_.IsDead()) {
+            player_.UpdateDefeatAnimation(deltaTime);
         }
-        if (IsKeyPressed(KEY_BACKSPACE)) {
-            inBattle_ = false;
-            mainMenu_.OpenHome();
+        if (boss_.IsDefeated()) {
+            boss_.Update(deltaTime, player_.Position(),
+                         player_.FacingDirection());
+        }
+        if (!player_.IsDead() || player_.DefeatAnimationFinished()) {
+            if (IsKeyPressed(KEY_ENTER)) {
+                Reset();
+            }
+            if (IsKeyPressed(KEY_BACKSPACE)) {
+                inBattle_ = false;
+                mainMenu_.OpenHome();
+            }
         }
         return;
     }
 
     player_.Update(deltaTime, bullets_, audio_);
-    boss_.Update(deltaTime, player_.Position());
+    boss_.Update(deltaTime, player_.Position(), player_.FacingDirection());
     UpdateBullets(deltaTime);
 
-    const bool touchingBoss = !boss_.IsDefeated() &&
+    const bool touchingBoss = boss_.CanDealContactDamage() &&
                               CheckCollisionCircleRec(boss_.Position(), boss_.Radius(),
                                                       player_.Hitbox());
     const bool hitByBossAttack = !boss_.IsDefeated() &&
-                                 boss_.AttackHits(player_.Hitbox());
+                                 boss_.AttackHits(player_.Hitbox(),
+                                                  player_.ProjectileHitbox());
     if (touchingBoss || hitByBossAttack) {
         if (player_.TakeDamage(boss_.Position())) {
             audio_.PlayPlayerHit();
@@ -179,7 +189,10 @@ void Game::Draw() const {
     player_.DrawHud(uiFont_, mainMenu_.SelectedOperatorName());
     boss_.DrawHud(uiFont_);
 
-    if (player_.IsDead() || boss_.IsDefeated()) {
+    const bool showResult = boss_.IsDefeated() ||
+                            (player_.IsDead() &&
+                             player_.DefeatAnimationFinished());
+    if (showResult) {
         DrawRectangle(0, 0, GameConfig::kScreenWidth, GameConfig::kScreenHeight,
                       Fade(BLACK, 0.58F));
         const char* title = player_.IsDead() ? "任务失败" : "弑君者已击败";

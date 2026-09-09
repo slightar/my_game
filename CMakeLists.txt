@@ -32,4 +32,12 @@ add_custom_command(TARGET my_game POST_BUILD
 
 if (WIN32)
     target_link_libraries(my_game PRIVATE imm32)
+    if (MINGW)
+        target_link_options(my_game PRIVATE -static-libgcc -static-libstdc++)
+        get_filename_component(MINGW_RUNTIME_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+        add_custom_command(TARGET my_game POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${MINGW_RUNTIME_DIR}/libwinpthread-1.dll"
+                        $<TARGET_FILE_DIR:my_game>)
+    endif()
 endif()

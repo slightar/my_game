@@ -12,7 +12,8 @@ enum class ChibiAnimation {
 
 enum class BattleChibiAnimation {
     Idle,
-    Attack
+    Attack,
+    Defeated
 };
 
 class CharacterArt {
@@ -32,9 +33,7 @@ public:
                    Color tint = WHITE) const;
     void DrawBattleChibi(Vector2 feetPosition, int facingDirection, float height,
                          BattleChibiAnimation animation, float animationTime,
-                         Color tint = WHITE, float rotation = 0.0F,
-                         float horizontalScale = 1.0F,
-                         float verticalScale = 1.0F) const;
+                         Color tint = WHITE) const;
 
 private:
     Texture2D portrait_{};
