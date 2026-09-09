@@ -16,6 +16,7 @@ public:
 
     void Update(float deltaTime);
     void Draw() const;
+    [[nodiscard]] bool ShouldQuit() const;
 
 private:
     void Reset();
@@ -31,5 +32,6 @@ private:
     std::vector<Bullet> bullets_;
     bool inBattle_ = false;
     bool paused_ = false;
+    bool quitRequested_ = false;
     int pauseSelection_ = 0;
 };

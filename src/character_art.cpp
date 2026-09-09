@@ -136,7 +136,9 @@ void CharacterArt::DrawChibi(Vector2 feetPosition, int facingDirection,
 
 void CharacterArt::DrawBattleChibi(Vector2 feetPosition, int facingDirection,
                                    float height, BattleChibiAnimation animation,
-                                   float animationTime, Color tint) const {
+                                   float animationTime, Color tint,
+                                   float rotation, float horizontalScale,
+                                   float verticalScale) const {
     if (!HasBattleChibi()) {
         return;
     }
@@ -155,12 +157,13 @@ void CharacterArt::DrawBattleChibi(Vector2 feetPosition, int facingDirection,
                 static_cast<int>(animationTime * 18.0F) % kRaisedGunFrameCount;
     }
 
-    const float width = height * frameWidth / frameHeight;
+    const float width = height * frameWidth / frameHeight * horizontalScale;
+    const float drawnHeight = height * verticalScale;
     const Rectangle source{frameWidth * static_cast<float>(frame),
                            frameHeight * static_cast<float>(row),
                            facingDirection < 0 ? -frameWidth : frameWidth,
                            frameHeight};
-    const Rectangle destination{feetPosition.x, feetPosition.y, width, height};
+    const Rectangle destination{feetPosition.x, feetPosition.y, width, drawnHeight};
     DrawTexturePro(battleChibi_, source, destination,
-                   {width / 2.0F, height}, 0.0F, tint);
+                   {width / 2.0F, drawnHeight}, rotation, tint);
 }

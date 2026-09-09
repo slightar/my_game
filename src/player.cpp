@@ -25,11 +25,13 @@ constexpr float kFireInterval = 0.085F;
 constexpr float kReloadDuration = 1.35F;
 constexpr float kBulletSpeed = 1050.0F;
 constexpr float kBulletLifetime = 1.4F;
+constexpr float kBulletSpreadRadians = 0.06F;
+constexpr float kBulletRadius = 7.5F;
 
 }  // namespace
 
 void Player::Reset() {
-    position_ = {240.0F, GameConfig::kFloorY - kRadius};
+    position_ = {240.0F, GameConfig::kFloorY - kHitboxHeight / 2.0F};
     velocity_ = {};
     facingDirection_ = 1;
     jumpCount_ = 0;
@@ -121,18 +123,20 @@ void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& 
     position_.x += velocity_.x * deltaTime;
     position_.y += velocity_.y * deltaTime;
 
-    const float leftLimit = GameConfig::kRoom.x + 28.0F + kRadius;
+    const float leftLimit = GameConfig::kRoom.x + 28.0F + kHitboxWidth / 2.0F;
     const float rightLimit =
-        GameConfig::kRoom.x + GameConfig::kRoom.width - 28.0F - kRadius;
+        GameConfig::kRoom.x + GameConfig::kRoom.width - 28.0F -
+        kHitboxWidth / 2.0F;
     position_.x = std::clamp(position_.x, leftLimit, rightLimit);
 
-    const float ceilingLimit = GameConfig::kRoom.y + 28.0F + kRadius;
+    const float ceilingLimit = GameConfig::kRoom.y + 28.0F +
+                               kHitboxHeight / 2.0F;
     if (position_.y < ceilingLimit) {
         position_.y = ceilingLimit;
         velocity_.y = 0.0F;
     }
-    if (position_.y + kRadius >= GameConfig::kFloorY) {
-        position_.y = GameConfig::kFloorY - kRadius;
+    if (position_.y + kHitboxHeight / 2.0F >= GameConfig::kFloorY) {
+        position_.y = GameConfig::kFloorY - kHitboxHeight / 2.0F;
         velocity_.y = 0.0F;
         jumpCount_ = 0;
     }
@@ -155,9 +159,14 @@ void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& 
     if (IsKeyDown(KEY_J) && !reloading_ && ammo_ > 0 && shotCooldown_ <= 0.0F &&
         dodgeTimer_ <= 0.0F) {
         const float direction = static_cast<float>(facingDirection_);
+        const float spread = static_cast<float>(GetRandomValue(-1000, 1000)) /
+                             1000.0F * kBulletSpreadRadians;
         bullets.push_back({
-            {position_.x + direction * (kRadius + 24.0F), position_.y - 30.0F},
-            {direction * kBulletSpeed, 0.0F}, kBulletLifetime, 4.0F, 1});
+            {position_.x + direction * (kHitboxWidth / 2.0F + 30.0F),
+             position_.y - 16.0F},
+            {direction * std::cos(spread) * kBulletSpeed,
+             std::sin(spread) * kBulletSpeed},
+            kBulletLifetime, kBulletRadius, 1});
         --ammo_;
         shotCooldown_ = kFireInterval;
         audio.PlayGunshot(ammo_);
@@ -181,7 +190,8 @@ void Player::Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& 
 }
 
 void Player::Draw(const CharacterArt& art) const {
-    const bool airborne = position_.y + kRadius < GameConfig::kFloorY - 0.5F;
+    const bool airborne = position_.y + kHitboxHeight / 2.0F <
+                          GameConfig::kFloorY - 0.5F;
     ChibiAnimation animation = ChibiAnimation::Idle;
     if (dodgeTimer_ > 0.0F) {
         animation = ChibiAnimation::Dodge;
@@ -190,17 +200,48 @@ void Player::Draw(const CharacterArt& art) const {
     } else if (std::abs(velocity_.x) > 1.0F) {
         animation = ChibiAnimation::Run;
     }
-    const float walkBob = !airborne && std::abs(velocity_.x) > 1.0F
-                              ? std::abs(std::sin(animationTime_ * 11.0F)) * 3.0F
+    const bool moving = !airborne && std::abs(velocity_.x) > 1.0F;
+    const float walkWave = std::sin(animationTime_ * 14.0F);
+    const float walkBob = moving
+                              ? std::abs(walkWave) * 5.0F
                               : 0.0F;
     const Vector2 feetPosition{position_.x,
-                               position_.y + kRadius - walkBob};
+                               position_.y + kHitboxHeight / 2.0F - walkBob};
+
+    float rotation = 0.0F;
+    float horizontalScale = 1.0F;
+    float verticalScale = 1.0F;
+    if (dodgeTimer_ > 0.0F) {
+        rotation = -static_cast<float>(facingDirection_) * 11.0F;
+        horizontalScale = 1.09F;
+        verticalScale = 0.91F;
+    } else if (airborne) {
+        const bool rising = velocity_.y < 0.0F;
+        rotation = static_cast<float>(facingDirection_) * (rising ? -7.0F : 6.0F);
+        horizontalScale = rising ? 0.94F : 1.06F;
+        verticalScale = rising ? 1.08F : 0.95F;
+    } else if (moving) {
+        rotation = walkWave * 3.3F;
+        horizontalScale = 1.0F + std::abs(walkWave) * 0.025F;
+        verticalScale = 1.0F - std::abs(walkWave) * 0.035F;
+    }
+
+    if (airborne) {
+        const float heightAboveFloor = GameConfig::kFloorY -
+                                       (position_.y + kHitboxHeight / 2.0F);
+        const float shadowScale = std::clamp(1.0F - heightAboveFloor / 430.0F,
+                                             0.38F, 1.0F);
+        DrawEllipse(static_cast<int>(position_.x),
+                    static_cast<int>(GameConfig::kFloorY + 3.0F),
+                    27.0F * shadowScale, 7.0F * shadowScale,
+                    Fade(BLACK, 0.24F));
+    }
 
     if (dodgeTimer_ > 0.0F) {
         for (int trail = 1; trail <= 3; ++trail) {
             const Vector2 trailPosition{
                 position_.x - static_cast<float>(dodgeDirection_ * trail) * 18.0F,
-                position_.y + kRadius};
+                position_.y + kHitboxHeight / 2.0F};
             if (art.HasBattleChibi()) {
                 art.DrawBattleChibi(trailPosition, facingDirection_, 120.0F,
                                     BattleChibiAnimation::Idle,
@@ -209,15 +250,22 @@ void Player::Draw(const CharacterArt& art) const {
                 art.DrawChibi(trailPosition, facingDirection_, 106.0F,
                               animation, animationTime_, Fade(WHITE, 0.11F));
             } else {
-                DrawCircleV({trailPosition.x, trailPosition.y - kRadius},
-                            kRadius - static_cast<float>(trail * 3),
-                            Fade(BLACK, 0.16F));
+                const Rectangle trailBody{trailPosition.x - 15.0F,
+                                          trailPosition.y - 68.0F,
+                                          30.0F, 68.0F};
+                DrawRectangleRec(trailBody, Fade(BLACK, 0.16F));
             }
         }
     }
 
     if (IsInvincible()) {
-        DrawCircleV(position_, kRadius + 7.0F, dodgeTimer_ > 0.0F ? SKYBLUE : ORANGE);
+        Rectangle aura = Hitbox();
+        aura.x -= 7.0F;
+        aura.y -= 7.0F;
+        aura.width += 14.0F;
+        aura.height += 14.0F;
+        DrawRectangleLinesEx(aura, 3.0F,
+                             dodgeTimer_ > 0.0F ? SKYBLUE : ORANGE);
     }
 
     const bool blinkOff = hurtInvincibilityTimer_ > 0.0F &&
@@ -228,18 +276,21 @@ void Player::Draw(const CharacterArt& art) const {
             firing_ ? BattleChibiAnimation::Attack
                     : BattleChibiAnimation::Idle,
             firing_ ? attackAnimationTime_ : animationTime_,
-            blinkOff ? Fade(WHITE, 0.3F) : WHITE);
+            blinkOff ? Fade(WHITE, 0.3F) : WHITE,
+            rotation, horizontalScale, verticalScale);
     } else if (art.HasChibi()) {
         art.DrawChibi(feetPosition, facingDirection_,
                       106.0F, animation, animationTime_,
                       blinkOff ? Fade(WHITE, 0.3F) : WHITE);
     } else {
-        const Vector2 gunStart{position_.x, position_.y - 2.0F};
+        const Vector2 gunStart{position_.x, position_.y - 10.0F};
         const Vector2 gunEnd{
             position_.x + static_cast<float>(facingDirection_) * 48.0F,
-            position_.y - 2.0F};
+            position_.y - 10.0F};
         DrawLineEx(gunStart, gunEnd, 9.0F, DARKGRAY);
-        DrawCircleV(position_, kRadius, blinkOff ? Fade(BLACK, 0.3F) : BLACK);
+        const Rectangle body{position_.x - 16.0F, position_.y - 28.0F,
+                             32.0F, 62.0F};
+        DrawRectangleRec(body, blinkOff ? Fade(BLACK, 0.3F) : BLACK);
     }
 }
 
@@ -302,8 +353,10 @@ Vector2 Player::Position() const {
     return position_;
 }
 
-float Player::Radius() const {
-    return kRadius;
+Rectangle Player::Hitbox() const {
+    return {position_.x - kHitboxWidth / 2.0F,
+            position_.y - kHitboxHeight / 2.0F,
+            kHitboxWidth, kHitboxHeight};
 }
 
 bool Player::IsDead() const {

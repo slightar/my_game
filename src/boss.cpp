@@ -328,12 +328,12 @@ void Boss::TakeDamage(int damage) {
 
 Vector2 Boss::Position() const { return position_; }
 float Boss::Radius() const { return kRadius; }
-bool Boss::AttackHits(Vector2 playerPosition, float playerRadius) {
+bool Boss::AttackHits(Rectangle playerHitbox) {
     const auto dartHit = std::find_if(
         darts_.begin(), darts_.end(),
-        [playerPosition, playerRadius](const Dart& dart) {
-            return CheckCollisionCircles(dart.position, kDartRadius,
-                                         playerPosition, playerRadius);
+        [playerHitbox](const Dart& dart) {
+            return CheckCollisionCircleRec(dart.position, kDartRadius,
+                                           playerHitbox);
         });
     if (dartHit != darts_.end()) {
         darts_.erase(dartHit);
@@ -344,8 +344,7 @@ bool Boss::AttackHits(Vector2 playerPosition, float playerRadius) {
         const Vector2 hitboxCenter{
             position_.x + static_cast<float>(facingDirection_) * kMeleeReach,
             position_.y - 2.0F};
-        return CheckCollisionCircles(hitboxCenter, 48.0F,
-                                     playerPosition, playerRadius);
+        return CheckCollisionCircleRec(hitboxCenter, 48.0F, playerHitbox);
     }
 
     return false;

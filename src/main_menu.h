@@ -6,7 +6,8 @@ class CharacterArt;
 
 enum class MenuAction {
     None,
-    StartBattle
+    StartBattle,
+    Quit
 };
 
 class MainMenu {

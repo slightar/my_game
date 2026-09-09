@@ -1,6 +1,7 @@
 #include "game.h"
 
 #include <algorithm>
+#include <cmath>
 
 Game::Game() {
     Reset();
@@ -16,9 +17,12 @@ void Game::Reset() {
 
 void Game::Update(float deltaTime) {
     if (!inBattle_) {
-        if (mainMenu_.Update() == MenuAction::StartBattle) {
+        const MenuAction action = mainMenu_.Update();
+        if (action == MenuAction::StartBattle) {
             Reset();
             inBattle_ = true;
+        } else if (action == MenuAction::Quit) {
+            quitRequested_ = true;
         }
         return;
     }
@@ -64,15 +68,19 @@ void Game::Update(float deltaTime) {
     UpdateBullets(deltaTime);
 
     const bool touchingBoss = !boss_.IsDefeated() &&
-                              CheckCollisionCircles(player_.Position(), player_.Radius(),
-                                                    boss_.Position(), boss_.Radius());
+                              CheckCollisionCircleRec(boss_.Position(), boss_.Radius(),
+                                                      player_.Hitbox());
     const bool hitByBossAttack = !boss_.IsDefeated() &&
-                                 boss_.AttackHits(player_.Position(), player_.Radius());
+                                 boss_.AttackHits(player_.Hitbox());
     if (touchingBoss || hitByBossAttack) {
         if (player_.TakeDamage(boss_.Position())) {
             audio_.PlayPlayerHit();
         }
     }
+}
+
+bool Game::ShouldQuit() const {
+    return quitRequested_;
 }
 
 void Game::DrawPauseMenu() const {
@@ -151,7 +159,19 @@ void Game::Draw() const {
                   {112, 119, 130, 255});
 
     for (const Bullet& bullet : bullets_) {
-        DrawCircleV(bullet.position, bullet.radius, {245, 183, 45, 255});
+        const float speed = std::sqrt(bullet.velocity.x * bullet.velocity.x +
+                                      bullet.velocity.y * bullet.velocity.y);
+        const Vector2 direction = speed > 0.0F
+                                      ? Vector2{bullet.velocity.x / speed,
+                                                bullet.velocity.y / speed}
+                                      : Vector2{1.0F, 0.0F};
+        const Vector2 tail{bullet.position.x - direction.x * 24.0F,
+                           bullet.position.y - direction.y * 24.0F};
+        DrawLineEx(tail, bullet.position, 6.0F, Fade(ORANGE, 0.78F));
+        DrawCircleV(bullet.position, bullet.radius + 7.0F,
+                    Fade(GOLD, 0.22F));
+        DrawCircleV(bullet.position, bullet.radius, Color{255, 231, 127, 255});
+        DrawCircleV(bullet.position, bullet.radius * 0.42F, RAYWHITE);
     }
 
     boss_.Draw(uiFont_);

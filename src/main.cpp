@@ -16,7 +16,7 @@ int main() {
 
     {
         Game game;
-        while (!WindowShouldClose()) {
+        while (!WindowShouldClose() && !game.ShouldQuit()) {
             const float deltaTime = std::min(GetFrameTime(), 1.0F / 30.0F);
             game.Update(deltaTime);
 

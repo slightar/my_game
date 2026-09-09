@@ -17,12 +17,13 @@ public:
 
     bool TakeDamage(Vector2 damageSource);
     [[nodiscard]] Vector2 Position() const;
-    [[nodiscard]] float Radius() const;
+    [[nodiscard]] Rectangle Hitbox() const;
     [[nodiscard]] bool IsDead() const;
     [[nodiscard]] bool IsInvincible() const;
 
 private:
-    static constexpr float kRadius = 24.0F;
+    static constexpr float kHitboxWidth = 38.0F;
+    static constexpr float kHitboxHeight = 78.0F;
     static constexpr int kMaxHealth = 3;
     static constexpr int kMagazineCapacity = 35;
     static constexpr int kMaxDodgeCharges = 1;

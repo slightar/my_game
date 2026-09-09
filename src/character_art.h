@@ -32,7 +32,9 @@ public:
                    Color tint = WHITE) const;
     void DrawBattleChibi(Vector2 feetPosition, int facingDirection, float height,
                          BattleChibiAnimation animation, float animationTime,
-                         Color tint = WHITE) const;
+                         Color tint = WHITE, float rotation = 0.0F,
+                         float horizontalScale = 1.0F,
+                         float verticalScale = 1.0F) const;
 
 private:
     Texture2D portrait_{};

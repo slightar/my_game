@@ -67,11 +67,17 @@ void DrawOperatorSilhouette(Vector2 center, float scale, Color color) {
 MenuAction MainMenu::Update() {
     switch (page_) {
         case Page::Splash:
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                return MenuAction::Quit;
+            }
             if (IsKeyPressed(KEY_ENTER)) {
                 page_ = Page::Home;
             }
             break;
         case Page::Home:
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                return MenuAction::Quit;
+            }
             if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) {
                 homeSelection_ = std::max(0, homeSelection_ - 1);
             }
@@ -84,7 +90,7 @@ MenuAction MainMenu::Update() {
             }
             break;
         case Page::StageSelect:
-            if (IsKeyPressed(KEY_BACKSPACE)) {
+            if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressed(KEY_ESCAPE)) {
                 page_ = Page::Home;
             } else if (IsKeyPressed(KEY_ENTER)) {
                 return MenuAction::StartBattle;
@@ -97,7 +103,7 @@ MenuAction MainMenu::Update() {
             if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) {
                 operatorCursor_ = std::min(2, operatorCursor_ + 1);
             }
-            if (IsKeyPressed(KEY_BACKSPACE)) {
+            if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressed(KEY_ESCAPE)) {
                 page_ = Page::Home;
             } else if (IsKeyPressed(KEY_ENTER) && operatorCursor_ == 0) {
                 page_ = Page::Home;
@@ -187,7 +193,7 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
                  "干员", "选择出战角色", homeSelection_ == 1);
 
     DrawRectangle(650, 600, 560, 54, Fade(BLACK, 0.7F));
-    font.Draw("W/S 或方向键选择   Enter 确认", 685.0F, 616.0F,
+    font.Draw("W/S 或方向键选择   Enter 确认   Esc 退出", 665.0F, 616.0F,
               19.0F, RAYWHITE);
 }
 
@@ -205,7 +211,7 @@ void MainMenu::DrawStageSelect(const UiFont& font) const {
     DrawMenuCard(font, {785.0F, 335.0F, 410.0F, 128.0F},
                  "1-3", "尚未开放", false, true);
     DrawRectangle(76, 560, 1119, 70, Fade(BLACK, 0.72F));
-    font.Draw("Enter 开始行动   Backspace 返回主页", 108.0F, 581.0F,
+    font.Draw("Enter 开始行动   Backspace/Esc 返回主页", 108.0F, 581.0F,
               22.0F, RAYWHITE);
 }
 
@@ -253,6 +259,6 @@ void MainMenu::DrawOperatorSelect(const UiFont& font, const CharacterArt& art) c
     font.Draw("开发中", 983.0F, 345.0F, 25.0F, Fade(RAYWHITE, 0.42F));
 
     DrawRectangle(72, 590, 1137, 58, Fade(BLACK, 0.72F));
-    font.Draw("方向键查看   Enter 确认   Backspace 返回主页",
+    font.Draw("方向键查看   Enter 确认   Backspace/Esc 返回主页",
               104.0F, 608.0F, 20.0F, RAYWHITE);
 }

@@ -16,7 +16,7 @@ public:
     void TakeDamage(int damage);
     [[nodiscard]] Vector2 Position() const;
     [[nodiscard]] float Radius() const;
-    [[nodiscard]] bool AttackHits(Vector2 playerPosition, float playerRadius);
+    [[nodiscard]] bool AttackHits(Rectangle playerHitbox);
     [[nodiscard]] bool IsDefeated() const;
 
 private:
