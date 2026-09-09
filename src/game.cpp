@@ -186,7 +186,7 @@ void Game::Draw() const {
 
     boss_.Draw(uiFont_);
     player_.Draw(characterArt_);
-    player_.DrawHud(uiFont_, mainMenu_.SelectedOperatorName());
+    player_.DrawHud(uiFont_, characterArt_, mainMenu_.SelectedOperatorName());
     boss_.DrawHud(uiFont_);
 
     const bool showResult = boss_.IsDefeated() ||

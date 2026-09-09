@@ -60,9 +60,25 @@ CharacterArt::CharacterArt() {
         battleChibi_ = LoadTexture(battlePath.c_str());
         SetTextureFilter(battleChibi_, TEXTURE_FILTER_BILINEAR);
     }
+
+    const char* skillPaths[2] = {
+        "assets/operators/exusiai_skill_2.png",
+        "assets/operators/exusiai_skill_3.png"};
+    for (int index = 0; index < 2; ++index) {
+        const std::string skillPath = AssetPath(skillPaths[index]);
+        if (FileExists(skillPath.c_str())) {
+            skillIcons_[index] = LoadTexture(skillPath.c_str());
+            SetTextureFilter(skillIcons_[index], TEXTURE_FILTER_BILINEAR);
+        }
+    }
 }
 
 CharacterArt::~CharacterArt() {
+    for (Texture2D& skillIcon : skillIcons_) {
+        if (IsTextureValid(skillIcon)) {
+            UnloadTexture(skillIcon);
+        }
+    }
     if (IsTextureValid(battleChibi_)) {
         UnloadTexture(battleChibi_);
     }
@@ -84,6 +100,11 @@ bool CharacterArt::HasChibi() const {
 
 bool CharacterArt::HasBattleChibi() const {
     return IsTextureValid(battleChibi_);
+}
+
+bool CharacterArt::HasSkillIcon(int skillIndex) const {
+    return skillIndex >= 0 && skillIndex < 2 &&
+           IsTextureValid(skillIcons_[skillIndex]);
 }
 
 void CharacterArt::DrawPortrait(Rectangle destination, Color tint) const {
@@ -167,4 +188,16 @@ void CharacterArt::DrawBattleChibi(Vector2 feetPosition, int facingDirection,
     const Rectangle destination{feetPosition.x, feetPosition.y, width, height};
     DrawTexturePro(battleChibi_, source, destination,
                    {width / 2.0F, height}, 0.0F, tint);
+}
+
+void CharacterArt::DrawSkillIcon(int skillIndex, Rectangle destination,
+                                 Color tint) const {
+    if (!HasSkillIcon(skillIndex)) {
+        return;
+    }
+    const Texture2D& texture = skillIcons_[skillIndex];
+    DrawTexturePro(texture,
+                   {0.0F, 0.0F, static_cast<float>(texture.width),
+                    static_cast<float>(texture.height)},
+                   destination, {}, 0.0F, tint);
 }

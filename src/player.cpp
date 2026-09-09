@@ -351,7 +351,8 @@ void Player::Draw(const CharacterArt& art) const {
     }
 }
 
-void Player::DrawHud(const UiFont& font, const char* operatorName) const {
+void Player::DrawHud(const UiFont& font, const CharacterArt& art,
+                     const char* operatorName) const {
     const char* operatorText = TextFormat("当前干员：%s", operatorName);
     font.Draw(operatorText, 72.0F, 42.0F, 18.0F, RAYWHITE);
     DrawRectangle(70, 70, 420, 150, Fade(BLACK, 0.72F));
@@ -402,11 +403,11 @@ void Player::DrawHud(const UiFont& font, const char* operatorName) const {
               ammoPanelX + (ammoPanelWidth - ammoTextWidth) / 2.0F,
               ammoPanelY + 268.0F, 17.0F, RAYWHITE);
 
-    const auto drawSkillIcon = [&font](float x, const char* key,
+    const auto drawSkillIcon = [&font, &art](float x, const char* key,
                                        const char* name, float activeTimer,
                                        float cooldownTimer,
                                        float cooldownDuration, Color color,
-                                       bool fanIcon) {
+                                       int skillIndex) {
         constexpr float size = 86.0F;
         const Rectangle icon{x, 552.0F, size, size};
         const bool active = activeTimer > 0.0F;
@@ -415,28 +416,18 @@ void Player::DrawHud(const UiFont& font, const char* operatorName) const {
                                      : (coolingDown
                                             ? Color{25, 29, 35, 248}
                                             : Color{39, 44, 52, 242}));
+        const Rectangle artwork{icon.x + 3.0F, icon.y + 3.0F,
+                                icon.width - 6.0F, icon.height - 6.0F};
+        if (art.HasSkillIcon(skillIndex)) {
+            art.DrawSkillIcon(skillIndex, artwork,
+                              coolingDown ? Color{150, 150, 150, 255}
+                                          : WHITE);
+        } else {
+            font.Draw(key, icon.x + 31.0F, icon.y + 24.0F,
+                      34.0F, RAYWHITE);
+        }
         DrawRectangleLinesEx(icon, active ? 4.0F : 2.0F,
                              active ? color : RAYWHITE);
-
-        const Color graphicColor = coolingDown ? Fade(RAYWHITE, 0.32F)
-                                               : RAYWHITE;
-        if (fanIcon) {
-            const Vector2 origin{icon.x + 23.0F, icon.y + 42.0F};
-            for (int ray = -2; ray <= 2; ++ray) {
-                const float angle = static_cast<float>(ray) * 0.20F;
-                const Vector2 end{origin.x + std::cos(angle) * 43.0F,
-                                  origin.y + std::sin(angle) * 43.0F};
-                DrawLineEx(origin, end, 3.0F, graphicColor);
-                DrawCircleV(end, 3.5F, color);
-            }
-        } else {
-            for (int lane = 0; lane < 2; ++lane) {
-                const float y = icon.y + 34.0F + static_cast<float>(lane) * 16.0F;
-                DrawLineEx({icon.x + 22.0F, y}, {icon.x + 65.0F, y},
-                           5.0F, graphicColor);
-                DrawCircleV({icon.x + 67.0F, y}, 5.0F, color);
-            }
-        }
 
         DrawRectangleRec({icon.x + 5.0F, icon.y + 5.0F, 22.0F, 22.0F},
                          Fade(BLACK, 0.72F));
@@ -446,13 +437,16 @@ void Player::DrawHud(const UiFont& font, const char* operatorName) const {
                 1.0F - cooldownTimer / cooldownDuration, 0.0F, 1.0F);
             const Vector2 center{icon.x + size / 2.0F,
                                  icon.y + size / 2.0F};
-            DrawRing(center, 35.0F, 40.0F, -90.0F,
-                     -90.0F + progress * 360.0F, 48, color);
+            DrawRing(center, 34.0F, 40.0F, -90.0F, 270.0F, 64,
+                     Color{108, 112, 120, 245});
+            DrawRing(center, 34.0F, 40.0F, -90.0F,
+                     -90.0F + progress * 360.0F, 64, RAYWHITE);
             const float handAngle = (-90.0F + progress * 360.0F) * DEG2RAD;
             const Vector2 handEnd{center.x + std::cos(handAngle) * 32.0F,
                                   center.y + std::sin(handAngle) * 32.0F};
-            DrawLineEx(center, handEnd, 4.0F, color);
-            DrawCircleV(center, 4.0F, RAYWHITE);
+            DrawLineEx(center, handEnd, 4.0F,
+                       Color{132, 136, 144, 255});
+            DrawCircleV(center, 4.0F, Color{132, 136, 144, 255});
         }
         DrawRectangleRec({icon.x + 2.0F, icon.y + 62.0F,
                           icon.width - 4.0F, 22.0F},
@@ -470,9 +464,9 @@ void Player::DrawHud(const UiFont& font, const char* operatorName) const {
         }
     };
     drawSkillIcon(1064.0F, "E", "扫射", barrageTimer_, barrageCooldown_,
-                  kBarrageCooldownDuration, SKYBLUE, false);
+                  kBarrageCooldownDuration, SKYBLUE, 0);
     drawSkillIcon(1156.0F, "Q", "过载", overloadTimer_, overloadCooldown_,
-                  kOverloadCooldownDuration, ORANGE, true);
+                  kOverloadCooldownDuration, ORANGE, 1);
 
     if (reloading_) {
         const char* reloadText = "换弹中……";

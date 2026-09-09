@@ -14,7 +14,8 @@ public:
     void Update(float deltaTime, std::vector<Bullet>& bullets, AudioSystem& audio);
     void UpdateDefeatAnimation(float deltaTime);
     void Draw(const CharacterArt& art) const;
-    void DrawHud(const UiFont& font, const char* operatorName) const;
+    void DrawHud(const UiFont& font, const CharacterArt& art,
+                 const char* operatorName) const;
 
     bool TakeDamage(Vector2 damageSource);
     [[nodiscard]] Vector2 Position() const;
