@@ -3,6 +3,19 @@
 #include <algorithm>
 #include <cmath>
 
+namespace {
+
+constexpr float kGateCloseDuration = 0.72F;
+constexpr float kEncounterBannerDuration = 2.4F;
+constexpr float kCameraFollowSharpness = 6.5F;
+
+float SmoothStep(float value) {
+    const float t = std::clamp(value, 0.0F, 1.0F);
+    return t * t * (3.0F - 2.0F * t);
+}
+
+}  // namespace
+
 Game::Game() {
     Reset();
 }
@@ -11,6 +24,10 @@ void Game::Reset() {
     bullets_.clear();
     player_.Reset(mainMenu_.SelectedOperator());
     boss_.Reset();
+    bossActive_ = false;
+    cameraX_ = static_cast<float>(GameConfig::kScreenWidth) / 2.0F;
+    gateCloseTimer_ = 0.0F;
+    encounterBannerTimer_ = 0.0F;
     paused_ = false;
     pauseSelection_ = 0;
 }
@@ -52,11 +69,11 @@ void Game::Update(float deltaTime) {
         return;
     }
 
-    if (player_.IsDead() || boss_.IsDefeated()) {
+    if (player_.IsDead() || (bossActive_ && boss_.IsDefeated())) {
         if (player_.IsDead()) {
             player_.UpdateDefeatAnimation(deltaTime);
         }
-        if (boss_.IsDefeated()) {
+        if (bossActive_ && boss_.IsDefeated()) {
             boss_.Update(deltaTime, player_.Position(),
                          player_.FacingDirection());
         }
@@ -73,13 +90,31 @@ void Game::Update(float deltaTime) {
     }
 
     player_.Update(deltaTime, boss_.Position(), boss_.Radius(), bullets_, audio_);
-    boss_.Update(deltaTime, player_.Position(), player_.FacingDirection());
-    UpdateBullets(deltaTime);
 
-    const bool touchingBoss = boss_.CanDealContactDamage() &&
+    if (!bossActive_ && player_.Position().x >= GameConfig::kBossTriggerX) {
+        bossActive_ = true;
+        gateCloseTimer_ = kGateCloseDuration;
+        encounterBannerTimer_ = kEncounterBannerDuration;
+        bullets_.clear();
+    }
+    if (bossActive_) {
+        const float sealedLeft = GameConfig::kBossGateX +
+                                 GameConfig::kBossGateWidth / 2.0F + 34.0F;
+        const float worldRight = GameConfig::kRoom.x + GameConfig::kRoom.width -
+                                 75.0F;
+        player_.SetHorizontalBounds(sealedLeft, worldRight);
+        gateCloseTimer_ = std::max(0.0F, gateCloseTimer_ - deltaTime);
+        encounterBannerTimer_ =
+            std::max(0.0F, encounterBannerTimer_ - deltaTime);
+        boss_.Update(deltaTime, player_.Position(), player_.FacingDirection());
+    }
+    UpdateBullets(deltaTime);
+    UpdateCamera(deltaTime);
+
+    const bool touchingBoss = bossActive_ && boss_.CanDealContactDamage() &&
                               CheckCollisionCircleRec(boss_.Position(), boss_.Radius(),
                                                       player_.Hitbox());
-    const bool hitByBossAttack = !boss_.IsDefeated() &&
+    const bool hitByBossAttack = bossActive_ && !boss_.IsDefeated() &&
                                  boss_.AttackHits(player_.Hitbox(),
                                                   player_.ProjectileHitbox());
     if (touchingBoss || hitByBossAttack) {
@@ -87,6 +122,17 @@ void Game::Update(float deltaTime) {
             audio_.PlayPlayerHit();
         }
     }
+}
+
+void Game::UpdateCamera(float deltaTime) {
+    const float halfView = static_cast<float>(GameConfig::kScreenWidth) / 2.0F;
+    const float minCameraX = halfView;
+    const float maxCameraX = GameConfig::kRoom.x + GameConfig::kRoom.width -
+                             halfView;
+    const float desiredX = std::clamp(player_.Position().x,
+                                      minCameraX, maxCameraX);
+    const float blend = 1.0F - std::exp(-kCameraFollowSharpness * deltaTime);
+    cameraX_ += (desiredX - cameraX_) * blend;
 }
 
 bool Game::ShouldQuit() const {
@@ -144,7 +190,7 @@ void Game::UpdateBullets(float deltaTime) {
             continue;
         }
 
-        if (!boss_.IsDefeated() &&
+        if (!bullet.hasHit && bossActive_ && !boss_.IsDefeated() &&
             CheckCollisionCircles(bullet.position, bullet.radius,
                                   boss_.Position(), boss_.Radius())) {
             boss_.TakeDamage(bullet.damage);
@@ -152,7 +198,10 @@ void Game::UpdateBullets(float deltaTime) {
                 boss_.Stun(bullet.stunDuration);
             }
             audio_.PlayBossHit();
-            bullet.lifetime = 0.0F;
+            bullet.hasHit = true;
+            if (bullet.kind != BulletKind::MeleeSlash) {
+                bullet.lifetime = 0.0F;
+            }
         }
     }
 
@@ -166,6 +215,118 @@ void Game::UpdateBullets(float deltaTime) {
     });
 }
 
+void Game::DrawMap() const {
+    const Rectangle room = GameConfig::kRoom;
+    DrawRectangleRec(room, Color{205, 211, 216, 255});
+
+    // A cool, clean safe room separated from the combat space by a heavy gate.
+    DrawRectangleRec(GameConfig::kSafeRoom, Color{188, 207, 211, 255});
+    DrawRectangle(static_cast<int>(GameConfig::kSafeRoom.x),
+                  static_cast<int>(GameConfig::kSafeRoom.y),
+                  static_cast<int>(GameConfig::kSafeRoom.width), 18,
+                  Color{63, 85, 91, 255});
+    for (int panel = 0; panel < 4; ++panel) {
+        const float panelX = GameConfig::kSafeRoom.x + 42.0F + panel * 164.0F;
+        DrawRectangleRec({panelX, 101.0F, 118.0F, 12.0F},
+                         Color{159, 238, 232, 255});
+        DrawRectangleRec({panelX + 5.0F, 105.0F, 108.0F, 30.0F},
+                         Fade(Color{124, 232, 224, 255}, 0.12F));
+    }
+    DrawRectangleRec({108.0F, 210.0F, 236.0F, 122.0F},
+                     Color{104, 124, 130, 255});
+    DrawRectangleLinesEx({108.0F, 210.0F, 236.0F, 122.0F}, 5.0F,
+                         Color{52, 68, 73, 255});
+    DrawRectangleRec({131.0F, 237.0F, 190.0F, 10.0F},
+                     Color{130, 222, 211, 255});
+    uiFont_.Draw("安全室 // SAFE", 137.0F, 274.0F, 22.0F,
+                 Color{221, 244, 241, 255});
+
+    DrawRectangleRec(GameConfig::kBossArena, Color{183, 187, 193, 255});
+    for (int panel = 0; panel < 8; ++panel) {
+        const float x = GameConfig::kBossArena.x + panel * 194.0F;
+        DrawRectangleLinesEx({x, GameConfig::kBossArena.y, 194.0F,
+                              GameConfig::kBossArena.height},
+                             2.0F, Fade(Color{75, 80, 88, 255}, 0.22F));
+    }
+    DrawRectangleRec({GameConfig::kBossArena.x + 76.0F, 116.0F,
+                      354.0F, 9.0F}, Color{178, 34, 43, 255});
+    uiFont_.Draw("高危作战区域", GameConfig::kBossArena.x + 91.0F,
+                 139.0F, 21.0F, Color{117, 31, 37, 255});
+
+    DrawRectangleLinesEx(room, 5.0F, Color{69, 75, 84, 255});
+    DrawRectangle(static_cast<int>(room.x),
+                  static_cast<int>(GameConfig::kFloorY),
+                  static_cast<int>(room.width),
+                  static_cast<int>(room.y + room.height - GameConfig::kFloorY),
+                  Color{97, 103, 113, 255});
+    for (int marker = 0; marker < 24; ++marker) {
+        const float x = room.x + 26.0F + marker * 101.0F;
+        DrawRectangleRec({x, GameConfig::kFloorY + 4.0F, 52.0F, 5.0F},
+                         marker < 8 ? Color{111, 187, 180, 255}
+                                    : Color{139, 58, 62, 255});
+    }
+
+    constexpr float doorTop = 185.0F;
+    const float gateLeft = GameConfig::kBossGateX -
+                           GameConfig::kBossGateWidth / 2.0F;
+    DrawRectangleRec({gateLeft - 17.0F, room.y, 17.0F,
+                      GameConfig::kFloorY - room.y},
+                     Color{55, 61, 69, 255});
+    DrawRectangleRec({gateLeft + GameConfig::kBossGateWidth, room.y, 17.0F,
+                      GameConfig::kFloorY - room.y},
+                     Color{55, 61, 69, 255});
+    DrawRectangleRec({gateLeft - 17.0F, doorTop - 22.0F,
+                      GameConfig::kBossGateWidth + 34.0F, 22.0F},
+                     Color{45, 50, 58, 255});
+
+    if (bossActive_) {
+        const float closeProgress = SmoothStep(
+            1.0F - gateCloseTimer_ / kGateCloseDuration);
+        const float gateHeight = (GameConfig::kFloorY - doorTop) * closeProgress;
+        DrawRectangleRec({gateLeft, doorTop, GameConfig::kBossGateWidth,
+                          gateHeight}, Color{58, 63, 71, 255});
+        for (float y = doorTop + 12.0F; y < doorTop + gateHeight; y += 28.0F) {
+            DrawRectangleRec({gateLeft + 3.0F, y,
+                              GameConfig::kBossGateWidth - 6.0F, 5.0F},
+                             Color{111, 117, 126, 255});
+        }
+        DrawRectangleRec({gateLeft, doorTop + gateHeight - 8.0F,
+                          GameConfig::kBossGateWidth, 8.0F},
+                         Color{207, 39, 47, 255});
+    } else {
+        uiFont_.Draw("→", gateLeft - 2.0F, 238.0F, 34.0F,
+                     Color{175, 231, 226, 255});
+        uiFont_.Draw("进入作战区", GameConfig::kBossGateX - 74.0F,
+                     287.0F, 18.0F, Color{77, 91, 98, 255});
+    }
+}
+
+void Game::DrawEncounterBanner() const {
+    if (encounterBannerTimer_ <= 0.0F) {
+        return;
+    }
+    const float elapsed = kEncounterBannerDuration - encounterBannerTimer_;
+    const float fadeIn = std::clamp(elapsed / 0.25F, 0.0F, 1.0F);
+    const float fadeOut = std::clamp(encounterBannerTimer_ / 0.45F, 0.0F, 1.0F);
+    const float alpha = fadeIn * fadeOut;
+    DrawRectangleRec({0.0F, 286.0F,
+                      static_cast<float>(GameConfig::kScreenWidth), 112.0F},
+                     Fade(BLACK, alpha * 0.68F));
+    const char* title = "目标出现：弑君者";
+    const float titleWidth = uiFont_.Measure(title, 38.0F);
+    uiFont_.Draw(title,
+                 static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
+                     titleWidth / 2.0F,
+                 304.0F, 38.0F, Fade(RAYWHITE, alpha));
+    const char* warning = "后门封锁 // 作战开始";
+    const float warningWidth = uiFont_.Measure(warning, 19.0F);
+    uiFont_.Draw(warning,
+                 static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
+                     warningWidth / 2.0F,
+                 356.0F, 19.0F,
+                 Fade(Color{239, 57, 64, 255}, alpha));
+}
+
 void Game::Draw() const {
     if (!inBattle_) {
         mainMenu_.Draw(uiFont_, characterArt_);
@@ -173,14 +334,13 @@ void Game::Draw() const {
     }
 
     ClearBackground({24, 27, 34, 255});
-    DrawRectangleRec(GameConfig::kRoom, {222, 225, 229, 255});
-    DrawRectangleLinesEx(GameConfig::kRoom, 5.0F, {88, 94, 105, 255});
-    DrawRectangle(static_cast<int>(GameConfig::kRoom.x),
-                  static_cast<int>(GameConfig::kFloorY),
-                  static_cast<int>(GameConfig::kRoom.width),
-                  static_cast<int>(GameConfig::kRoom.y + GameConfig::kRoom.height -
-                                   GameConfig::kFloorY),
-                  {112, 119, 130, 255});
+    const Camera2D worldCamera{
+        {static_cast<float>(GameConfig::kScreenWidth) / 2.0F,
+         static_cast<float>(GameConfig::kScreenHeight) / 2.0F},
+        {cameraX_, static_cast<float>(GameConfig::kScreenHeight) / 2.0F},
+        0.0F, 1.0F};
+    BeginMode2D(worldCamera);
+    DrawMap();
 
     for (const Bullet& bullet : bullets_) {
         if (bullet.activationDelay > 0.0F) {
@@ -265,10 +425,15 @@ void Game::Draw() const {
 
     boss_.Draw(uiFont_);
     player_.Draw(characterArt_);
-    player_.DrawHud(uiFont_, characterArt_, mainMenu_.SelectedOperatorName());
-    boss_.DrawHud(uiFont_);
+    EndMode2D();
 
-    const bool showResult = boss_.IsDefeated() ||
+    player_.DrawHud(uiFont_, characterArt_, mainMenu_.SelectedOperatorName());
+    if (bossActive_) {
+        boss_.DrawHud(uiFont_);
+    }
+    DrawEncounterBanner();
+
+    const bool showResult = (bossActive_ && boss_.IsDefeated()) ||
                             (player_.IsDead() &&
                              player_.DefeatAnimationFinished());
     if (showResult) {

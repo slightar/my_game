@@ -62,7 +62,9 @@ Boss::~Boss() {
 }
 
 void Boss::Reset() {
-    position_ = {1030.0F, GameConfig::kFloorY - kRadius};
+    position_ = {GameConfig::kBossArena.x + GameConfig::kBossArena.width -
+                     210.0F,
+                 GameConfig::kFloorY - kRadius};
     slashStart_ = position_;
     slashTarget_ = position_;
     state_ = State::Idle;
@@ -155,8 +157,9 @@ void Boss::Update(float deltaTime, Vector2 playerPosition,
             break;
         case State::Rush: {
             position_.x += static_cast<float>(facingDirection_) * kRushSpeed * deltaTime;
-            const float left = GameConfig::kRoom.x + 28.0F + kRadius;
-            const float right = GameConfig::kRoom.x + GameConfig::kRoom.width - 28.0F - kRadius;
+            const float left = GameConfig::kBossArena.x + 28.0F + kRadius;
+            const float right = GameConfig::kBossArena.x +
+                                GameConfig::kBossArena.width - 28.0F - kRadius;
             const float clampedX = std::clamp(position_.x, left, right);
             const bool hitWall = clampedX != position_.x;
             position_.x = clampedX;
@@ -227,8 +230,8 @@ void Boss::StartRush(Vector2 playerPosition, int playerFacingDirection) {
     facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
     position_.y = GameConfig::kFloorY - kRadius;
     if (health_ <= kMaxHealth / 2) {
-        const float left = GameConfig::kRoom.x + 28.0F + kRadius;
-        const float right = GameConfig::kRoom.x + GameConfig::kRoom.width -
+        const float left = GameConfig::kBossArena.x + 28.0F + kRadius;
+        const float right = GameConfig::kBossArena.x + GameConfig::kBossArena.width -
                             28.0F - kRadius;
         rushTeleportTargetX_ = std::clamp(
             playerPosition.x - static_cast<float>(playerFacingDirection) *
@@ -245,12 +248,13 @@ void Boss::StartRush(Vector2 playerPosition, int playerFacingDirection) {
 
 void Boss::StartAirSlash(Vector2 playerPosition) {
     facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
-    const float left = GameConfig::kRoom.x + 80.0F;
-    const float right = GameConfig::kRoom.x + GameConfig::kRoom.width - 80.0F;
+    const float left = GameConfig::kBossArena.x + 80.0F;
+    const float right = GameConfig::kBossArena.x +
+                        GameConfig::kBossArena.width - 80.0F;
     slashStart_ = {
         std::clamp(playerPosition.x - static_cast<float>(facingDirection_) * 260.0F,
                    left, right),
-        GameConfig::kRoom.y + 120.0F};
+        GameConfig::kBossArena.y + 120.0F};
     slashTarget_ = {std::clamp(playerPosition.x, left, right),
                     GameConfig::kFloorY - kRadius};
     position_ = slashStart_;
@@ -288,7 +292,7 @@ void Boss::UpdateDarts(float deltaTime) {
     }
 
     std::erase_if(darts_, [](const Dart& dart) {
-        const Rectangle room = GameConfig::kRoom;
+        const Rectangle room = GameConfig::kBossArena;
         return dart.position.x < room.x ||
                dart.position.x > room.x + room.width ||
                dart.position.y < room.y ||

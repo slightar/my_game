@@ -14,6 +14,7 @@ public:
     void Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
                 std::vector<Bullet>& bullets, AudioSystem& audio);
     void UpdateDefeatAnimation(float deltaTime);
+    void SetHorizontalBounds(float left, float right);
     void Draw(const CharacterArt& art) const;
     void DrawHud(const UiFont& font, const CharacterArt& art,
                  const char* operatorName) const;
@@ -41,6 +42,8 @@ private:
 
     Vector2 position_{};
     Vector2 velocity_{};
+    float movementLeft_ = 0.0F;
+    float movementRight_ = 0.0F;
     int facingDirection_ = 1;
     int jumpCount_ = 0;
     float jumpHoldTimer_ = 0.0F;

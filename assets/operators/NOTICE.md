@@ -22,9 +22,19 @@
 - `texas_skill2_battle.png` 由 ArknightsResource 收录的缄默德克萨斯官方
   战斗 Spine 模型 `char_1028_texas2` 离线渲染，包含二技能
   `Skill_2_Idle`、`Skill_2_Loop` 与 `Skill_2_End` 动画帧。
+- `texas_skill2_composite.png` 与 `texas_skill2_hit_composite.png` 由用户提供的
+  1080p60 透明 ProRes 4444 素材
+  `缄默德克萨斯_纯刀光_原作优化_1080p60_透明.mov` 和
+  `缄默德克萨斯_命中迸射_原作优化_1080p60_透明.mov` 转换为两张同步的
+  8×9 透明帧表；每层各保留 65 个有效帧，运行时分别绘制主体刀光和命中碎片。
 - `texas_skill2_aura.png`、`texas_skill2_slash_a.png`、
-  `texas_skill2_slash_b.png` 与 `texas_skill2_burst.png` 提取自用户本机安装的
-  《明日方舟》客户端，仅用于本非商业学习项目中的二技能特效还原。
+  `texas_skill2_slash_b.png`、`texas_skill2_burst.png`、
+  `texas_skill2_arc.png` 与 `texas_skill2_impact.png` 提取自用户本机安装的
+  《明日方舟》PC 客户端 `battle/prefabs/effects/texas2.ab`，分别来自官方
+  `texas2_lt_11$0` 弧形粒子蒙版与 `texas2_lt_11` 刀光爆点；弧形
+  蒙版仅做了中性白处理，以便在运行时恢复原效果的蓝白粒子材质着色。
+  暗色拖尾来自官方共享资源 `refs/fx/texture/trail.ab` 中由材质
+  `texas2_daoguang_an` 引用的 `trail_47_C`，未修改纹理内容。
 - 上述来源不授予本项目对官方素材的再分发或商业使用权。若公开发布项目，需根据
   权利方规则重新确认授权范围，并优先让使用者自行取得素材。
 

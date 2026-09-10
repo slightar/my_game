@@ -21,6 +21,9 @@ public:
 private:
     void Reset();
     void UpdateBullets(float deltaTime);
+    void UpdateCamera(float deltaTime);
+    void DrawMap() const;
+    void DrawEncounterBanner() const;
     void DrawPauseMenu() const;
 
     AudioSystem audio_;
@@ -33,5 +36,9 @@ private:
     bool inBattle_ = false;
     bool paused_ = false;
     bool quitRequested_ = false;
+    bool bossActive_ = false;
+    float cameraX_ = static_cast<float>(GameConfig::kScreenWidth) / 2.0F;
+    float gateCloseTimer_ = 0.0F;
+    float encounterBannerTimer_ = 0.0F;
     int pauseSelection_ = 0;
 };

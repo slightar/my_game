@@ -36,6 +36,7 @@ constexpr float kOverloadDuration = 4.0F;
 constexpr float kOverloadCooldownDuration = 16.0F;
 
 constexpr float kTexasAttackInterval = 0.32F;
+constexpr float kTexasRainAttackInterval = 0.52F;
 constexpr float kTexasMeleeRange = 112.0F;
 constexpr float kTexasRainMeleeRange = 142.0F;
 constexpr float kSwordWaveSpeed = 780.0F;
@@ -50,6 +51,8 @@ constexpr float kTexasSwordWaveDamage = 1.45F;
 constexpr float kTexasSwordRainDamage = 1.55F;
 constexpr float kTexasRainEnterDuration = 0.62F;
 constexpr float kTexasRainExitDuration = 0.28F;
+constexpr float kTexasRainSlashDuration = 0.52F;
+constexpr float kTexasNormalSlashDuration = 0.17F;
 
 }  // namespace
 
@@ -57,6 +60,9 @@ void Player::Reset(OperatorKind operatorKind) {
     operatorKind_ = operatorKind;
     position_ = {240.0F, GameConfig::kFloorY - kHitboxHeight / 2.0F};
     velocity_ = {};
+    movementLeft_ = GameConfig::kRoom.x + 28.0F + kHitboxWidth / 2.0F;
+    movementRight_ = GameConfig::kRoom.x + GameConfig::kRoom.width - 28.0F -
+                     kHitboxWidth / 2.0F;
     facingDirection_ = 1;
     jumpCount_ = 0;
     jumpHoldTimer_ = 0.0F;
@@ -188,11 +194,7 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
     position_.x += velocity_.x * deltaTime;
     position_.y += velocity_.y * deltaTime;
 
-    const float leftLimit = GameConfig::kRoom.x + 28.0F + kHitboxWidth / 2.0F;
-    const float rightLimit =
-        GameConfig::kRoom.x + GameConfig::kRoom.width - 28.0F -
-        kHitboxWidth / 2.0F;
-    position_.x = std::clamp(position_.x, leftLimit, rightLimit);
+    position_.x = std::clamp(position_.x, movementLeft_, movementRight_);
 
     const float ceilingLimit = GameConfig::kRoom.y + 28.0F +
                                kHitboxHeight / 2.0F;
@@ -358,13 +360,14 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
                 bullets.push_back({
                     {position_.x + direction * range * 0.54F,
                      position_.y - 8.0F + static_cast<float>(strike) * 12.0F},
-                    {}, 0.12F + static_cast<float>(strike) * 0.035F,
+                    {}, texasRainMode_ ? kTexasRainSlashDuration
+                                       : kTexasNormalSlashDuration,
                     range * 0.53F,
                     texasRainMode_ ? kTexasRainHitDamage : kTexasMeleeDamage,
                     BulletKind::MeleeSlash,
                     texasRainMode_ ? DamageType::Arts : DamageType::Physical,
                     false, 0.0F,
-                    texasRainMode_ ? static_cast<float>(strike) * 0.10F
+                    texasRainMode_ ? static_cast<float>(strike) * 0.16F
                                    : 0.0F,
                     strike});
             }
@@ -379,8 +382,10 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
                 swordWaveRechargeTimer_ = kSwordWaveRechargeDuration;
             }
         }
-        shotCooldown_ = kTexasAttackInterval;
-        texasAttackEffectTimer_ = 0.19F;
+        shotCooldown_ = texasRainMode_ ? kTexasRainAttackInterval
+                                       : kTexasAttackInterval;
+        texasAttackEffectTimer_ = texasRainMode_ ? kTexasRainSlashDuration
+                                                 : kTexasNormalSlashDuration;
     }
 
     firing_ = texasAttackEffectTimer_ > 0.0F;
@@ -393,6 +398,12 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
 
 void Player::UpdateDefeatAnimation(float deltaTime) {
     defeatAnimationTime_ += deltaTime;
+}
+
+void Player::SetHorizontalBounds(float left, float right) {
+    movementLeft_ = std::min(left, right);
+    movementRight_ = std::max(left, right);
+    position_.x = std::clamp(position_.x, movementLeft_, movementRight_);
 }
 
 void Player::Draw(const CharacterArt& art) const {

@@ -17,6 +17,9 @@ constexpr int kBattleColumns = 12;
 constexpr int kBattleRows = 3;
 constexpr int kTexasSkill2Columns = 12;
 constexpr int kTexasSkill2Rows = 3;
+constexpr int kTexasSkill2CompositeColumns = 8;
+constexpr int kTexasSkill2CompositeFrameCount = 65;
+constexpr float kTexasSkill2CompositeDuration = 0.52F;
 
 struct AnimationStrip {
     int row;
@@ -119,15 +122,22 @@ CharacterArt::CharacterArt() {
         texasSkill2Battle_ = LoadTexture(texasSkill2BattlePath.c_str());
         SetTextureFilter(texasSkill2Battle_, TEXTURE_FILTER_BILINEAR);
     }
-    const char* texasEffectPaths[4] = {
+    const char* texasEffectPaths[9] = {
         "assets/operators/texas_skill2_aura.png",
         "assets/operators/texas_skill2_slash_a.png",
         "assets/operators/texas_skill2_slash_b.png",
-        "assets/operators/texas_skill2_burst.png"};
-    Texture2D* texasEffectTextures[4] = {
+        "assets/operators/texas_skill2_burst.png",
+        "assets/operators/texas_skill2_composite.png",
+        "assets/operators/texas_skill2_hit_composite.png",
+        "assets/operators/texas_skill2_dark_trail.png",
+        "assets/operators/texas_skill2_arc.png",
+        "assets/operators/texas_skill2_impact.png"};
+    Texture2D* texasEffectTextures[9] = {
         &texasSkill2Aura_, &texasSkill2Slashes_[0],
-        &texasSkill2Slashes_[1], &texasSkill2Burst_};
-    for (int index = 0; index < 4; ++index) {
+        &texasSkill2Slashes_[1], &texasSkill2Burst_,
+        &texasSkill2Composite_, &texasSkill2HitComposite_,
+        &texasSkill2DarkTrail_, &texasSkill2Arc_, &texasSkill2Impact_};
+    for (int index = 0; index < 9; ++index) {
         const std::string effectPath = AssetPath(texasEffectPaths[index]);
         if (FileExists(effectPath.c_str())) {
             *texasEffectTextures[index] = LoadTexture(effectPath.c_str());
@@ -148,6 +158,21 @@ CharacterArt::CharacterArt() {
 }
 
 CharacterArt::~CharacterArt() {
+    if (IsTextureValid(texasSkill2Impact_)) {
+        UnloadTexture(texasSkill2Impact_);
+    }
+    if (IsTextureValid(texasSkill2Arc_)) {
+        UnloadTexture(texasSkill2Arc_);
+    }
+    if (IsTextureValid(texasSkill2DarkTrail_)) {
+        UnloadTexture(texasSkill2DarkTrail_);
+    }
+    if (IsTextureValid(texasSkill2Composite_)) {
+        UnloadTexture(texasSkill2Composite_);
+    }
+    if (IsTextureValid(texasSkill2HitComposite_)) {
+        UnloadTexture(texasSkill2HitComposite_);
+    }
     if (IsTextureValid(texasSkill2Burst_)) {
         UnloadTexture(texasSkill2Burst_);
     }
@@ -219,9 +244,11 @@ bool CharacterArt::HasTexasSkill2Battle() const {
 
 bool CharacterArt::HasTexasSkill2Effects() const {
     return IsTextureValid(texasSkill2Aura_) &&
-           IsTextureValid(texasSkill2Slashes_[0]) &&
-           IsTextureValid(texasSkill2Slashes_[1]) &&
-           IsTextureValid(texasSkill2Burst_);
+           IsTextureValid(texasSkill2Composite_) &&
+           IsTextureValid(texasSkill2HitComposite_) &&
+           IsTextureValid(texasSkill2DarkTrail_) &&
+           IsTextureValid(texasSkill2Arc_) &&
+           IsTextureValid(texasSkill2Impact_);
 }
 
 bool CharacterArt::HasSkillIcon(int skillIndex) const {
@@ -459,39 +486,85 @@ void CharacterArt::DrawTexasSkill2Aura(Vector2 center, int facingDirection,
 void CharacterArt::DrawTexasSkill2TransitionOverlay(
     Vector2 center, int facingDirection, bool rainMode,
     float transitionProgress) const {
-    const float progress = std::clamp(transitionProgress, 0.0F, 1.0F);
-    const float direction = static_cast<float>(facingDirection);
-    const float flash = PulseWindow(progress, 0.0F, rainMode ? 0.44F : 0.58F);
-    if (flash <= 0.0F) {
+    if (!IsTextureValid(texasSkill2Arc_) ||
+        !IsTextureValid(texasSkill2Impact_) ||
+        !IsTextureValid(texasSkill2DarkTrail_)) {
         return;
     }
 
-    const float spread = rainMode ? 72.0F + SmoothStep(progress) * 98.0F
-                                  : 132.0F - SmoothStep(progress) * 48.0F;
-    const float tilt = rainMode ? 0.62F : 0.48F;
-    const Vector2 slashAStart{center.x - direction * spread,
-                              center.y - spread * tilt};
-    const Vector2 slashAEnd{center.x + direction * spread,
-                            center.y + spread * tilt};
-    const Vector2 slashBStart{center.x - direction * spread * 0.88F,
-                              center.y + spread * tilt * 0.95F};
-    const Vector2 slashBEnd{center.x + direction * spread * 0.88F,
-                            center.y - spread * tilt * 0.95F};
+    const float progress = std::clamp(transitionProgress, 0.0F, 1.0F);
+    const float direction = static_cast<float>(facingDirection);
+    const float firstArc = PulseWindow(progress, 0.01F,
+                                       rainMode ? 0.62F : 0.76F);
+    const float secondArc = PulseWindow(progress, 0.09F,
+                                        rainMode ? 0.79F : 0.92F);
+    const float expansion = rainMode ? 0.88F + SmoothStep(progress) * 0.24F
+                                     : 1.08F - SmoothStep(progress) * 0.18F;
+    const Rectangle arcSource{
+        0.0F, 0.0F,
+        facingDirection < 0 ? -static_cast<float>(texasSkill2Arc_.width)
+                            : static_cast<float>(texasSkill2Arc_.width),
+        static_cast<float>(texasSkill2Arc_.height)};
+    const Rectangle darkSource{
+        0.0F, 0.0F,
+        facingDirection < 0
+            ? -static_cast<float>(texasSkill2DarkTrail_.width)
+            : static_cast<float>(texasSkill2DarkTrail_.width),
+        static_cast<float>(texasSkill2DarkTrail_.height)};
 
-    DrawLineEx(slashAStart, slashAEnd, 28.0F,
-               Fade(BLACK, flash * 0.88F));
-    DrawLineEx(slashBStart, slashBEnd, 22.0F,
-               Fade(BLACK, flash * 0.82F));
-    DrawLineEx(slashAStart, slashAEnd, 9.0F,
-               Fade(RAYWHITE, flash));
-    DrawLineEx(slashBStart, slashBEnd, 6.0F,
-               Fade(Color{247, 31, 45, 255}, flash * 0.96F));
+    const auto drawArc = [&](float width, float height, float rotation,
+                             Color color, float alpha) {
+        DrawTexturePro(texasSkill2Arc_, arcSource,
+                       {center.x, center.y - 7.0F, width, height},
+                       {width / 2.0F, height / 2.0F}, rotation,
+                       Fade(color, std::clamp(alpha, 0.0F, 1.0F)));
+    };
 
-    const float coreRadius = 11.0F + flash * 19.0F;
+    // The official effect does not bake black into its additive blade texture.
+    // texas2_daoguang_an renders trail_47_C as a separate translucent ribbon.
+    // Draw that ribbon with normal alpha before the blue/white additive layers.
+    const auto drawDarkTrail = [&](float width, float height, float rotation,
+                                   float opacity) {
+        DrawTexturePro(texasSkill2DarkTrail_, darkSource,
+                       {center.x, center.y - 8.0F, width, height},
+                       {width / 2.0F, height / 2.0F}, rotation,
+                       Fade(Color{88, 88, 88, 255},
+                            std::clamp(opacity, 0.0F, 1.0F)));
+    };
+    drawDarkTrail(330.0F * expansion, 166.0F * expansion,
+                  5.0F * direction, firstArc * 0.18F);
+    drawDarkTrail(305.0F * expansion, 142.0F * expansion,
+                  -13.0F * direction, secondArc * 0.46F);
+
+    // The second half of the recorded attack is a red-black upper crescent.
+    // Together with the first lower sweep it closes into a fast cross cut.
+    drawArc(170.0F * expansion, 318.0F * expansion,
+            -76.0F * direction, Color{35, 8, 13, 255}, secondArc * 0.92F);
+    drawArc(158.0F * expansion, 306.0F * expansion,
+            -76.0F * direction, Color{139, 19, 31, 255}, secondArc * 0.52F);
+
     BeginBlendMode(BLEND_ADDITIVE);
-    DrawCircleGradient(static_cast<int>(center.x), static_cast<int>(center.y),
-                       coreRadius, Fade(WHITE, flash * 0.88F),
-                       Fade(Color{237, 25, 40, 255}, 0.0F));
+    drawArc(160.0F * expansion, 326.0F * expansion,
+            88.0F * direction, Color{91, 159, 255, 255}, firstArc * 0.62F);
+    drawArc(142.0F * expansion, 310.0F * expansion,
+            88.0F * direction, RAYWHITE, firstArc * 0.98F);
+    drawArc(150.0F * expansion, 292.0F * expansion,
+            -76.0F * direction, Color{218, 36, 55, 255}, secondArc * 0.50F);
+    drawArc(136.0F * expansion, 278.0F * expansion,
+            -76.0F * direction, Color{255, 225, 230, 255},
+            secondArc * 0.80F);
+
+    const float impactAlpha = PulseWindow(progress, 0.025F, 0.52F);
+    const float impactSize = 72.0F + SmoothStep(progress) * 34.0F;
+    DrawTexturePro(
+        texasSkill2Impact_,
+        {0.0F, 0.0F, static_cast<float>(texasSkill2Impact_.width),
+         static_cast<float>(texasSkill2Impact_.height)},
+        {center.x - direction * 75.0F, center.y - 13.0F,
+         impactSize, impactSize},
+        {impactSize / 2.0F, impactSize / 2.0F},
+        -14.0F * direction,
+        Fade(Color{220, 237, 255, 255}, impactAlpha));
     EndBlendMode();
 }
 
@@ -499,60 +572,173 @@ void CharacterArt::DrawTexasSkill2Slash(Vector2 center, int facingDirection,
                                         bool secondStrike,
                                         bool artsDamage, float remainingLife,
                                         float radius) const {
-    const Texture2D& slash = texasSkill2Slashes_[secondStrike ? 1 : 0];
-    if (!IsTextureValid(slash)) {
+    if (artsDamage && IsTextureValid(texasSkill2Composite_) &&
+        IsTextureValid(texasSkill2HitComposite_)) {
+        // The supplied transparent render already contains both halves of the
+        // cross cut.  The second melee bullet still applies delayed damage,
+        // but must not draw the complete animation a second time.
+        if (secondStrike) {
+            return;
+        }
+        const float progress = std::clamp(
+            1.0F - remainingLife / kTexasSkill2CompositeDuration,
+            0.0F, 0.9999F);
+        const int frame = std::min(
+            static_cast<int>(progress * kTexasSkill2CompositeFrameCount),
+            kTexasSkill2CompositeFrameCount - 1);
+        const int row = frame / kTexasSkill2CompositeColumns;
+        const int column = frame % kTexasSkill2CompositeColumns;
+        const float frameWidth = static_cast<float>(
+            texasSkill2Composite_.width / kTexasSkill2CompositeColumns);
+        const float frameHeight = frameWidth * 0.5F;
+        const float sourceX = facingDirection < 0
+                                  ? (static_cast<float>(column) + 1.0F) *
+                                        frameWidth
+                                  : static_cast<float>(column) * frameWidth;
+        const Rectangle source{
+            sourceX, static_cast<float>(row) * frameHeight,
+            facingDirection < 0 ? -frameWidth : frameWidth, frameHeight};
+        const float direction = static_cast<float>(facingDirection);
+        const Vector2 effectCenter{
+            center.x - direction * radius * 1.02F + direction * 10.0F,
+            center.y - 22.0F};
+        constexpr float drawWidth = 430.0F;
+        constexpr float drawHeight = 215.0F;
+        DrawTexturePro(texasSkill2Composite_, source,
+                       {effectCenter.x, effectCenter.y,
+                        drawWidth, drawHeight},
+                       {drawWidth / 2.0F, drawHeight / 2.0F}, 0.0F, WHITE);
+        DrawTexturePro(texasSkill2HitComposite_, source,
+                       {effectCenter.x, effectCenter.y,
+                        drawWidth, drawHeight},
+                       {drawWidth / 2.0F, drawHeight / 2.0F}, 0.0F, WHITE);
         return;
     }
 
-    const float initialLife = secondStrike ? 0.155F : 0.12F;
+    const float initialLife = artsDamage ? 0.26F : 0.17F;
     const float progress = std::clamp(1.0F - remainingLife / initialLife,
                                       0.0F, 1.0F);
-    const float alpha = std::clamp(1.0F - progress * 0.88F, 0.0F, 1.0F);
-    const float width = radius * (2.3F + progress * 0.55F);
-    const float height = radius * (1.85F + progress * 0.35F);
-    const float rotation = (secondStrike ? -18.0F : 16.0F) *
-                           static_cast<float>(facingDirection);
-    const Rectangle source{
-        0.0F, 0.0F,
-        facingDirection < 0 ? -static_cast<float>(slash.width)
-                            : static_cast<float>(slash.width),
-        static_cast<float>(slash.height)};
-
-    // Black cannot survive additive blending.  Draw the official texture with
-    // normal alpha first, then place a solid black-and-white cutting edge over
-    // it so the S2 double slash stays crisp against bright backgrounds.
-    DrawTexturePro(slash, source,
-                   {center.x, center.y, width, height},
-                   {width / 2.0F, height / 2.0F}, rotation,
-                   Fade(artsDamage ? RAYWHITE
-                                   : Color{190, 222, 239, 255},
-                        alpha * 0.92F));
-
     const float direction = static_cast<float>(facingDirection);
-    const float diagonal = secondStrike ? -1.0F : 1.0F;
-    const Vector2 start{center.x - direction * radius * 0.86F,
-                        center.y - diagonal * radius * 0.63F};
-    const Vector2 end{center.x + direction * radius * 0.9F,
-                      center.y + diagonal * radius * 0.63F};
-    const Vector2 lead{end.x + direction * radius * 0.22F,
-                       end.y + diagonal * radius * 0.08F};
-    const Color outer = Fade(BLACK, alpha);
-    const Color inner = Fade(artsDamage ? RAYWHITE
-                                        : Color{211, 235, 246, 255},
-                             alpha);
-    DrawLineEx(start, lead, artsDamage ? 25.0F : 19.0F, outer);
-    DrawLineEx(start, end, artsDamage ? 11.0F : 8.0F, inner);
-    DrawCircleV(end, artsDamage ? 7.0F : 5.0F, inner);
-
-    if (artsDamage) {
-        const Vector2 echoStart{start.x + direction * 13.0F,
-                                start.y - diagonal * 21.0F};
-        const Vector2 echoEnd{end.x - direction * 8.0F,
-                              end.y - diagonal * 21.0F};
-        DrawLineEx(echoStart, echoEnd, 13.0F, Fade(BLACK, alpha * 0.94F));
-        DrawLineEx(echoStart, echoEnd, 4.5F,
-                   Fade(RAYWHITE, alpha * 0.92F));
+    if (!artsDamage || !IsTextureValid(texasSkill2Arc_) ||
+        !IsTextureValid(texasSkill2Impact_) ||
+        !IsTextureValid(texasSkill2DarkTrail_)) {
+        const Texture2D& slash = texasSkill2Slashes_[secondStrike ? 1 : 0];
+        if (!IsTextureValid(slash)) {
+            return;
+        }
+        const float alpha = 1.0F - SmoothStep(progress);
+        const float size = radius * (2.1F + progress * 0.35F);
+        DrawTexturePro(
+            slash,
+            {0.0F, 0.0F,
+             facingDirection < 0 ? -static_cast<float>(slash.width)
+                                 : static_cast<float>(slash.width),
+             static_cast<float>(slash.height)},
+            {center.x, center.y, size, size}, {size / 2.0F, size / 2.0F},
+            (secondStrike ? -12.0F : 12.0F) * direction,
+            Fade(Color{204, 229, 247, 255}, alpha));
+        return;
     }
+
+    const float fadeIn = std::clamp(progress / 0.09F, 0.0F, 1.0F);
+    const float fadeOut = 1.0F - SmoothStep(
+        std::clamp((progress - 0.16F) / 0.84F, 0.0F, 1.0F));
+    const float alpha = fadeIn * fadeOut;
+    const float darkFadeOut = 1.0F - SmoothStep(
+        std::clamp((progress - 0.30F) / 0.70F, 0.0F, 1.0F));
+    const float darkAlpha = fadeIn * darkFadeOut;
+    const float growth = 0.91F + SmoothStep(progress) * 0.23F;
+    const Vector2 effectCenter{center.x - direction * radius * 1.02F,
+                               center.y - 7.0F};
+    const float rotation = (secondStrike ? -78.0F : 89.0F) * direction;
+    const Rectangle arcSource{
+        0.0F, 0.0F,
+        facingDirection < 0 ? -static_cast<float>(texasSkill2Arc_.width)
+                            : static_cast<float>(texasSkill2Arc_.width),
+        static_cast<float>(texasSkill2Arc_.height)};
+    const Rectangle darkSource{
+        0.0F, 0.0F,
+        facingDirection < 0
+            ? -static_cast<float>(texasSkill2DarkTrail_.width)
+            : static_cast<float>(texasSkill2DarkTrail_.width),
+        static_cast<float>(texasSkill2DarkTrail_.height)};
+    const auto drawArc = [&](float width, float height, float angle,
+                             Color color, float opacity) {
+        DrawTexturePro(texasSkill2Arc_, arcSource,
+                       {effectCenter.x, effectCenter.y, width, height},
+                       {width / 2.0F, height / 2.0F}, angle,
+                       Fade(color, std::clamp(opacity, 0.0F, 1.0F)));
+    };
+
+    const float darkRotation = (secondStrike ? -12.0F : 7.0F) * direction;
+    const float darkWidth = (secondStrike ? 318.0F : 342.0F) * growth;
+    const float darkHeight = (secondStrike ? 142.0F : 158.0F) * growth;
+    const Vector2 darkCenter{
+        effectCenter.x - direction * (secondStrike ? 4.0F : 12.0F),
+        effectCenter.y + (secondStrike ? 3.0F : -5.0F)};
+    DrawTexturePro(
+        texasSkill2DarkTrail_, darkSource,
+        {darkCenter.x, darkCenter.y, darkWidth, darkHeight},
+        {darkWidth / 2.0F, darkHeight / 2.0F}, darkRotation,
+        Fade(Color{88, 88, 88, 255},
+             darkAlpha * (secondStrike ? 0.36F : 0.0F)));
+    // A short offset copy reproduces the broad, fast-moving dark wake without
+    // putting a synthetic black outline around the white cutting edge.
+    DrawTexturePro(
+        texasSkill2DarkTrail_, darkSource,
+        {darkCenter.x - direction * 14.0F, darkCenter.y + 5.0F,
+         darkWidth * 0.94F, darkHeight * 0.86F},
+        {darkWidth * 0.47F, darkHeight * 0.43F},
+        darkRotation - direction * 4.0F,
+        Fade(Color{56, 58, 64, 255},
+             darkAlpha * (secondStrike ? 0.16F : 0.0F)));
+
+    if (secondStrike) {
+        // The source video shows a broad black/red upper blade, not another
+        // blue-white copy.  Its pale leading edge is added in the next pass.
+        drawArc(174.0F * growth, 338.0F * growth,
+                rotation - direction * 2.0F,
+                Color{31, 7, 12, 255}, darkAlpha * 0.96F);
+        drawArc(160.0F * growth, 324.0F * growth, rotation,
+                Color{142, 17, 29, 255}, darkAlpha * 0.58F);
+    }
+
+    BeginBlendMode(BLEND_ADDITIVE);
+    // Three close rotations create the swift motion echo visible in the
+    // official S2 attack, while every layer fades instead of gaining an edge.
+    if (secondStrike) {
+        const float leadingEdge = 1.0F - SmoothStep(
+            std::clamp((progress - 0.36F) / 0.46F, 0.0F, 1.0F));
+        drawArc(143.0F * growth, 310.0F * growth,
+                rotation - direction * 5.0F,
+                Color{206, 27, 45, 255}, alpha * leadingEdge * 0.30F);
+        drawArc(122.0F * growth, 286.0F * growth, rotation,
+                Color{255, 226, 232, 255}, alpha * leadingEdge * 0.74F);
+    } else {
+        drawArc(148.0F * growth, 330.0F * growth,
+                rotation - direction * 9.0F,
+                Color{72, 118, 235, 255}, alpha * 0.22F);
+        drawArc(140.0F * growth, 322.0F * growth,
+                rotation - direction * 4.0F,
+                Color{105, 169, 255, 255}, alpha * 0.48F);
+        drawArc(130.0F * growth, 310.0F * growth, rotation,
+                Color{236, 245, 255, 255}, alpha * 0.98F);
+    }
+
+    const float impactAlpha = PulseWindow(progress, 0.015F, 0.58F);
+    const float impactSize = 64.0F + SmoothStep(progress) * 28.0F;
+    const Vector2 impactCenter{
+        effectCenter.x + direction * (secondStrike ? 68.0F : 72.0F),
+        effectCenter.y - (secondStrike ? 15.0F : 4.0F)};
+    DrawTexturePro(
+        texasSkill2Impact_,
+        {0.0F, 0.0F, static_cast<float>(texasSkill2Impact_.width),
+         static_cast<float>(texasSkill2Impact_.height)},
+        {impactCenter.x, impactCenter.y, impactSize, impactSize},
+        {impactSize / 2.0F, impactSize / 2.0F},
+        (secondStrike ? 18.0F : -12.0F) * direction,
+        Fade(RAYWHITE, impactAlpha));
+    EndBlendMode();
 }
 
 void CharacterArt::DrawSkillIcon(int skillIndex, Rectangle destination,

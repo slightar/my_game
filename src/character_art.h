@@ -78,5 +78,10 @@ private:
     Texture2D texasSkill2Aura_{};
     Texture2D texasSkill2Slashes_[2]{};
     Texture2D texasSkill2Burst_{};
+    Texture2D texasSkill2Composite_{};
+    Texture2D texasSkill2HitComposite_{};
+    Texture2D texasSkill2DarkTrail_{};
+    Texture2D texasSkill2Arc_{};
+    Texture2D texasSkill2Impact_{};
     Texture2D texasSkillIcons_[2]{};
 };
