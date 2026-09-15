@@ -7,6 +7,7 @@
 #include "main_menu.h"
 #include "player.h"
 #include "ui_font.h"
+#include "character_repository.h"
 
 #include <vector>
 
@@ -20,6 +21,7 @@ public:
 
 private:
     void Reset();
+    void ReloadCharacters();
     void UpdateBullets(float deltaTime);
     void UpdateCamera(float deltaTime);
     void DrawMap() const;

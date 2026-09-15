@@ -18,7 +18,8 @@ inline constexpr float kFloorY = kRoom.y + kRoom.height - 28.0F;
 
 enum class OperatorKind {
     Exusiai,
-    Texas
+    Texas,
+    Custom
 };
 
 enum class BulletKind {

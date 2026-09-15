@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "my_character",
+  "name": "我的角色",
+  "description": "填写角色介绍；图片可稍后补充",
+  "assets": {},
+  "stats": { "health": 5, "attackInterval": 0.2 },
+  "attack": { "type": "projectile", "amount": 1, "speed": 1000 },
+  "skills": [
+    {
+      "name": "散射",
+      "description": "发射五枚法术弹道",
+      "cooldown": 4,
+      "effects": [
+        { "type": "projectile", "damageType": "arts", "count": 5, "spread": 0.15, "amount": 2 }
+      ]
+    },
+    {
+      "name": "恢复",
+      "description": "恢复两点生命",
+      "cooldown": 10,
+      "effects": [ { "type": "heal", "amount": 2 } ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "id": "single_robot",
+  "name": "单图动作示例",
+  "description": "只填一张小人图 / 自动获得基础动作",
+  "assets": { "sprite": "single_sprite.png" },
+  "attack": { "type": "projectile", "amount": 1 }
+}

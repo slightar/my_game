@@ -57,6 +57,8 @@ constexpr float kTexasNormalSlashDuration = 0.17F;
 }  // namespace
 
 void Player::Reset(OperatorKind operatorKind) {
+    character_.reset();
+    animator_ = {};
     operatorKind_ = operatorKind;
     position_ = {240.0F, GameConfig::kFloorY - kHitboxHeight / 2.0F};
     velocity_ = {};
@@ -92,6 +94,13 @@ void Player::Reset(OperatorKind operatorKind) {
     barrageCooldown_ = 0.0F;
     overloadTimer_ = 0.0F;
     overloadCooldown_ = 0.0F;
+}
+
+void Player::Reset(const Character& character) {
+    character.Validate();
+    Reset(OperatorKind::Custom);
+    character_.emplace(character);
+    health_ = character.stats.health;
 }
 
 void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
@@ -169,15 +178,15 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         velocity_.x = static_cast<float>(dodgeDirection_) * kDodgeSpeed;
         dodgeTimer_ = std::max(0.0F, dodgeTimer_ - deltaTime);
     } else {
-        velocity_.x = moveDirection * kMoveSpeed;
+        velocity_.x = moveDirection * (character_ ? character_->Definition().stats.moveSpeed : kMoveSpeed);
     }
 
     const bool jumpPressed = IsKeyPressed(KEY_W) || IsKeyPressed(KEY_K) ||
                              IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_UP);
     const bool jumpHeld = IsKeyDown(KEY_W) || IsKeyDown(KEY_K) ||
                           IsKeyDown(KEY_SPACE) || IsKeyDown(KEY_UP);
-    if (jumpPressed && jumpCount_ < kMaxJumps && dodgeTimer_ <= 0.0F) {
-        velocity_.y = -kJumpSpeed;
+    if (jumpPressed && jumpCount_ < (character_ ? character_->Definition().stats.jumps : kMaxJumps) && dodgeTimer_ <= 0.0F) {
+        velocity_.y = -(character_ ? character_->Definition().stats.jumpSpeed : kJumpSpeed);
         ++jumpCount_;
         jumpHoldTimer_ = kJumpHoldDuration;
     }
@@ -209,6 +218,16 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
     }
 
     shotCooldown_ = std::max(0.0F, shotCooldown_ - deltaTime);
+    if (character_) {
+        firing_ = IsKeyDown(KEY_J) && dodgeTimer_ <= 0;
+        character_->Update(deltaTime, position_, facingDirection_, enemyPosition,
+                           firing_, {IsKeyPressed(KEY_E) && dodgeTimer_ <= 0,
+                                     IsKeyPressed(KEY_Q) && dodgeTimer_ <= 0}, health_, bullets);
+        animator_.Update(deltaTime, {velocity_, position_.y + kHitboxHeight / 2 >= GameConfig::kFloorY - 0.5F,
+            dodgeTimer_ > 0, character_->PerformedAction(), false, character_->Definition().attack.type == EffectType::Melee});
+        attackAnimationTime_ = firing_ ? attackAnimationTime_ + deltaTime : 0;
+        return;
+    }
     if (operatorKind_ == OperatorKind::Texas) {
         UpdateTexasCombat(deltaTime, enemyPosition, enemyRadius, bullets);
         return;
@@ -398,6 +417,7 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
 
 void Player::UpdateDefeatAnimation(float deltaTime) {
     defeatAnimationTime_ += deltaTime;
+    if (character_) animator_.Update(deltaTime, {{}, true, false, false, true});
 }
 
 void Player::SetHorizontalBounds(float left, float right) {
@@ -407,6 +427,12 @@ void Player::SetHorizontalBounds(float left, float right) {
 }
 
 void Player::Draw(const CharacterArt& art) const {
+    if (character_) {
+        const auto& c = character_->Definition();
+        const Color tint = IsDead() ? Fade(WHITE, 0.3F) : IsInvincible() ? Fade(SKYBLUE, 0.65F) : WHITE;
+        art.DrawAnimatedCharacter(c, {position_.x, position_.y + kHitboxHeight / 2}, facingDirection_, animator_, tint);
+        return;
+    }
     const bool airborne = position_.y + kHitboxHeight / 2.0F <
                           GameConfig::kFloorY - 0.5F;
     ChibiAnimation animation = ChibiAnimation::Idle;
@@ -489,13 +515,9 @@ void Player::Draw(const CharacterArt& art) const {
                               ChibiAnimation::Dodge, animationTime_,
                               Fade(WHITE, 0.11F));
             } else if (operatorKind_ != OperatorKind::Texas &&
-                       art.HasBattleChibi()) {
-                art.DrawBattleChibi(trailPosition, facingDirection_, 120.0F,
-                                    BattleChibiAnimation::Idle,
-                                    animationTime_, Fade(WHITE, 0.11F));
-            } else if (operatorKind_ != OperatorKind::Texas && art.HasChibi()) {
-                art.DrawChibi(trailPosition, facingDirection_, 106.0F,
-                              animation, animationTime_, Fade(WHITE, 0.11F));
+                       (art.HasBattleChibi() || art.HasChibi())) {
+                art.DrawExusiai(trailPosition, facingDirection_, ChibiAnimation::Dodge,
+                                false, false, animationTime_, 0, 0, Fade(WHITE, 0.11F));
             } else {
                 const Rectangle trailBody{trailPosition.x - 15.0F,
                                           trailPosition.y - 68.0F,
@@ -538,21 +560,10 @@ void Player::Draw(const CharacterArt& art) const {
                       firing_ ? attackAnimationTime_ : animationTime_,
                       IsDead() ? Fade(WHITE, 0.28F)
                                : (blinkOff ? Fade(WHITE, 0.3F) : WHITE));
-    } else if (operatorKind_ != OperatorKind::Texas && art.HasBattleChibi()) {
-        const BattleChibiAnimation battleAnimation =
-            IsDead() ? BattleChibiAnimation::Defeated
-                     : (firing_ ? BattleChibiAnimation::Attack
-                                : BattleChibiAnimation::Idle);
-        art.DrawBattleChibi(
-            feetPosition, facingDirection_, 120.0F,
-            battleAnimation,
-            IsDead() ? defeatAnimationTime_
-                     : (firing_ ? attackAnimationTime_ : animationTime_),
-            !IsDead() && blinkOff ? Fade(WHITE, 0.3F) : WHITE);
-    } else if (operatorKind_ != OperatorKind::Texas && art.HasChibi()) {
-        art.DrawChibi(feetPosition, facingDirection_,
-                      106.0F, animation, animationTime_,
-                      blinkOff ? Fade(WHITE, 0.3F) : WHITE);
+    } else if (operatorKind_ != OperatorKind::Texas && (art.HasBattleChibi() || art.HasChibi())) {
+        art.DrawExusiai(feetPosition, facingDirection_, animation, firing_, IsDead(),
+                        animationTime_, attackAnimationTime_, defeatAnimationTime_,
+                        !IsDead() && blinkOff ? Fade(WHITE, 0.3F) : WHITE);
     } else {
         const Vector2 weaponStart{position_.x, position_.y - 10.0F};
         const Vector2 weaponEnd{
@@ -580,6 +591,26 @@ void Player::Draw(const CharacterArt& art) const {
 
 void Player::DrawHud(const UiFont& font, const CharacterArt& art,
                      const char* operatorName) const {
+    if (character_) {
+        const auto& c = character_->Definition();
+        DrawRectangle(70, 70, 455, 150, Fade(BLACK, 0.75F));
+        font.Draw(c.name.c_str(), 88, 82, 24, RAYWHITE);
+        font.Draw("A/D 移动   W/K/空格 跳跃   J 攻击", 88, 116, 17, RAYWHITE);
+        font.Draw("S/L/Shift 闪避   E/Q 技能", 88, 143, 17, RAYWHITE);
+        font.Draw(TextFormat("生命 %i/%i   闪避 %i", health_, c.stats.health, dodgeCharges_), 88, 178, 19, SKYBLUE);
+        for (std::size_t i = 0; i < c.skills.size(); ++i) {
+            const auto& skill = c.skills[i]; const auto& state = character_->Skills()[i];
+            const float x = 940 + static_cast<float>(i) * 160;
+            DrawRectangleRec({x, 546, 152, 102}, Fade(BLACK, 0.8F));
+            art.DrawCustomSkill(c.id, static_cast<int>(i), {x + 5, 551, 40, 40});
+            font.Draw(i == 0 ? "E" : "Q", x + 51, 553, 23, SKYBLUE);
+            const float size = std::min(18.0F, 138.0F / std::max(1.0F, font.Measure(skill.name.c_str(), 18)) * 18);
+            font.Draw(skill.name.c_str(), x + 6, 595, size, RAYWHITE);
+            font.Draw(state.remaining > 0 ? TextFormat("生效 %.1f", state.remaining) :
+                      state.cooldown > 0 ? TextFormat("冷却 %.1f", state.cooldown) : "就绪", x + 6, 621, 16, ORANGE);
+        }
+        return;
+    }
     const char* operatorText = TextFormat("当前干员：%s", operatorName);
     font.Draw(operatorText, 72.0F, 42.0F, 18.0F, RAYWHITE);
     DrawRectangle(70, 70, 420, 150, Fade(BLACK, 0.72F));
@@ -749,6 +780,7 @@ bool Player::TakeDamage(Vector2 damageSource) {
         return false;
     }
     --health_;
+    if (character_) animator_.TriggerHurt();
     if (IsDead()) {
         defeatAnimationTime_ = 0.0F;
         hurtInvincibilityTimer_ = 0.0F;

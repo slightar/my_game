@@ -1,0 +1,21 @@
+{
+  "id": "modular_robot",
+  "name": "分件动作示例",
+  "description": "默认关节 / 自动迈腿摆臂 / 武器跟手",
+  "assets": {
+    "height": 130,
+    "parts": {
+      "torso": { "image": "rig_parts/torso.png" },
+      "head": { "image": "rig_parts/head.png" },
+      "armFront": { "image": "rig_parts/armFront.png" },
+      "armBack": { "image": "rig_parts/armBack.png" },
+      "legFront": { "image": "rig_parts/legFront.png" },
+      "legBack": { "image": "rig_parts/legBack.png" },
+      "weapon": { "image": "rig_parts/weapon.png" }
+    }
+  },
+  "attack": { "type": "melee", "range": 120, "amount": 2, "lifetime": 0.15 },
+  "skills": [
+    { "name": "恢复", "cooldown": 10, "effects": [{ "type": "heal", "amount": 2 }] }
+  ]
+}

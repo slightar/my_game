@@ -1,6 +1,8 @@
 #pragma once
 #include "game_types.h"
 #include "raylib.h"
+#include "character.h"
+#include <vector>
 
 class UiFont;
 class CharacterArt;
@@ -16,6 +18,10 @@ public:
     MenuAction Update();
     void Draw(const UiFont& font, const CharacterArt& art) const;
     void OpenHome();
+    void OpenOperatorSelect() { page_ = Page::OperatorSelect; }
+    void SetCharacters(std::vector<Character> characters);
+    void SetStatus(std::string status) { status_ = std::move(status); }
+    [[nodiscard]] const Character* SelectedCharacter() const;
 
     [[nodiscard]] const char* SelectedOperatorName() const;
     [[nodiscard]] OperatorKind SelectedOperator() const;
@@ -38,4 +44,7 @@ private:
     int homeSelection_ = 0;
     int operatorCursor_ = 0;
     OperatorKind selectedOperator_ = OperatorKind::Exusiai;
+    int selectedCustom_ = -1;
+    std::vector<Character> characters_;
+    std::string status_;
 };

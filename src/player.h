@@ -3,6 +3,9 @@
 #include "game_types.h"
 
 #include <vector>
+#include "character.h"
+#include "character_animation.h"
+#include <optional>
 
 class AudioSystem;
 class CharacterArt;
@@ -11,6 +14,7 @@ class UiFont;
 class Player {
 public:
     void Reset(OperatorKind operatorKind = OperatorKind::Exusiai);
+    void Reset(const Character& character);
     void Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
                 std::vector<Bullet>& bullets, AudioSystem& audio);
     void UpdateDefeatAnimation(float deltaTime);
@@ -30,6 +34,8 @@ public:
     [[nodiscard]] OperatorKind Kind() const;
 
 private:
+    std::optional<CharacterRuntime> character_;
+    CharacterAnimator animator_;
     static constexpr float kHitboxWidth = 38.0F;
     static constexpr float kHitboxHeight = 78.0F;
     static constexpr int kMaxHealth = 3;

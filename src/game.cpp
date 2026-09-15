@@ -1,7 +1,10 @@
 #include "game.h"
+#include "file_path.h"
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
+#include <map>
 
 namespace {
 
@@ -17,12 +20,45 @@ float SmoothStep(float value) {
 }  // namespace
 
 Game::Game() {
+    ReloadCharacters();
     Reset();
+}
+
+void Game::ReloadCharacters() {
+    characterArt_.ClearCustomCharacters();
+    const auto app = Utf8Path(GetApplicationDirectory());
+    std::map<std::string, Character> entries;
+    std::string errors;
+    // Imported definitions override bundled examples with the same stable id.
+    for (const auto& root : {app / "assets" / "characters", app / "characters"}) {
+        try {
+            LocalCharacterRepository repository(root);
+            auto result = repository.LoadAll();
+            for (const auto& error : result.errors) {
+                TraceLog(LOG_WARNING, "%s", error.c_str()); errors += error + " ";
+            }
+            for (auto& c : result.characters) {
+                characterArt_.RegisterCharacter(c, root);
+                entries.insert_or_assign(c.id, std::move(c));
+            }
+        } catch (const std::exception& e) { errors += e.what(); TraceLog(LOG_WARNING, "%s", e.what()); }
+    }
+    std::vector<Character> characters;
+    std::string glyphs = errors;
+    for (auto& [id, c] : entries) {
+        glyphs += c.name + c.description;
+        for (const auto& skill : c.skills) glyphs += skill.name + skill.description;
+        characters.push_back(std::move(c));
+    }
+    uiFont_.SetAdditionalText(glyphs);
+    mainMenu_.SetCharacters(std::move(characters));
+    mainMenu_.SetStatus(errors.empty() ? "" : "配置文件: " + errors);
 }
 
 void Game::Reset() {
     bullets_.clear();
-    player_.Reset(mainMenu_.SelectedOperator());
+    if (const auto* character = mainMenu_.SelectedCharacter()) player_.Reset(*character);
+    else player_.Reset(mainMenu_.SelectedOperator());
     boss_.Reset();
     bossActive_ = false;
     cameraX_ = static_cast<float>(GameConfig::kScreenWidth) / 2.0F;
@@ -34,6 +70,24 @@ void Game::Reset() {
 
 void Game::Update(float deltaTime) {
     if (!inBattle_) {
+        if (IsKeyPressed(KEY_F5)) ReloadCharacters();
+        if (IsFileDropped()) {
+            const auto dropped = LoadDroppedFiles();
+            std::string status;
+            for (unsigned int i = 0; i < dropped.count; ++i) {
+                try {
+                    LocalCharacterRepository repository(Utf8Path(GetApplicationDirectory()) / "characters");
+                    const auto c = repository.Import(Utf8Path(dropped.paths[i]));
+                    status += "本地保存成功: " + c.name + " ";
+                } catch (const std::exception& e) {
+                    status += "导入失败: " + std::string(e.what()) + " ";
+                    TraceLog(LOG_WARNING, "%s", e.what());
+                }
+            }
+            UnloadDroppedFiles(dropped);
+            ReloadCharacters();
+            mainMenu_.SetStatus(std::move(status));
+        }
         const MenuAction action = mainMenu_.Update();
         if (action == MenuAction::StartBattle) {
             Reset();

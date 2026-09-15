@@ -1,4 +1,6 @@
 #include "character_art.h"
+#include "file_path.h"
+#include "character_image.h"
 
 #include <algorithm>
 #include <cmath>
@@ -8,7 +10,7 @@
 namespace {
 
 std::string AssetPath(const char* relativePath) {
-    return (std::filesystem::path(GetApplicationDirectory()) / relativePath).string();
+    return (Utf8Path(GetApplicationDirectory()) / relativePath).string();
 }
 
 constexpr int kChibiColumns = 8;
@@ -71,6 +73,151 @@ Vector2 PolarPoint(Vector2 center, float angle, float radius) {
 }
 
 }  // namespace
+
+void CharacterArt::RegisterCharacter(const Character& character, const std::filesystem::path& assetRoot) {
+    const auto load = [&](const std::string& ref, CharacterFrameMap* frames = nullptr) -> Texture2D {
+        if (ref.empty()) return {};
+        if (ref.find("://") != std::string::npos) {
+            TraceLog(LOG_WARNING, "Remote artwork requires an API cache resolver: %s", ref.c_str()); return {};
+        }
+        Image image = LoadCharacterImage(assetRoot / Utf8Path(ref));
+        if (!image.data) { TraceLog(LOG_WARNING, "Cannot load character artwork: %s", ref.c_str()); return {}; }
+        if (frames) *frames = FindCharacterFrames(image, character.assets);
+        auto texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+        if (texture.id) SetTextureFilter(texture, TEXTURE_FILTER_BILINEAR);
+        return texture;
+    };
+    auto& textures = custom_[character.id];
+    for (const auto& [slot, texture] : textures.parts) if (texture.id) UnloadTexture(texture);
+    for (auto texture : {textures.portrait, textures.sprite, textures.icons[0], textures.icons[1]})
+        if (texture.id) UnloadTexture(texture);
+    textures = {};
+    textures.portrait = load(character.assets.portrait);
+    textures.sprite = load(character.assets.sprite, &textures.frames);
+    for (const auto& [slot, part] : character.assets.parts) textures.parts[slot] = load(part.image);
+    if (textures.sprite.id && (textures.sprite.width < character.assets.columns ||
+        textures.sprite.height < character.assets.rows || textures.sprite.width % character.assets.columns != 0 ||
+        textures.sprite.height % character.assets.rows != 0)) {
+        TraceLog(LOG_WARNING, "Invalid sprite dimensions for character: %s", character.id.c_str());
+        UnloadTexture(textures.sprite); textures.sprite = {};
+    }
+    for (std::size_t i = 0; i < character.skills.size(); ++i) textures.icons[i] = load(character.skills[i].icon);
+}
+
+void CharacterArt::DrawCustomPortrait(const std::string& id, Rectangle destination, Color tint) const {
+    const auto found = custom_.find(id);
+    if (found == custom_.end() || !found->second.portrait.id) {
+        DrawCircle(static_cast<int>(destination.x + destination.width / 2),
+                   static_cast<int>(destination.y + destination.height * 0.35F), 38, Fade(SKYBLUE, 0.6F));
+        DrawRectangleRec({destination.x + destination.width * 0.25F, destination.y + destination.height * 0.5F,
+                          destination.width * 0.5F, destination.height * 0.45F}, Fade(SKYBLUE, 0.4F));
+        return;
+    }
+    const auto t = found->second.portrait;
+    const float scale = std::min(destination.width / t.width, destination.height / t.height);
+    DrawTexturePro(t, {0, 0, static_cast<float>(t.width), static_cast<float>(t.height)},
+                   {destination.x + (destination.width - t.width * scale) / 2,
+                    destination.y + destination.height - t.height * scale, t.width * scale, t.height * scale}, {}, 0, tint);
+}
+
+void CharacterArt::DrawCustomSprite(const Character& c, Vector2 feet, int facing, int row, float time, Color tint) const {
+    if (!c.assets.parts.empty() && (c.assets.animationMode == "auto" || c.assets.animationMode == "rig")) {
+        CharacterAnimator animator; animator.Update(0.016F, {});
+        DrawAnimatedCharacter(c, feet, facing, animator, tint); return;
+    }
+    const auto found = custom_.find(c.id);
+    if (found == custom_.end() || !found->second.sprite.id) {
+        DrawRectangleRec({feet.x - 19, feet.y - 78, 38, 78}, tint);
+        DrawLineEx({feet.x, feet.y - 55}, {feet.x + facing * 40.0F, feet.y - 55}, 5, SKYBLUE);
+        return;
+    }
+    const auto t = found->second.sprite;
+    const float w = static_cast<float>(t.width) / c.assets.columns;
+    const float h = static_cast<float>(t.height) / c.assets.rows;
+    const auto frame = SampleCharacterFrame(found->second.frames, row, c.assets.idleRow, c.assets.fps, time);
+    if (!frame.valid) return;
+    const float scale = std::min(c.assets.height / h, c.assets.height * 1.5F / w);
+    const float width = w * scale, height = h * scale;
+    DrawTexturePro(t, {frame.column * w, frame.row * h, facing < 0 ? -w : w, h},
+                   {feet.x - width / 2, feet.y - height, width, height}, {}, 0, tint);
+}
+
+void CharacterArt::DrawAnimatedCharacter(const Character& c, Vector2 feet, int facing,
+                                         const CharacterAnimator& animator, Color tint) const {
+    const auto found = custom_.find(c.id);
+    if (found == custom_.end()) return;
+    const auto& textures = found->second;
+    const auto& a = c.assets;
+    const bool rig = (a.animationMode == "auto" || a.animationMode == "rig") &&
+                     textures.parts.count("torso") && textures.parts.at("torso").id;
+    const bool frames = !rig && (a.animationMode == "frames" ||
+        (a.animationMode == "auto" && (a.columns > 1 || a.rows > 1)));
+    const int row = animator.Row(a);
+    auto pose = animator.Pose();
+    const float strength = frames && row >= 0 ? 0 : a.motionStrength;
+    pose.scale = {1 + (pose.scale.x - 1) * strength, 1 + (pose.scale.y - 1) * strength};
+    const float rootAngle = pose.angle * strength * facing;
+    const Vector2 base{feet.x + pose.offset.x * a.height * strength * facing,
+                       feet.y + pose.offset.y * a.height * strength};
+    const auto rotate = [](Vector2 point, float degrees) {
+        const float angle = degrees * DEG2RAD;
+        return Vector2{point.x * std::cos(angle) - point.y * std::sin(angle),
+                       point.x * std::sin(angle) + point.y * std::cos(angle)};
+    };
+    const auto angleFor = [&](const std::string& slot) {
+        if (slot == "armFront" || slot == "weapon") return pose.armFront * strength;
+        if (slot == "armBack") return pose.armBack * strength;
+        if (slot == "legFront") return pose.legFront * strength;
+        if (slot == "legBack") return pose.legBack * strength;
+        return slot == "head" ? pose.head * strength : 0.0F;
+    };
+    if (rig) {
+        // Back limbs first; weapon inherits the front arm's joint transform.
+        for (const char* slot : {"legBack", "armBack", "torso", "legFront", "head", "armFront", "weapon"}) {
+            const auto part = a.parts.find(slot); const auto tex = textures.parts.find(slot);
+            if (part == a.parts.end() || tex == textures.parts.end() || !tex->second.id) continue;
+            const auto& p = part->second; const auto t = tex->second;
+            Vector2 joint{p.x * a.height, p.y * a.height};
+            if (std::string(slot) == "weapon") {
+                if (!textures.parts.at("armFront").id) continue;
+                const auto& arm = a.parts.at("armFront");
+                const auto grip = rotate({p.x * arm.height * a.height, p.y * arm.height * a.height}, angleFor("armFront"));
+                joint = {arm.x * a.height + grip.x, arm.y * a.height + grip.y};
+            }
+            joint = rotate({joint.x * pose.scale.x * facing, joint.y * pose.scale.y}, rootAngle);
+            const float height = p.height * a.height * pose.scale.y;
+            const float width = p.height * a.height * static_cast<float>(t.width) / t.height * pose.scale.x;
+            DrawTexturePro(t, {0, 0, facing < 0 ? -static_cast<float>(t.width) : static_cast<float>(t.width), static_cast<float>(t.height)},
+                           {base.x + joint.x, base.y + joint.y, width, height},
+                           {(facing < 0 ? 1 - p.pivotX : p.pivotX) * width, p.pivotY * height},
+                           rootAngle + angleFor(slot) * facing, tint);
+        }
+        return;
+    }
+    if (!textures.sprite.id) {
+        DrawRectanglePro({base.x, base.y, 38 * pose.scale.x, 78 * pose.scale.y},
+                         {19 * pose.scale.x, 78 * pose.scale.y}, rootAngle, tint); return;
+    }
+    const auto t = textures.sprite;
+    const float w = static_cast<float>(t.width) / a.columns, h = static_cast<float>(t.height) / a.rows;
+    const auto frame = SampleCharacterFrame(textures.frames, row, a.idleRow, a.fps, animator.ActionTime(),
+                                           animator.Action() != CharacterAction::Defeated);
+    if (!frame.valid) {
+        DrawRectangleRec({feet.x - 19, feet.y - 78, 38, 78}, tint); return;
+    }
+    const float scale = std::min(a.height / h, a.height * 1.5F / w);
+    const float width = w * scale * pose.scale.x, height = h * scale * pose.scale.y;
+    DrawTexturePro(t, {frame.column * w, frame.row * h, facing < 0 ? -w : w, h},
+                   {base.x, base.y, width, height}, {width / 2, height}, rootAngle, tint);
+}
+
+void CharacterArt::DrawCustomSkill(const std::string& id, int slot, Rectangle destination) const {
+    const auto found = custom_.find(id);
+    if (found == custom_.end() || slot < 0 || slot >= 2 || !found->second.icons[slot].id) return;
+    const auto t = found->second.icons[slot];
+    DrawTexturePro(t, {0, 0, static_cast<float>(t.width), static_cast<float>(t.height)}, destination, {}, 0, WHITE);
+}
 
 CharacterArt::CharacterArt() {
     const std::string portraitPath =
@@ -157,7 +304,17 @@ CharacterArt::CharacterArt() {
     }
 }
 
+void CharacterArt::ClearCustomCharacters() {
+    for (const auto& [id, textures] : custom_) {
+        for (const auto& [slot, texture] : textures.parts) if (texture.id) UnloadTexture(texture);
+        for (auto texture : {textures.portrait, textures.sprite, textures.icons[0], textures.icons[1]})
+            if (texture.id) UnloadTexture(texture);
+    }
+    custom_.clear();
+}
+
 CharacterArt::~CharacterArt() {
+    ClearCustomCharacters();
     if (IsTextureValid(texasSkill2Impact_)) {
         UnloadTexture(texasSkill2Impact_);
     }
@@ -332,6 +489,23 @@ void CharacterArt::DrawChibi(OperatorKind operatorKind, Vector2 feetPosition,
     const Rectangle destination{feetPosition.x, feetPosition.y, width, height};
     DrawTexturePro(chibi, source, destination,
                    {width / 2.0F, height}, 0.0F, tint);
+}
+
+void CharacterArt::DrawExusiai(Vector2 feetPosition, int facingDirection, ChibiAnimation movement,
+                                bool attacking, bool defeated, float movementTime, float attackTime,
+                                float defeatTime, Color tint) const {
+    // The 12x3 combat sheet has no locomotion. Use the authored directional walk sheet.
+    if (!defeated && !attacking && movement != ChibiAnimation::Idle && HasChibi()) {
+        DrawChibi(OperatorKind::Exusiai, {feetPosition.x, feetPosition.y + 4.0F}, facingDirection,
+                  132.0F, movement, movementTime, tint);
+    } else if (HasBattleChibi()) {
+        DrawBattleChibi(feetPosition, facingDirection, 120.0F,
+                       defeated ? BattleChibiAnimation::Defeated : attacking ? BattleChibiAnimation::Attack : BattleChibiAnimation::Idle,
+                       defeated ? defeatTime : attacking ? attackTime : movementTime, tint);
+    } else if (HasChibi()) {
+        DrawChibi(OperatorKind::Exusiai, feetPosition, facingDirection, 132.0F,
+                  movement, movementTime, tint);
+    }
 }
 
 void CharacterArt::DrawBattleChibi(Vector2 feetPosition, int facingDirection,

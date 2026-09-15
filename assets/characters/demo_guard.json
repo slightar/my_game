@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "id": "demo_guard",
+  "name": "示例剑士",
+  "description": "配置角色 / 近战 / 剑雨 / 治疗增益",
+  "assets": {
+    "portrait": "../operators/texas_portrait.png",
+    "sprite": "../operators/texas_chibi.png",
+    "columns": 8,
+    "rows": 11,
+    "rowFrameCounts": [7, 8, 8, 4, 5, 8, 6, 6, 6, 8, 8],
+    "idleRow": 0,
+    "runRow": 1,
+    "attackRow": 3,
+    "fps": 8,
+    "height": 112
+  },
+  "stats": {
+    "health": 5,
+    "moveSpeed": 340,
+    "jumpSpeed": 610,
+    "jumps": 2,
+    "attackInterval": 0.32
+  },
+  "attack": {
+    "type": "melee",
+    "amount": 2,
+    "range": 120,
+    "lifetime": 0.15,
+    "destroysProjectiles": true
+  },
+  "skills": [
+    {
+      "name": "剑雨",
+      "description": "在敌人上方持续落剑，造成法术伤害并眩晕。",
+      "icon": "../operators/texas_skill_q.png",
+      "cooldown": 10,
+      "duration": 1.5,
+      "interval": 0.15,
+      "effects": [
+        {
+          "type": "rain",
+          "damageType": "arts",
+          "amount": 1.5,
+          "speed": 920,
+          "count": 3,
+          "range": 160,
+          "radius": 15,
+          "stun": 0.4
+        }
+      ]
+    },
+    {
+      "name": "战意恢复",
+      "description": "恢复两点生命，四秒内普攻伤害和攻速提升。",
+      "cooldown": 12,
+      "duration": 4,
+      "effects": [
+        { "type": "heal", "amount": 2 },
+        { "type": "buff", "damageMultiplier": 1.8, "attackSpeedMultiplier": 1.5 }
+      ]
+    }
+  ]
+}

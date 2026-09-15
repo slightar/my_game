@@ -2,6 +2,11 @@
 
 #include "game_types.h"
 #include "raylib.h"
+#include "character.h"
+#include "character_animation.h"
+#include "character_image.h"
+#include <filesystem>
+#include <map>
 
 enum class ChibiAnimation {
     Idle,
@@ -24,6 +29,15 @@ public:
 
     CharacterArt(const CharacterArt&) = delete;
     CharacterArt& operator=(const CharacterArt&) = delete;
+
+    void RegisterCharacter(const Character& character, const std::filesystem::path& assetRoot);
+    void ClearCustomCharacters();
+    void DrawCustomPortrait(const std::string& id, Rectangle destination, Color tint = WHITE) const;
+    void DrawCustomSprite(const Character& character, Vector2 feet, int facing,
+                          int row, float time, Color tint = WHITE) const;
+    void DrawAnimatedCharacter(const Character& character, Vector2 feet, int facing,
+                               const CharacterAnimator& animator, Color tint = WHITE) const;
+    void DrawCustomSkill(const std::string& id, int slot, Rectangle destination) const;
 
     [[nodiscard]] bool HasPortrait() const;
     [[nodiscard]] bool HasPortrait(OperatorKind operatorKind) const;
@@ -48,6 +62,9 @@ public:
     void DrawBattleChibi(Vector2 feetPosition, int facingDirection, float height,
                          BattleChibiAnimation animation, float animationTime,
                          Color tint = WHITE) const;
+    void DrawExusiai(Vector2 feetPosition, int facingDirection, ChibiAnimation movement,
+                     bool attacking, bool defeated, float movementTime, float attackTime,
+                     float defeatTime, Color tint = WHITE) const;
     void DrawTexasSkill2Battle(Vector2 feetPosition, int facingDirection,
                                float height, bool attacking, bool ending,
                                float animationTime,
@@ -68,6 +85,11 @@ public:
                        Rectangle destination, Color tint = WHITE) const;
 
 private:
+    struct CustomTextures { Texture2D portrait{}; Texture2D sprite{}; Texture2D icons[2]{};
+        std::map<std::string, Texture2D> parts;
+        CharacterFrameMap frames;
+    };
+    std::map<std::string, CustomTextures> custom_;
     Texture2D portrait_{};
     Texture2D chibi_{};
     Texture2D battleChibi_{};
