@@ -249,7 +249,9 @@ void CharacterRuntime::Apply(const SkillEffect& e, Vector2 pos, int facing, Vect
         b.damageType = e.damageType; b.stunDuration = e.stun; b.destroysEnemyProjectile = e.destroysProjectiles;
         if (e.type == EffectType::Melee) {
             b.kind = BulletKind::MeleeSlash; b.velocity = {};
-            b.position = {pos.x + facing * e.range / 2, pos.y - 8}; b.radius = e.range / 2;
+            b.position = {pos.x + facing * e.range / 2, pos.y - 8};
+            b.radius = e.range / 2;
+            b.facingDirection = facing;
         } else if (e.type == EffectType::Rain) {
             b.kind = BulletKind::FallingSword;
             b.position = {std::clamp(target.x + offset * e.range / e.count, GameConfig::kRoom.x + 25, GameConfig::kRoom.x + GameConfig::kRoom.width - 25),

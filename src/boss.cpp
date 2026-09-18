@@ -2,6 +2,7 @@
 
 #include "game_types.h"
 #include "ui_font.h"
+#include "ui_theme.h"
 
 #include <algorithm>
 #include <array>
@@ -417,16 +418,19 @@ void Boss::Draw(const UiFont& font) const {
 }
 
 void Boss::DrawHud(const UiFont& font) const {
-    constexpr int width = 540;
-    constexpr int height = 22;
-    const int x = GameConfig::kScreenWidth / 2 - width / 2;
-    const int y = GameConfig::kScreenHeight - 44;
+    constexpr float width = 520.0F;
+    constexpr float height = 54.0F;
+    const float x = static_cast<float>(GameConfig::kScreenWidth) - width - 32.0F;
+    constexpr float y = 28.0F;
     const float ratio = health_ / kMaxHealth;
-    DrawRectangle(x, y, width, height, Color{55, 58, 67, 255});
-    DrawRectangle(x, y, static_cast<int>(static_cast<float>(width) * ratio), height, MAROON);
-    DrawRectangleLines(x, y, width, height, RAYWHITE);
-    font.Draw("弑君者", static_cast<float>(x), static_cast<float>(y - 22),
-              18.0F, RAYWHITE);
+    TacticalUi::DrawCutPanel({x, y, width, height}, TacticalUi::kPanel,
+                             Fade(RAYWHITE, 0.20F), 13.0F);
+    font.Draw("BOSS // 弑君者", x + 18.0F, y + 8.0F, 15.0F,
+              TacticalUi::kPaper);
+    font.Draw(TextFormat("%03i%%", static_cast<int>(ratio * 100.0F)),
+              x + width - 66.0F, y + 8.0F, 13.0F, TacticalUi::kMuted);
+    TacticalUi::DrawProgressLine({x + 18.0F, y + 39.0F}, width - 40.0F,
+                                 ratio, TacticalUi::kRed, 7.0F);
 }
 
 void Boss::TakeDamage(float damage) {

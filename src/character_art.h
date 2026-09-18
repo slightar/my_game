@@ -29,6 +29,7 @@ public:
 
     CharacterArt(const CharacterArt&) = delete;
     CharacterArt& operator=(const CharacterArt&) = delete;
+    void DrawFacingRing(Vector2 ground, int facing) const;
 
     void RegisterCharacter(const Character& character, const std::filesystem::path& assetRoot);
     void ClearCustomCharacters();
@@ -85,6 +86,8 @@ public:
                        Rectangle destination, Color tint = WHITE) const;
 
 private:
+    Texture2D facingRing_{};
+    Texture2D facingArrow_{};
     struct CustomTextures { Texture2D portrait{}; Texture2D sprite{}; Texture2D icons[2]{};
         std::map<std::string, Texture2D> parts;
         CharacterFrameMap frames;

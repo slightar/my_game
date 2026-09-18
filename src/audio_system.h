@@ -15,6 +15,7 @@ public:
     void PlayReload() const;
     void PlayPlayerHit() const;
     void PlayBossHit() const;
+    void SetEffectsVolume(float volume);
 
 private:
     Sound gunshot_{};

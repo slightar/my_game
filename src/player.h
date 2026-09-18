@@ -10,18 +10,20 @@
 class AudioSystem;
 class CharacterArt;
 class UiFont;
+class GameSettings;
 
 class Player {
 public:
     void Reset(OperatorKind operatorKind = OperatorKind::Exusiai);
     void Reset(const Character& character);
+    void PlaceAt(Vector2 position, int facing);
     void Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
-                std::vector<Bullet>& bullets, AudioSystem& audio);
+                std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings);
     void UpdateDefeatAnimation(float deltaTime);
     void SetHorizontalBounds(float left, float right);
     void Draw(const CharacterArt& art) const;
     void DrawHud(const UiFont& font, const CharacterArt& art,
-                 const char* operatorName) const;
+                 const char* operatorName, const GameSettings* settings = nullptr) const;
 
     bool TakeDamage(Vector2 damageSource);
     [[nodiscard]] Vector2 Position() const;
@@ -44,7 +46,8 @@ private:
     static constexpr int kMaxSwordWaveCharges = 6;
 
     void UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
-                           float enemyRadius, std::vector<Bullet>& bullets);
+                           float enemyRadius, std::vector<Bullet>& bullets,
+                           const GameSettings& settings);
 
     Vector2 position_{};
     Vector2 velocity_{};

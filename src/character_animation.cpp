@@ -13,7 +13,7 @@ void CharacterAnimator::Update(float dt, const CharacterMotion& m) {
     grounded_ = m.grounded;
     if (m.attackTriggered && !m.dead) attack_ = 0.24F;
     const float speed = std::clamp(std::abs(m.velocity.x) / 320.0F, 0.0F, 2.0F);
-    phase_ = std::fmod(phase_ + dt * 14 * speed, 2 * PI);
+    phase_ = std::fmod(phase_ + dt * 10 * speed, 2 * PI);
     const auto next = m.dead ? CharacterAction::Defeated : hurt_ > 0 ? CharacterAction::Hurt :
         m.dodging ? CharacterAction::Dodge : !m.grounded ? (m.velocity.y < 0 ? CharacterAction::Jump : CharacterAction::Fall) :
         land_ > 0 ? CharacterAction::Land : attack_ > 0 ? CharacterAction::Attack :

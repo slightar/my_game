@@ -83,11 +83,16 @@ AudioSystem::AudioSystem()
       reload_(CreateReload()),
       playerHit_(CreateHit(105.0F, 0.18F)),
       bossHit_(CreateHit(240.0F, 0.09F)) {
-    SetSoundVolume(gunshot_, 0.28F);
-    SetSoundVolume(emptyClick_, 0.35F);
-    SetSoundVolume(reload_, 0.55F);
-    SetSoundVolume(playerHit_, 0.55F);
-    SetSoundVolume(bossHit_, 0.18F);
+    SetEffectsVolume(1.0F);
+}
+
+void AudioSystem::SetEffectsVolume(float volume) {
+    const float level = std::clamp(volume, 0.0F, 1.0F);
+    SetSoundVolume(gunshot_, 0.28F * level);
+    SetSoundVolume(emptyClick_, 0.35F * level);
+    SetSoundVolume(reload_, 0.55F * level);
+    SetSoundVolume(playerHit_, 0.55F * level);
+    SetSoundVolume(bossHit_, 0.18F * level);
 }
 
 AudioSystem::~AudioSystem() {

@@ -33,13 +33,9 @@ int main() {
                 (static_cast<float>(GetScreenHeight()) -
                  static_cast<float>(GameConfig::kScreenHeight) * displayScale) /
                     2.0F};
-            const Camera2D logicalCamera{displayOffset, {}, 0.0F, displayScale};
-
             BeginDrawing();
             ClearBackground(BLACK);
-            BeginMode2D(logicalCamera);
-            game.Draw();
-            EndMode2D();
+            game.Draw(displayScale, displayOffset);
             EndDrawing();
         }
     }

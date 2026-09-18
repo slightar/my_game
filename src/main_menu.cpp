@@ -1,290 +1,251 @@
 #include "main_menu.h"
-
 #include "character_art.h"
+#include "file_path.h"
 #include "game_types.h"
 #include "ui_font.h"
+#include "ui_theme.h"
+#include "terminal_ui.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
+bool Up() { return IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W); }
+bool Down() { return IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S); }
+bool Left() { return IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A); }
+bool Right() { return IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D); }
 
-constexpr Color kBlue{0, 156, 211, 255};
-constexpr Color kOrange{255, 91, 18, 255};
-constexpr Color kInk{24, 28, 32, 255};
-constexpr Color kPaper{238, 239, 236, 255};
-
-std::string FitText(const UiFont& font, std::string text, float size, float width) {
-    if (font.Measure(text.c_str(), size) <= width) return text;
-    while (!text.empty() && font.Measure((text + "...").c_str(), size) > width) {
-        auto last = text.size() - 1;
-        while (last > 0 && (static_cast<unsigned char>(text[last]) & 0xc0) == 0x80) --last;
-        text.resize(last);
-    }
-    return text + "...";
 }
 
-void DrawTechLines() {
-    for (int x = -180; x < GameConfig::kScreenWidth + 240; x += 190) {
-        DrawLineEx({static_cast<float>(x), 0.0F},
-                   {static_cast<float>(x + 460),
-                    static_cast<float>(GameConfig::kScreenHeight)},
-                   2.0F, Fade(RAYWHITE, 0.055F));
+MainMenu::MainMenu() : MainMenu(Utf8Path(GetApplicationDirectory())) {}
+MainMenu::MainMenu(const std::filesystem::path& applicationDirectory)
+    : progress_(applicationDirectory), settings_(applicationDirectory) { SyncError(); }
+void MainMenu::SyncError() {
+    const auto& error = !settings_.Error().empty() ? settings_.Error() : progress_.Error();
+    if (!error.empty() && status_ != error) { status_ = error; TraceLog(LOG_WARNING, "%s", status_.c_str()); }
+}
+void MainMenu::OpenHome() { progress_.SetProtocolSuppressed(false); page_ = Page::Home; }
+
+void MainMenu::MoveExplorer(float deltaTime) {
+    float x = static_cast<float>(IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) -
+              static_cast<float>(IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT));
+    float y = static_cast<float>(IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN)) -
+              static_cast<float>(IsKeyDown(KEY_W) || IsKeyDown(KEY_UP));
+    const float length = std::sqrt(x * x + y * y);
+    if (length > 0.0F) { x /= length; y /= length; walkingToPointer_ = false; pendingExit_.clear(); }
+    if (walkingToPointer_) {
+        const float dx = walkTarget_.x - explorer_.x, dy = walkTarget_.y - explorer_.y;
+        const float distance = std::sqrt(dx * dx + dy * dy);
+        if (distance <= 350.0F * deltaTime) { explorer_ = walkTarget_; walkingToPointer_ = false; }
+        else { x = dx / distance; y = dy / distance; }
     }
-    for (int y = 100; y < GameConfig::kScreenHeight; y += 135) {
-        DrawLine(0, y, GameConfig::kScreenWidth, y, Fade(RAYWHITE, 0.035F));
-    }
+    explorer_.x = std::clamp(explorer_.x + x * 350.0F * deltaTime, 195.0F, 1100.0F);
+    explorer_.y = std::clamp(explorer_.y + y * 350.0F * deltaTime, 215.0F, 555.0F);
 }
 
-void DrawMenuCard(const UiFont& font, Rectangle bounds, const char* title,
-                  const char* subtitle, bool selected, bool dark = false) {
-    const Color fill = dark ? Color{42, 47, 52, 245} : Color{239, 240, 237, 245};
-    const Color text = dark ? RAYWHITE : kInk;
-    DrawRectangleRec(bounds, fill);
-    DrawTriangle({bounds.x, bounds.y},
-                 {bounds.x + 48.0F, bounds.y},
-                 {bounds.x, bounds.y + 48.0F},
-                 selected ? kOrange : Fade(kBlue, 0.55F));
-    DrawRectangle(static_cast<int>(bounds.x),
-                  static_cast<int>(bounds.y + bounds.height - 7.0F),
-                  static_cast<int>(bounds.width), 7,
-                  selected ? kOrange : Fade(BLACK, 0.18F));
-    if (selected) {
-        DrawRectangleLinesEx(bounds, 4.0F, kBlue);
-        DrawRectangle(static_cast<int>(bounds.x - 14.0F),
-                      static_cast<int>(bounds.y), 8,
-                      static_cast<int>(bounds.height), kOrange);
+const MapExit* MainMenu::NearbyExit() const {
+    const auto* node = progress_.CurrentNode(); if (!node) return nullptr;
+    for (const auto& exit : node->exits) if (progress_.ExitVisible(exit)) {
+        const float dx = explorer_.x - exit.x, dy = explorer_.y - exit.y;
+        if (dx * dx + dy * dy < 75.0F * 75.0F) return &exit;
     }
-    font.Draw(title, bounds.x + 38.0F, bounds.y + 35.0F, 52.0F, text);
-    font.Draw(subtitle, bounds.x + 40.0F, bounds.y + 105.0F, 22.0F,
-              dark ? Fade(RAYWHITE, 0.65F) : Color{83, 88, 92, 255});
+    return nullptr;
 }
 
-void DrawOperatorSilhouette(Vector2 center, float scale, Color color) {
-    DrawCircleV({center.x, center.y - 105.0F * scale}, 58.0F * scale, color);
-    DrawTriangle({center.x - 92.0F * scale, center.y + 95.0F * scale},
-                 {center.x + 92.0F * scale, center.y + 95.0F * scale},
-                 {center.x, center.y - 65.0F * scale}, color);
-    DrawLineEx({center.x - 55.0F * scale, center.y - 145.0F * scale},
-               {center.x - 25.0F * scale, center.y - 215.0F * scale},
-               13.0F * scale, color);
-    DrawLineEx({center.x + 55.0F * scale, center.y - 145.0F * scale},
-               {center.x + 25.0F * scale, center.y - 215.0F * scale},
-               13.0F * scale, color);
-}
-
-}  // namespace
-
-MenuAction MainMenu::Update() {
+MenuAction MainMenu::Update(float deltaTime) {
+    pointer_ = ReadUiPointer(touchPreviouslyDown_);
+    if (page_ != Page::Splash && page_ != Page::Home && pointer_.Clicked(TerminalUi::Back)) {
+        if (page_ == Page::KeyBindings && capturingKey_) { capturingKey_ = false; return MenuAction::None; }
+        progress_.SetProtocolSuppressed(false);
+        walkingToPointer_ = false; pendingExit_.clear();
+        if (page_ == Page::KeyBindings || page_ == Page::ConfirmReset) page_ = Page::Settings;
+        else if (page_ == Page::NodeDetail || page_ == Page::FirstReset || page_ == Page::HiddenBoss || page_ == Page::Ending) page_ = Page::Map;
+        else page_ = Page::Home;
+        return MenuAction::None;
+    }
+    // TODO: Remove development shortcuts when progression can be earned through full levels.
+    if (IsKeyPressed(KEY_F6)) { progress_.AddCompliance(); status_ = "调试：PRTS 遵循度 +1"; }
+    if (IsKeyPressed(KEY_F7)) { progress_.AddTruth(); status_ = "调试：真相发现度 +1"; }
+    if (IsKeyPressed(KEY_F8)) { progress_.UnlockAllNodes(); status_ = "调试：全部节点已解锁"; }
+    if (IsKeyPressed(KEY_F10)) { progress_.DebugNormalReady(); explorer_ = {640, 390}; status_ = "调试：已准备普通结局"; }
+    if (IsKeyPressed(KEY_F11)) { progress_.DebugHiddenReady(); explorer_ = {640, 390}; status_ = "调试：已准备隐藏结局"; }
+    SyncError();
     switch (page_) {
-        case Page::Splash:
-            if (IsKeyPressed(KEY_ESCAPE)) {
-                return MenuAction::Quit;
+    case Page::Splash:
+        if (IsKeyPressed(KEY_ESCAPE)) return MenuAction::Quit;
+        if (IsKeyPressed(KEY_ENTER) || pointer_.pressed) page_ = Page::Home;
+        break;
+    case Page::Home:
+        if (IsKeyPressed(KEY_B)) return MenuAction::StartBattle;
+        if (Up() || Down()) {
+            for (int i = 0; i < 6; ++i) if (TerminalUi::HomeOrder[i] == homeSelection_) {
+                homeSelection_ = TerminalUi::HomeOrder[(i + (Up() ? 5 : 1)) % 6];
+                break;
             }
-            if (IsKeyPressed(KEY_ENTER)) {
-                page_ = Page::Home;
-            }
-            break;
-        case Page::Home:
-            if (IsKeyPressed(KEY_ESCAPE)) {
-                return MenuAction::Quit;
-            }
-            if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) {
-                homeSelection_ = std::max(0, homeSelection_ - 1);
-            }
-            if (IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) {
-                homeSelection_ = std::min(1, homeSelection_ + 1);
-            }
-            if (IsKeyPressed(KEY_ENTER)) {
-                page_ = homeSelection_ == 0 ? Page::StageSelect
-                                             : Page::OperatorSelect;
-            }
-            break;
-        case Page::StageSelect:
-            if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressed(KEY_ESCAPE)) {
-                page_ = Page::Home;
-            } else if (IsKeyPressed(KEY_ENTER)) {
-                return MenuAction::StartBattle;
-            }
-            break;
-        case Page::OperatorSelect:
-            if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) {
-                operatorCursor_ = std::max(0, operatorCursor_ - 1);
-            }
-            if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) {
-                operatorCursor_ = std::min(1 + static_cast<int>(characters_.size()), operatorCursor_ + 1);
-            }
-            if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressed(KEY_ESCAPE)) {
-                page_ = Page::Home;
-            } else if (IsKeyPressed(KEY_ENTER)) {
-                selectedCustom_ = operatorCursor_ >= 2 ? operatorCursor_ - 2 : -1;
-                selectedOperator_ = operatorCursor_ == 0
-                                        ? OperatorKind::Exusiai
-                                        : operatorCursor_ == 1 ? OperatorKind::Texas : OperatorKind::Custom;
-                page_ = Page::Home;
-            }
-            break;
-    }
-    return MenuAction::None;
-}
-
-void MainMenu::Draw(const UiFont& font, const CharacterArt& art) const {
-    switch (page_) {
-        case Page::Splash:
-            DrawSplash(font);
-            break;
-        case Page::Home:
-            DrawHome(font, art);
-            break;
-        case Page::StageSelect:
-            DrawStageSelect(font);
-            break;
-        case Page::OperatorSelect:
-            DrawOperatorSelect(font, art);
-            break;
-    }
-}
-
-void MainMenu::OpenHome() {
-    page_ = Page::Home;
-}
-
-const char* MainMenu::SelectedOperatorName() const {
-    if (const auto* c = SelectedCharacter()) return c->name.c_str();
-    return selectedOperator_ == OperatorKind::Texas ? "德克萨斯" : "能天使";
-}
-
-void MainMenu::SetCharacters(std::vector<Character> characters) {
-    const std::string selectedId = SelectedCharacter() ? SelectedCharacter()->id : "";
-    characters_ = std::move(characters);
-    selectedCustom_ = -1;
-    for (std::size_t i = 0; i < characters_.size(); ++i)
-        if (characters_[i].id == selectedId) selectedCustom_ = static_cast<int>(i);
-    if (selectedCustom_ < 0 && selectedOperator_ == OperatorKind::Custom) selectedOperator_ = OperatorKind::Exusiai;
-    operatorCursor_ = std::clamp(operatorCursor_, 0, 1 + static_cast<int>(characters_.size()));
-}
-
-const Character* MainMenu::SelectedCharacter() const {
-    return selectedCustom_ >= 0 && selectedCustom_ < static_cast<int>(characters_.size()) ? &characters_[selectedCustom_] : nullptr;
-}
-
-OperatorKind MainMenu::SelectedOperator() const {
-    return selectedOperator_;
-}
-
-void MainMenu::DrawBackground(const UiFont& font, const char* section) const {
-    ClearBackground(kInk);
-    DrawRectangleGradientV(0, 0, GameConfig::kScreenWidth,
-                           GameConfig::kScreenHeight,
-                           Color{80, 91, 96, 255}, Color{16, 21, 25, 255});
-    DrawTechLines();
-    DrawTriangle({0.0F, 0.0F}, {670.0F, 0.0F}, {410.0F, 720.0F},
-                 Fade(BLACK, 0.38F));
-    DrawRectangle(0, 0, GameConfig::kScreenWidth, 74, Fade(BLACK, 0.72F));
-    DrawRectangle(0, 70, GameConfig::kScreenWidth, 4, kBlue);
-    font.Draw("ARKNIGHTS-GO", 42.0F, 19.0F, 30.0F, RAYWHITE);
-    font.Draw("// 罗德岛战术终端", 275.0F, 27.0F, 18.0F,
-              Fade(RAYWHITE, 0.65F));
-    const float sectionWidth = font.Measure(section, 20.0F);
-    font.Draw(section, 1225.0F - sectionWidth, 27.0F, 20.0F, kOrange);
-}
-
-void MainMenu::DrawSplash(const UiFont& font) const {
-    DrawBackground(font, "系统接入");
-    DrawRectangle(0, 505, GameConfig::kScreenWidth, 215, Fade(BLACK, 0.58F));
-    DrawLineEx({150.0F, 395.0F}, {1130.0F, 395.0F}, 3.0F, kBlue);
-    const char* title = "ARKNIGHTS-GO";
-    const float titleWidth = font.Measure(title, 70.0F);
-    font.Draw(title, 640.0F - titleWidth / 2.0F, 235.0F, 70.0F, RAYWHITE);
-    const char* subtitle = "战术终端";
-    const float subtitleWidth = font.Measure(subtitle, 27.0F);
-    font.Draw(subtitle, 640.0F - subtitleWidth / 2.0F, 325.0F,
-              27.0F, Fade(RAYWHITE, 0.72F));
-    const char* prompt = "按 Enter 进入主页";
-    const float promptWidth = font.Measure(prompt, 28.0F);
-    font.Draw(prompt, 640.0F - promptWidth / 2.0F, 570.0F,
-              28.0F, RAYWHITE);
-    DrawRectangle(640 - 150, 620, 300, 6, kOrange);
-}
-
-void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
-    DrawBackground(font, "主页");
-
-    if (const auto* c = SelectedCharacter()) {
-        art.DrawCustomPortrait(c->id, {77.0F, 82.0F, 390.0F, 585.0F});
-    } else if (art.HasPortrait(selectedOperator_)) {
-        DrawRectangle(48, 82, 478, 585, Fade(BLACK, 0.8F));
-        art.DrawPortrait(selectedOperator_, {77.0F, 82.0F, 390.0F, 585.0F});
-    } else {
-        DrawOperatorSilhouette({315.0F, 480.0F}, 1.25F, Fade(BLACK, 0.82F));
-    }
-    DrawRectangle(52, 555, 460, 112, Fade(BLACK, 0.72F));
-    DrawRectangle(52, 555, 8, 112, kBlue);
-    font.Draw("当前出战", 82.0F, 574.0F, 20.0F, Fade(RAYWHITE, 0.65F));
-    font.Draw(SelectedOperatorName(), 82.0F, 608.0F, 35.0F, RAYWHITE);
-
-    DrawMenuCard(font, {650.0F, 145.0F, 560.0F, 205.0F},
-                 "作战", "选择关卡，开始行动", homeSelection_ == 0);
-    DrawMenuCard(font, {730.0F, 390.0F, 480.0F, 165.0F},
-                 "干员", "选择出战角色", homeSelection_ == 1);
-
-    DrawRectangle(650, 600, 560, 54, Fade(BLACK, 0.7F));
-    font.Draw("W/S 或方向键选择   Enter 确认   Esc 退出", 665.0F, 616.0F,
-              19.0F, RAYWHITE);
-}
-
-void MainMenu::DrawStageSelect(const UiFont& font) const {
-    DrawBackground(font, "作战 / 关卡选择");
-    font.Draw("行动档案", 72.0F, 112.0F, 30.0F, RAYWHITE);
-
-    DrawMenuCard(font, {76.0F, 175.0F, 660.0F, 295.0F},
-                 "1-1  近卫交锋", "目标：击败弑君者", true, true);
-    DrawRectangle(112, 386, 580, 48, kBlue);
-    font.Draw(TextFormat("可部署干员：%s", SelectedOperatorName()),
-              136.0F, 398.0F, 20.0F, RAYWHITE);
-
-    DrawMenuCard(font, {785.0F, 175.0F, 410.0F, 128.0F},
-                 "1-2", "尚未开放", false, true);
-    DrawMenuCard(font, {785.0F, 335.0F, 410.0F, 128.0F},
-                 "1-3", "尚未开放", false, true);
-    DrawRectangle(76, 560, 1119, 70, Fade(BLACK, 0.72F));
-    font.Draw("Enter 开始行动   Backspace/Esc 返回主页", 108.0F, 581.0F,
-              22.0F, RAYWHITE);
-}
-
-void MainMenu::DrawOperatorSelect(const UiFont& font, const CharacterArt& art) const {
-    DrawBackground(font, "干员 / 出战选择");
-    font.Draw("选择一名出战干员", 72, 106, 30, RAYWHITE);
-    const int total = 2 + static_cast<int>(characters_.size());
-    const int start = operatorCursor_ / 3 * 3;
-    font.Draw(TextFormat("%i / %i", operatorCursor_ + 1, total), 1080, 112, 22, SKYBLUE);
-    for (int index = start; index < std::min(start + 3, total); ++index) {
-        const float x = 72 + static_cast<float>(index - start) * 396;
-        const Rectangle card{x, 170, 345, 385};
-        DrawRectangleRec(card, Color{32, 38, 44, 245});
-        DrawRectangleLinesEx(card, operatorCursor_ == index ? 5.0F : 2.0F, operatorCursor_ == index ? kBlue : GRAY);
-        const Rectangle portrait{x + 20, 181, 305, 268};
-        const char* name;
-        const char* description;
-        bool selected;
-        if (index < 2) {
-            const auto kind = index == 0 ? OperatorKind::Exusiai : OperatorKind::Texas;
-            art.DrawPortrait(kind, portrait);
-            name = index == 0 ? "能天使" : "德克萨斯";
-            description = index == 0 ? "高速射击 / 扫射 / 过载" : "近战 / 剑气 / 剑雨";
-            selected = selectedOperator_ == kind;
-        } else {
-            const auto& c = characters_[index - 2];
-            art.DrawCustomPortrait(c.id, portrait);
-            art.DrawCustomSprite(c, {x + 290, 446}, 1, c.assets.idleRow, static_cast<float>(GetTime()));
-            name = c.name.c_str(); description = c.description.c_str();
-            selected = selectedCustom_ == index - 2;
         }
-        const float nameSize = std::min(28.0F, 298.0F / std::max(1.0F, font.Measure(name, 28)) * 28);
-        font.Draw(name, x + 20, 458, nameSize, RAYWHITE);
-        font.Draw(FitText(font, description, 17, 300).c_str(), x + 20, 494, 17, LIGHTGRAY);
-        if (selected) font.Draw("已选择", x + 20, 525, 18, ORANGE);
+        if (IsKeyPressed(KEY_ESCAPE)) return MenuAction::Quit;
+        for (int i = 0; i < 6; ++i) if (pointer_.Clicked(TerminalUi::HomeButtons[i])) homeSelection_ = i;
+        if (IsKeyPressed(KEY_ENTER) || pointer_.Clicked(TerminalUi::HomeButtons[homeSelection_])) {
+            if (homeSelection_ == 0) page_ = Page::Map;
+            else if (homeSelection_ == 1) page_ = Page::Archive;
+            else if (homeSelection_ == 2) page_ = Page::Equipment;
+            else if (homeSelection_ == 3) page_ = Page::Settings;
+            else if (homeSelection_ == 4) page_ = Page::Map;
+            else return MenuAction::Quit;
+        }
+        break;
+    case Page::Map:
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { page_ = Page::Home; walkingToPointer_ = false; pendingExit_.clear(); }
+        else {
+            if (pointer_.Clicked(TerminalUi::MapTask)) { page_ = Page::NodeDetail; walkingToPointer_ = false; pendingExit_.clear(); break; }
+            if (pointer_.Clicked(TerminalUi::MapArea)) {
+                walkTarget_ = {std::clamp(pointer_.position.x, 195.0F, 1100.0F), std::clamp(pointer_.position.y, 215.0F, 555.0F)};
+                walkingToPointer_ = true; pendingExit_.clear();
+                if (const auto* node = progress_.CurrentNode()) for (const auto& exit : node->exits) {
+                    if (!progress_.ExitVisible(exit)) continue;
+                    const float labelY = exit.y < 240 ? exit.y + 30 : exit.y - 64;
+                    if (pointer_.Hit({exit.x - 27, exit.y - 27, 54, 54}) || pointer_.Hit({exit.x - 104, labelY, 208, 29})) {
+                        walkTarget_ = {exit.x, exit.y}; pendingExit_ = exit.id; break;
+                    }
+                }
+            }
+            MoveExplorer(deltaTime);
+            const auto* nearby = NearbyExit();
+            const bool autoEnter = nearby && !pendingExit_.empty() && nearby->id == pendingExit_;
+            if (IsKeyPressed(KEY_ENTER) || autoEnter) {
+                if (nearby) {
+                    if (progress_.Travel(nearby->id)) { explorer_ = {640, 390}; status_ = "已通过出口进入下一地图"; }
+                    else status_ = "出口尚未开放：请先完成当前任务或调查线索";
+                } else page_ = Page::NodeDetail;
+                walkingToPointer_ = false; pendingExit_.clear();
+            }
+        }
+        break;
+    case Page::Archive: {
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { page_ = Page::Home; break; }
+        if (pointer_.Clicked(TerminalUi::Category(0))) { archiveCategory_ = 0; archiveSelection_ = 0; }
+        if (pointer_.Clicked(TerminalUi::Category(1))) { archiveCategory_ = 1; archiveSelection_ = 0; }
+        if (Left() || Right()) { archiveCategory_ = 1 - archiveCategory_; archiveSelection_ = 0; }
+        const auto entries = progress_.Archives(archiveCategory_ == 0 ? ArchiveCategory::Story : ArchiveCategory::Item);
+        if (entries.empty()) break;
+        const int start = std::clamp(archiveSelection_ - 3, 0, std::max(0, static_cast<int>(entries.size()) - 7));
+        for (int i = start; i < std::min(start + 7, static_cast<int>(entries.size())); ++i)
+            if (pointer_.Clicked({340, 180.0F + (i - start) * 55.0F, 367, 45})) { archiveSelection_ = i; break; }
+        const float wheel = GetMouseWheelMove();
+        if (Up() || wheel > 0) archiveSelection_ = (archiveSelection_ + static_cast<int>(entries.size()) - 1) % static_cast<int>(entries.size());
+        if (Down() || wheel < 0) archiveSelection_ = (archiveSelection_ + 1) % static_cast<int>(entries.size());
+        break;
     }
-    font.Draw("方向键查看   Enter 确认   Backspace/Esc 返回主页", 90, 579, 20, RAYWHITE);
-    font.Draw("拖入角色 JSON 导入 / F5 刷新", 90, 610, 18, SKYBLUE);
-    font.Draw(FitText(font, status_, 16, 1110).c_str(), 90, 645, 16, ORANGE);
+    case Page::Equipment: {
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { page_ = Page::Home; break; }
+        for (int i = 0; i < 3; ++i) if (pointer_.Clicked({62.0F + i * 403, 151, 378, 105})) equipmentSlot_ = i;
+        if (Left()) equipmentSlot_ = (equipmentSlot_ + 2) % 3;
+        if (Right()) equipmentSlot_ = (equipmentSlot_ + 1) % 3;
+        const auto entries = progress_.Equipment();
+        int count = 0; for (const auto& entry : entries) if (entry.owned) ++count;
+        const int start = std::max(0, equipmentSelection_ - 3);
+        int visibleRow = 0;
+        for (const auto& entry : entries) if (entry.owned) {
+            if (visibleRow >= start && visibleRow < start + 6 && pointer_.Clicked({78, 343.0F + (visibleRow - start) * 43, 516, 39})) equipmentSelection_ = visibleRow;
+            ++visibleRow;
+        }
+        const float wheel = GetMouseWheelMove();
+        if (count > 0 && (Up() || wheel > 0)) equipmentSelection_ = (equipmentSelection_ + count - 1) % count;
+        if (count > 0 && (Down() || wheel < 0)) equipmentSelection_ = (equipmentSelection_ + 1) % count;
+        if (IsKeyPressed(KEY_DELETE) || IsKeyPressed(KEY_X) || pointer_.Clicked(TerminalUi::Unequip)) progress_.Equip(equipmentSlot_, "");
+        if (IsKeyPressed(KEY_ENTER) || pointer_.Clicked(TerminalUi::Equip)) { int i = 0; for (const auto& entry : entries) if (entry.owned && i++ == equipmentSelection_) { progress_.Equip(equipmentSlot_, entry.id); break; } }
+        break;
+    }
+    case Page::Settings:
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { page_ = Page::Home; break; }
+        for (int i = 0; i < 5; ++i) if (pointer_.Clicked({84, 166.0F + i * 88, 1115, 71})) settingsSelection_ = i;
+        if (pointer_.down && pointer_.Hit({680, 181, 365, 43})) settingsSelection_ = 0;
+        if (pointer_.down && pointer_.Hit({680, 269, 365, 43})) settingsSelection_ = 1;
+        if (Up()) settingsSelection_ = (settingsSelection_ + 4) % 5;
+        if (Down()) settingsSelection_ = (settingsSelection_ + 1) % 5;
+        if (settingsSelection_ < 2) {
+            const int step = Right() ? 5 : Left() ? -5 : 0;
+            if (step) { if (settingsSelection_ == 0) settings_.AdjustMaster(step); else settings_.AdjustSound(step); }
+        }
+        if (settingsSelection_ < 2 && pointer_.down && pointer_.Hit({680, 181.0F + settingsSelection_ * 88, 365, 43})) {
+            const int value = std::clamp(static_cast<int>((pointer_.position.x - 690.0F) / 345.0F * 100.0F), 0, 100);
+            if (settingsSelection_ == 0 && value != settings_.MasterVolume()) settings_.AdjustMaster(value - settings_.MasterVolume());
+            else if (settingsSelection_ == 1 && value != settings_.SoundVolume()) settings_.AdjustSound(value - settings_.SoundVolume());
+        }
+        if (IsKeyPressed(KEY_ENTER) || pointer_.Clicked({84, 166.0F + settingsSelection_ * 88, 1115, 71})) {
+            if (settingsSelection_ == 2) page_ = Page::KeyBindings;
+            else if (settingsSelection_ == 3) page_ = Page::ConfirmReset;
+            else if (settingsSelection_ == 4) page_ = Page::Home;
+        }
+        break;
+    case Page::KeyBindings:
+        if (capturingKey_) {
+            const int key = GetKeyPressed();
+            if (key == KEY_ESCAPE) { capturingKey_ = false; status_ = "已取消改键"; }
+            else if (key != 0) {
+                if (settings_.Bind(static_cast<GameAction>(keySelection_), key)) {
+                    capturingKey_ = false; status_ = "键位已保存";
+                } else status_ = "此键不可用或已被其他操作占用";
+            }
+            break;
+        }
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { page_ = Page::Settings; break; }
+        if (Up()) keySelection_ = (keySelection_ + GameSettings::kActionCount - 1) % GameSettings::kActionCount;
+        if (Down()) keySelection_ = (keySelection_ + 1) % GameSettings::kActionCount;
+        for (int i = 0; i < GameSettings::kActionCount; ++i)
+            if (pointer_.Clicked({81, 149.0F + i * 43, 1115, 40})) keySelection_ = i;
+        if (IsKeyPressed(KEY_ENTER) || pointer_.Clicked({81, 149.0F + keySelection_ * 43, 1115, 40})) { capturingKey_ = true; status_ = "请按新键；Esc 取消"; }
+        break;
+    case Page::ConfirmReset:
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { page_ = Page::Settings; break; }
+        if (IsKeyPressed(KEY_ENTER) || pointer_.Clicked(TerminalUi::ResetConfirm)) {
+            const bool saved = progress_.ResetProgress();
+            archiveSelection_ = equipmentSelection_ = 0;
+            status_ = saved ? "游戏进度已重置" : progress_.Error();
+            page_ = Page::Settings;
+        }
+        break;
+    case Page::NodeDetail: {
+        // TODO: Replace this confirmation with each node's battle and reward flow.
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { page_ = Page::Map; break; }
+        if (!IsKeyPressed(KEY_ENTER) && !pointer_.Clicked(TerminalUi::Confirm)) break;
+        const auto id = progress_.SelectedNode();
+        if (progress_.IsCompleted(id)) { page_ = Page::Map; break; }
+        if (id == "ending_prts_core" && !progress_.IsCompleted(id)) {
+            if (!progress_.CanCompleteCurrent()) { status_ = "尚未完成隐藏路线入口"; break; }
+            progress_.SetProtocolSuppressed(true); page_ = Page::HiddenBoss; break;
+        }
+        if (!progress_.CompleteNode(id)) {
+            status_ = progress_.IsCompleted(id) ? "该地点已完成，请从出口继续" :
+                      "尚未满足完成条件；试炼需卸下全部协议";
+            break;
+        }
+        if (id == "ending_normal" || id == "ending_hidden") {
+            ending_ = id == "ending_normal" ? EndingType::Normal : EndingType::Hidden;
+            page_ = Page::Ending;
+        } else if (id == "prologue_defeat") page_ = Page::FirstReset;
+        else { status_ = "地点已完成；返回地图寻找新出口"; page_ = Page::Map; }
+        break;
+    }
+    case Page::FirstReset:
+        if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_ESCAPE) || pointer_.Clicked(TerminalUi::Confirm)) page_ = Page::Map;
+        break;
+    case Page::HiddenBoss:
+        // TODO: Connect PRTS boss attacks and victory to the real battle module.
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { progress_.SetProtocolSuppressed(false); page_ = Page::Map; }
+        else if (IsKeyPressed(KEY_ENTER) || pointer_.Clicked(TerminalUi::Confirm)) {
+            const bool completed = progress_.CompleteNode("ending_prts_core");
+            progress_.SetProtocolSuppressed(false);
+            if (!completed || !progress_.Travel("to_hidden_ending")) {
+                page_ = Page::Map; status_ = "行动未能完成，请检查当前任务条件或存档提示"; break;
+            }
+            explorer_ = {640, 390};
+            page_ = Page::NodeDetail;
+        }
+        break;
+    case Page::Ending:
+        if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE) || pointer_.Clicked(TerminalUi::Confirm)) page_ = Page::Map;
+        break;
+    }
+    SyncError(); return MenuAction::None;
 }

@@ -1,4 +1,5 @@
 #include "game.h"
+#include "ui_theme.h"
 #include "file_path.h"
 
 #include <algorithm>
@@ -20,6 +21,8 @@ float SmoothStep(float value) {
 }  // namespace
 
 Game::Game() {
+    SetMasterVolume(mainMenu_.Settings().MasterVolume() / 100.0F);
+    audio_.SetEffectsVolume(mainMenu_.Settings().SoundVolume() / 100.0F);
     ReloadCharacters();
     Reset();
 }
@@ -51,14 +54,15 @@ void Game::ReloadCharacters() {
         characters.push_back(std::move(c));
     }
     uiFont_.SetAdditionalText(glyphs);
-    mainMenu_.SetCharacters(std::move(characters));
     mainMenu_.SetStatus(errors.empty() ? "" : "配置文件: " + errors);
 }
 
 void Game::Reset() {
     bullets_.clear();
-    if (const auto* character = mainMenu_.SelectedCharacter()) player_.Reset(*character);
-    else player_.Reset(mainMenu_.SelectedOperator());
+    operators_[0].Reset(OperatorKind::Exusiai);
+    operators_[1].Reset(OperatorKind::Texas);
+    activeOperator_ = 0;
+    player_ = &operators_[0];
     boss_.Reset();
     bossActive_ = false;
     cameraX_ = static_cast<float>(GameConfig::kScreenWidth) / 2.0F;
@@ -66,6 +70,21 @@ void Game::Reset() {
     encounterBannerTimer_ = 0.0F;
     paused_ = false;
     pauseSelection_ = 0;
+}
+
+void Game::SwitchOperator(int slot) {
+    if (slot < 0 || slot >= static_cast<int>(operators_.size()) ||
+        slot == activeOperator_ || operators_[slot].IsDead()) return;
+    const Vector2 position = player_->Position();
+    const int facing = player_->FacingDirection();
+    activeOperator_ = slot;
+    player_ = &operators_[slot];
+    if (bossActive_) {
+        player_->SetHorizontalBounds(
+            GameConfig::kBossGateX + GameConfig::kBossGateWidth / 2.0F + 34.0F,
+            GameConfig::kRoom.x + GameConfig::kRoom.width - 75.0F);
+    }
+    player_->PlaceAt(position, facing);
 }
 
 void Game::Update(float deltaTime) {
@@ -88,7 +107,9 @@ void Game::Update(float deltaTime) {
             ReloadCharacters();
             mainMenu_.SetStatus(std::move(status));
         }
-        const MenuAction action = mainMenu_.Update();
+        const MenuAction action = mainMenu_.Update(deltaTime);
+        SetMasterVolume(mainMenu_.Settings().MasterVolume() / 100.0F);
+        audio_.SetEffectsVolume(mainMenu_.Settings().SoundVolume() / 100.0F);
         if (action == MenuAction::StartBattle) {
             Reset();
             inBattle_ = true;
@@ -98,13 +119,18 @@ void Game::Update(float deltaTime) {
         return;
     }
 
-    if (IsKeyPressed(KEY_ESCAPE)) {
+    const UiPointer pointer = ReadUiPointer(touchPreviouslyDown_);
+    if ((!paused_ && mainMenu_.Settings().Pressed(GameAction::Pause)) || IsKeyPressed(KEY_ESCAPE)) {
         paused_ = !paused_;
         pauseSelection_ = 0;
         return;
     }
 
     if (paused_) {
+        if (pointer.Clicked({470, 310, 340, 65})) { paused_ = false; return; }
+        if (pointer.Clicked({470, 395, 340, 65})) {
+            paused_ = false; inBattle_ = false; mainMenu_.OpenHome(); return;
+        }
         if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) {
             pauseSelection_ = std::max(0, pauseSelection_ - 1);
         }
@@ -123,19 +149,22 @@ void Game::Update(float deltaTime) {
         return;
     }
 
-    if (player_.IsDead() || (bossActive_ && boss_.IsDefeated())) {
-        if (player_.IsDead()) {
-            player_.UpdateDefeatAnimation(deltaTime);
+    if (player_->IsDead() && !operators_[1 - activeOperator_].IsDead()) {
+        SwitchOperator(1 - activeOperator_);
+    }
+    if (player_->IsDead() || (bossActive_ && boss_.IsDefeated())) {
+        if (player_->IsDead()) {
+            player_->UpdateDefeatAnimation(deltaTime);
         }
         if (bossActive_ && boss_.IsDefeated()) {
-            boss_.Update(deltaTime, player_.Position(),
-                         player_.FacingDirection());
+            boss_.Update(deltaTime, player_->Position(),
+                         player_->FacingDirection());
         }
-        if (!player_.IsDead() || player_.DefeatAnimationFinished()) {
+        if (!player_->IsDead() || player_->DefeatAnimationFinished()) {
             if (IsKeyPressed(KEY_ENTER)) {
                 Reset();
             }
-            if (IsKeyPressed(KEY_BACKSPACE)) {
+            if (IsKeyPressed(KEY_BACKSPACE) || pointer.pressed) {
                 inBattle_ = false;
                 mainMenu_.OpenHome();
             }
@@ -143,9 +172,11 @@ void Game::Update(float deltaTime) {
         return;
     }
 
-    player_.Update(deltaTime, boss_.Position(), boss_.Radius(), bullets_, audio_);
+    if (mainMenu_.Settings().Pressed(GameAction::OperatorOne)) SwitchOperator(0);
+    else if (mainMenu_.Settings().Pressed(GameAction::OperatorTwo)) SwitchOperator(1);
+    player_->Update(deltaTime, boss_.Position(), boss_.Radius(), bullets_, audio_, mainMenu_.Settings());
 
-    if (!bossActive_ && player_.Position().x >= GameConfig::kBossTriggerX) {
+    if (!bossActive_ && player_->Position().x >= GameConfig::kBossTriggerX) {
         bossActive_ = true;
         gateCloseTimer_ = kGateCloseDuration;
         encounterBannerTimer_ = kEncounterBannerDuration;
@@ -156,23 +187,23 @@ void Game::Update(float deltaTime) {
                                  GameConfig::kBossGateWidth / 2.0F + 34.0F;
         const float worldRight = GameConfig::kRoom.x + GameConfig::kRoom.width -
                                  75.0F;
-        player_.SetHorizontalBounds(sealedLeft, worldRight);
+        player_->SetHorizontalBounds(sealedLeft, worldRight);
         gateCloseTimer_ = std::max(0.0F, gateCloseTimer_ - deltaTime);
         encounterBannerTimer_ =
             std::max(0.0F, encounterBannerTimer_ - deltaTime);
-        boss_.Update(deltaTime, player_.Position(), player_.FacingDirection());
+        boss_.Update(deltaTime, player_->Position(), player_->FacingDirection());
     }
     UpdateBullets(deltaTime);
     UpdateCamera(deltaTime);
 
     const bool touchingBoss = bossActive_ && boss_.CanDealContactDamage() &&
                               CheckCollisionCircleRec(boss_.Position(), boss_.Radius(),
-                                                      player_.Hitbox());
+                                                      player_->Hitbox());
     const bool hitByBossAttack = bossActive_ && !boss_.IsDefeated() &&
-                                 boss_.AttackHits(player_.Hitbox(),
-                                                  player_.ProjectileHitbox());
+                                 boss_.AttackHits(player_->Hitbox(),
+                                                  player_->ProjectileHitbox());
     if (touchingBoss || hitByBossAttack) {
-        if (player_.TakeDamage(boss_.Position())) {
+        if (player_->TakeDamage(boss_.Position())) {
             audio_.PlayPlayerHit();
         }
     }
@@ -183,7 +214,7 @@ void Game::UpdateCamera(float deltaTime) {
     const float minCameraX = halfView;
     const float maxCameraX = GameConfig::kRoom.x + GameConfig::kRoom.width -
                              halfView;
-    const float desiredX = std::clamp(player_.Position().x,
+    const float desiredX = std::clamp(player_->Position().x,
                                       minCameraX, maxCameraX);
     const float blend = 1.0F - std::exp(-kCameraFollowSharpness * deltaTime);
     cameraX_ += (desiredX - cameraX_) * blend;
@@ -193,14 +224,38 @@ bool Game::ShouldQuit() const {
     return quitRequested_;
 }
 
+void Game::DrawOperatorSlots() const {
+    constexpr const char* names[] = {"能天使", "德克萨斯", "未开放", "未开放"};
+    for (int slot = 0; slot < 4; ++slot) {
+        const Rectangle box{618.0F + 108.0F * slot, 646.0F, 100.0F, 50.0F};
+        const bool active = slot == activeOperator_;
+        const bool available = slot < static_cast<int>(operators_.size());
+        DrawRectangleRec(box, active ? Color{232, 235, 235, 245}
+                                     : Color{27, 30, 34, 226});
+        DrawRectangleRec({box.x, box.y, 4, box.height},
+                         active ? Color{182, 218, 78, 255}
+                                : available ? Fade(WHITE, 0.65F)
+                                            : Fade(WHITE, 0.18F));
+        const Color color = active ? Color{25, 29, 33, 255}
+                                   : available && operators_[slot].IsDead()
+                                         ? Color{198, 84, 87, 255}
+                                         : available ? RAYWHITE : Fade(RAYWHITE, 0.37F);
+        uiFont_.Draw(TextFormat("%d", slot + 1), box.x + 12, box.y + 4, 23, color);
+        uiFont_.Draw(names[slot], box.x + 36, box.y + 16, 15, color);
+    }
+}
+
 void Game::DrawPauseMenu() const {
     DrawRectangle(0, 0, GameConfig::kScreenWidth, GameConfig::kScreenHeight,
                   Fade(BLACK, 0.68F));
     const Rectangle panel{410.0F, 176.0F, 460.0F, 370.0F};
-    DrawRectangleRec(panel, Color{31, 36, 42, 248});
-    DrawRectangleLinesEx(panel, 3.0F, Color{0, 156, 211, 255});
-    DrawRectangle(static_cast<int>(panel.x), static_cast<int>(panel.y),
-                  static_cast<int>(panel.width), 8, Color{255, 91, 18, 255});
+    TacticalUi::DrawCutPanel(panel, TacticalUi::kPanel,
+                             TacticalUi::kCyan, 30.0F, 2.0F);
+    DrawRectangle(static_cast<int>(panel.x + 30.0F),
+                  static_cast<int>(panel.y),
+                  static_cast<int>(panel.width - 30.0F), 6,
+                  TacticalUi::kOrange);
+    TacticalUi::DrawCornerMarks(panel, Fade(RAYWHITE, 0.65F));
 
     const char* title = "行动暂停";
     const float titleWidth = uiFont_.Measure(title, 42.0F);
@@ -214,14 +269,18 @@ void Game::DrawPauseMenu() const {
     for (int index = 0; index < 2; ++index) {
         const bool selected = pauseSelection_ == index;
         DrawRectangleRec(options[index],
-                         selected ? Color{0, 156, 211, 255}
-                                  : Color{62, 69, 76, 255});
-        DrawRectangleLinesEx(options[index], selected ? 3.0F : 1.0F,
-                             selected ? RAYWHITE : Fade(RAYWHITE, 0.35F));
+                         selected ? TacticalUi::kPaper
+                                  : TacticalUi::kPanelSoft);
+        DrawRectangle(static_cast<int>(options[index].x),
+                      static_cast<int>(options[index].y),
+                      selected ? 8 : 3,
+                      static_cast<int>(options[index].height),
+                      selected ? TacticalUi::kOrange : TacticalUi::kMuted);
         const float labelWidth = uiFont_.Measure(labels[index], 25.0F);
         uiFont_.Draw(labels[index],
                      options[index].x + (options[index].width - labelWidth) / 2.0F,
-                     options[index].y + 18.0F, 25.0F, RAYWHITE);
+                     options[index].y + 18.0F, 25.0F,
+                     selected ? TacticalUi::kInk : RAYWHITE);
     }
     uiFont_.Draw("W/S 选择   Enter 确认   Esc 继续",
                  486.0F, 496.0F, 18.0F, Fade(RAYWHITE, 0.72F));
@@ -381,18 +440,28 @@ void Game::DrawEncounterBanner() const {
                  Fade(Color{239, 57, 64, 255}, alpha));
 }
 
-void Game::Draw() const {
+void Game::Draw(float displayScale, Vector2 displayOffset) const {
+    const Camera2D uiCamera{displayOffset, {}, 0.0F, displayScale};
     if (!inBattle_) {
+        BeginMode2D(uiCamera);
         mainMenu_.Draw(uiFont_, characterArt_);
+        EndMode2D();
         return;
     }
 
-    ClearBackground({24, 27, 34, 255});
+    BeginMode2D(uiCamera);
+    DrawRectangle(0, 0, GameConfig::kScreenWidth, GameConfig::kScreenHeight,
+                  Color{24, 27, 34, 255});
+    EndMode2D();
     const Camera2D worldCamera{
-        {static_cast<float>(GameConfig::kScreenWidth) / 2.0F,
-         static_cast<float>(GameConfig::kScreenHeight) / 2.0F},
+        {displayOffset.x +
+             static_cast<float>(GameConfig::kScreenWidth) * displayScale /
+                 2.0F,
+         displayOffset.y +
+             static_cast<float>(GameConfig::kScreenHeight) * displayScale /
+                 2.0F},
         {cameraX_, static_cast<float>(GameConfig::kScreenHeight) / 2.0F},
-        0.0F, 1.0F};
+        0.0F, displayScale};
     BeginMode2D(worldCamera);
     DrawMap();
 
@@ -402,8 +471,11 @@ void Game::Draw() const {
         }
         if (bullet.kind == BulletKind::MeleeSlash) {
             if (characterArt_.HasTexasSkill2Effects()) {
+                const int effectFacing = bullet.facingDirection == 0
+                                             ? player_->FacingDirection()
+                                             : bullet.facingDirection;
                 characterArt_.DrawTexasSkill2Slash(
-                    bullet.position, player_.FacingDirection(),
+                    bullet.position, effectFacing,
                     bullet.visualVariant == 1,
                     bullet.damageType == DamageType::Arts,
                     bullet.lifetime, bullet.radius);
@@ -478,36 +550,51 @@ void Game::Draw() const {
     }
 
     boss_.Draw(uiFont_);
-    player_.Draw(characterArt_);
+    player_->Draw(characterArt_);
     EndMode2D();
 
-    player_.DrawHud(uiFont_, characterArt_, mainMenu_.SelectedOperatorName());
+    BeginMode2D(uiCamera);
+    player_->DrawHud(uiFont_, characterArt_, activeOperator_ == 0 ? "能天使" : "德克萨斯", &mainMenu_.Settings());
+    DrawOperatorSlots();
     if (bossActive_) {
         boss_.DrawHud(uiFont_);
     }
     DrawEncounterBanner();
 
     const bool showResult = (bossActive_ && boss_.IsDefeated()) ||
-                            (player_.IsDead() &&
-                             player_.DefeatAnimationFinished());
+                            (player_->IsDead() &&
+                             player_->DefeatAnimationFinished());
     if (showResult) {
         DrawRectangle(0, 0, GameConfig::kScreenWidth, GameConfig::kScreenHeight,
-                      Fade(BLACK, 0.58F));
-        const char* title = player_.IsDead() ? "任务失败" : "弑君者已击败";
+                      Fade(BLACK, 0.72F));
+        const Rectangle resultPanel{320.0F, 244.0F, 640.0F, 184.0F};
+        TacticalUi::DrawCutPanel(resultPanel, TacticalUi::kPanel,
+                                 player_->IsDead() ? TacticalUi::kRed
+                                                  : TacticalUi::kCyan,
+                                 30.0F, 2.0F);
+        DrawRectangle(static_cast<int>(resultPanel.x + 30.0F),
+                      static_cast<int>(resultPanel.y),
+                      static_cast<int>(resultPanel.width - 30.0F), 6,
+                      player_->IsDead() ? TacticalUi::kRed
+                                       : TacticalUi::kOrange);
+        const char* title = player_->IsDead() ? "任务失败" : "弑君者已击败";
         const float titleWidth = uiFont_.Measure(title, 46.0F);
         uiFont_.Draw(title,
                      static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
                          titleWidth / 2.0F,
-                     290.0F, 46.0F, player_.IsDead() ? RED : SKYBLUE);
+                     280.0F, 46.0F,
+                     player_->IsDead() ? TacticalUi::kRed
+                                      : TacticalUi::kPaper);
         const char* restart = "Enter 重新开始   Backspace 返回主页";
         const float restartWidth = uiFont_.Measure(restart, 24.0F);
         uiFont_.Draw(restart,
                      static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
                          restartWidth / 2.0F,
-                     360.0F, 24.0F, RAYWHITE);
+                     367.0F, 21.0F, TacticalUi::kMuted);
     }
 
     if (paused_) {
         DrawPauseMenu();
     }
+    EndMode2D();
 }

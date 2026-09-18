@@ -46,5 +46,6 @@ struct Bullet {
     float stunDuration = 0.0F;
     float activationDelay = 0.0F;
     int visualVariant = 0;
+    int facingDirection = 0;
     bool hasHit = false;
 };

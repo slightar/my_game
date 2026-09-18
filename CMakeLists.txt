@@ -27,7 +27,12 @@ add_executable(my_game
         src/player.cpp
         src/boss.cpp
         src/audio_system.cpp
+        src/game_settings.cpp
         src/main_menu.cpp
+        src/menu_views.cpp
+        src/terminal_ui.cpp
+        src/story_data.cpp
+        src/progress_system.cpp
         src/ui_font.cpp
         src/platform_input.cpp)
 target_link_libraries(my_game PRIVATE character_core)
@@ -37,8 +42,15 @@ if (BUILD_TESTING)
     add_executable(character_tests tests/character_tests.cpp)
     target_link_libraries(character_tests PRIVATE character_core)
     add_test(NAME character_tests COMMAND character_tests)
+    add_executable(progress_tests tests/progress_tests.cpp src/progress_system.cpp src/story_data.cpp)
+    target_include_directories(progress_tests PRIVATE src third_party)
+    add_test(NAME progress_tests COMMAND progress_tests)
+    add_executable(settings_tests tests/settings_tests.cpp src/game_settings.cpp)
+    target_include_directories(settings_tests PRIVATE src third_party)
+    target_link_libraries(settings_tests PRIVATE raylib)
+    add_test(NAME settings_tests COMMAND settings_tests)
     add_executable(character_render_smoke tests/character_render_smoke.cpp
-        src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp src/ui_font.cpp)
+        src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp src/menu_views.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
     target_link_libraries(character_render_smoke PRIVATE character_core)
 endif()
 
@@ -52,7 +64,7 @@ if (WIN32)
     if (MINGW)
         set(GAME_EXECUTABLES my_game character_tool)
         if (BUILD_TESTING)
-            list(APPEND GAME_EXECUTABLES character_tests character_render_smoke)
+            list(APPEND GAME_EXECUTABLES character_tests character_render_smoke progress_tests settings_tests)
         endif()
         get_filename_component(MINGW_RUNTIME_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
         foreach(GAME_EXECUTABLE IN LISTS GAME_EXECUTABLES)

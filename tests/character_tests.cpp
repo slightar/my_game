@@ -115,6 +115,8 @@ void Runtime() {
     CharacterRuntime melee(rain); bullets.clear();
     melee.Update(0, {200, 500}, -1, {}, true, {}, healthA, bullets);
     Require(bullets[0].position.x == 110 && bullets[0].radius == 90 && bullets[0].velocity.x == 0, "Melee range or facing failed");
+    Require(bullets[0].facingDirection == -1,
+            "Melee attack did not preserve its spawn direction");
 
     auto repeat = Character::FromJson(R"({"id":"repeat","name":"Repeat","skills":[{"name":"Pulse","duration":1,"interval":0.25,"cooldown":2,"effects":[{"count":2}]}]})");
     CharacterRuntime pulse(repeat); bullets.clear();

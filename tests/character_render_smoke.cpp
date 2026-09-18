@@ -4,6 +4,7 @@
 #include "main_menu.h"
 #include "player.h"
 #include "ui_font.h"
+#include "menu_render_checks.h"
 #include <iostream>
 #include <fstream>
 
@@ -26,7 +27,7 @@ int main() {
             for (const auto& s : c.skills) text += s.name + s.description;
         }
         font.SetAdditionalText(text);
-        MainMenu menu; menu.SetCharacters(list.characters); menu.OpenOperatorSelect();
+        MainMenu menu; menu.OpenHome();
         Player player; player.Reset(list.characters.front());
         const auto output = app / "character-qa"; std::filesystem::create_directories(output);
         const auto render = [&](const char* filename, auto draw) {
@@ -39,6 +40,25 @@ int main() {
             if (!saved) throw std::runtime_error("Cannot export render");
         };
         render("menu.png", [&] { menu.Draw(font, art); });
+        menu.OpenHome();
+        render("home.png", [&] { menu.Draw(font, art); });
+        menu.OpenStageSelect();
+        render("stage.png", [&] { menu.Draw(font, art); });
+        menu.OpenArchive();
+        render("archive.png", [&] { menu.Draw(font, art); });
+        menu.OpenEquipment();
+        render("equipment.png", [&] { menu.Draw(font, art); });
+        menu.OpenSettings();
+        render("settings.png", [&] { menu.Draw(font, art); });
+        CheckMenuInteraction(output, [&](const char* name, const MainMenu& subject) {
+            render(name, [&] { subject.Draw(font, art); });
+        });
+        Player builtin;
+        builtin.Reset();
+        render("exusiai-hud.png", [&] {
+            builtin.Draw(art); builtin.DrawHud(font, art, "能天使");
+            art.DrawFacingRing({500, 644}, -1);
+        });
         render("battle.png", [&] {
             DrawRectangle(48, 644, 1184, 50, DARKGRAY);
             player.Draw(art); player.DrawHud(font, art, "");

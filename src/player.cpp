@@ -2,10 +2,13 @@
 
 #include "audio_system.h"
 #include "character_art.h"
+#include "ui_theme.h"
 #include "ui_font.h"
+#include "game_settings.h"
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 namespace {
 
@@ -103,8 +106,19 @@ void Player::Reset(const Character& character) {
     health_ = character.stats.health;
 }
 
+void Player::PlaceAt(Vector2 position, int facing) {
+    position_ = position;
+    position_.x = std::clamp(position_.x, movementLeft_, movementRight_);
+    velocity_ = {};
+    facingDirection_ = facing;
+    jumpCount_ = position_.y + kHitboxHeight / 2.0F < GameConfig::kFloorY - 1.0F ? 1 : 0;
+    jumpHoldTimer_ = 0.0F;
+    dodgeTimer_ = 0.0F;
+    firing_ = false;
+}
+
 void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
-                    std::vector<Bullet>& bullets, AudioSystem& audio) {
+                    std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings) {
     hurtInvincibilityTimer_ = std::max(0.0F, hurtInvincibilityTimer_ - deltaTime);
     animationTime_ += deltaTime;
     if (IsDead()) {
@@ -127,26 +141,42 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
     } else if (operatorKind_ == OperatorKind::Exusiai) {
         overloadCooldown_ = std::max(0.0F, overloadCooldown_ - deltaTime);
     }
-    if (operatorKind_ == OperatorKind::Exusiai && IsKeyPressed(KEY_E) &&
+    if (operatorKind_ == OperatorKind::Exusiai && settings.Pressed(GameAction::SkillTwo) &&
         barrageTimer_ <= 0.0F &&
         barrageCooldown_ <= 0.0F) {
         barrageTimer_ = kBarrageDuration;
     }
-    if (operatorKind_ == OperatorKind::Exusiai && IsKeyPressed(KEY_Q) &&
+    if (operatorKind_ == OperatorKind::Exusiai && settings.Pressed(GameAction::SkillOne) &&
         overloadTimer_ <= 0.0F &&
         overloadCooldown_ <= 0.0F) {
         overloadTimer_ = kOverloadDuration;
     }
 
     float moveDirection = 0.0F;
-    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT)) {
+    if (settings.Down(GameAction::MoveLeft)) {
         moveDirection -= 1.0F;
     }
-    if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) {
+    if (settings.Down(GameAction::MoveRight)) {
         moveDirection += 1.0F;
     }
 
-    if (moveDirection != 0.0F && !IsKeyDown(KEY_J)) {
+    bool texasUsingSwordWave = false;
+    if (!character_ && operatorKind_ == OperatorKind::Texas &&
+        !texasRainMode_ && swordWaveCharges_ > 0 && settings.Down(GameAction::Attack)) {
+        const float deltaX = enemyPosition.x - position_.x;
+        const bool enemyInMeleeRange =
+            deltaX * static_cast<float>(facingDirection_) >= -enemyRadius &&
+            std::abs(deltaX) <= kTexasMeleeRange + enemyRadius &&
+            std::abs(enemyPosition.y - position_.y) <= 100.0F;
+        texasUsingSwordWave = !enemyInMeleeRange;
+    }
+    const bool rangedBasicAttack =
+        character_ ? character_->Definition().attack.type != EffectType::Melee
+                   : operatorKind_ == OperatorKind::Exusiai ||
+                         texasUsingSwordWave;
+    const bool lockFacingWhileAttacking =
+        rangedBasicAttack && settings.Down(GameAction::Attack);
+    if (moveDirection != 0.0F && !lockFacingWhileAttacking) {
         facingDirection_ = moveDirection > 0.0F ? 1 : -1;
     }
     if (dodgeCharges_ < kMaxDodgeCharges) {
@@ -159,9 +189,7 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         }
     }
 
-    const bool dodgePressed = IsKeyPressed(KEY_S) || IsKeyPressed(KEY_L) ||
-                              IsKeyPressed(KEY_LEFT_SHIFT) ||
-                              IsKeyPressed(KEY_RIGHT_SHIFT);
+    const bool dodgePressed = settings.Pressed(GameAction::Dodge);
     if (dodgePressed && dodgeCharges_ > 0 && dodgeTimer_ <= 0.0F) {
         dodgeDirection_ = moveDirection != 0.0F
                               ? (moveDirection > 0.0F ? 1 : -1)
@@ -181,10 +209,8 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         velocity_.x = moveDirection * (character_ ? character_->Definition().stats.moveSpeed : kMoveSpeed);
     }
 
-    const bool jumpPressed = IsKeyPressed(KEY_W) || IsKeyPressed(KEY_K) ||
-                             IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_UP);
-    const bool jumpHeld = IsKeyDown(KEY_W) || IsKeyDown(KEY_K) ||
-                          IsKeyDown(KEY_SPACE) || IsKeyDown(KEY_UP);
+    const bool jumpPressed = settings.Pressed(GameAction::Jump);
+    const bool jumpHeld = settings.Down(GameAction::Jump);
     if (jumpPressed && jumpCount_ < (character_ ? character_->Definition().stats.jumps : kMaxJumps) && dodgeTimer_ <= 0.0F) {
         velocity_.y = -(character_ ? character_->Definition().stats.jumpSpeed : kJumpSpeed);
         ++jumpCount_;
@@ -219,20 +245,20 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
 
     shotCooldown_ = std::max(0.0F, shotCooldown_ - deltaTime);
     if (character_) {
-        firing_ = IsKeyDown(KEY_J) && dodgeTimer_ <= 0;
+        firing_ = settings.Down(GameAction::Attack) && dodgeTimer_ <= 0;
         character_->Update(deltaTime, position_, facingDirection_, enemyPosition,
-                           firing_, {IsKeyPressed(KEY_E) && dodgeTimer_ <= 0,
-                                     IsKeyPressed(KEY_Q) && dodgeTimer_ <= 0}, health_, bullets);
+                           firing_, {settings.Pressed(GameAction::SkillTwo) && dodgeTimer_ <= 0,
+                                     settings.Pressed(GameAction::SkillOne) && dodgeTimer_ <= 0}, health_, bullets);
         animator_.Update(deltaTime, {velocity_, position_.y + kHitboxHeight / 2 >= GameConfig::kFloorY - 0.5F,
             dodgeTimer_ > 0, character_->PerformedAction(), false, character_->Definition().attack.type == EffectType::Melee});
         attackAnimationTime_ = firing_ ? attackAnimationTime_ + deltaTime : 0;
         return;
     }
     if (operatorKind_ == OperatorKind::Texas) {
-        UpdateTexasCombat(deltaTime, enemyPosition, enemyRadius, bullets);
+        UpdateTexasCombat(deltaTime, enemyPosition, enemyRadius, bullets, settings);
         return;
     }
-    if (IsKeyPressed(KEY_R) && ammo_ < kMagazineCapacity && !reloading_) {
+    if (settings.Pressed(GameAction::Reload) && ammo_ < kMagazineCapacity && !reloading_) {
         reloading_ = true;
         reloadTimer_ = kReloadDuration;
         audio.PlayReload();
@@ -246,7 +272,7 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         }
     }
 
-    if (IsKeyDown(KEY_J) && !reloading_ && ammo_ > 0 && shotCooldown_ <= 0.0F &&
+    if (settings.Down(GameAction::Attack) && !reloading_ && ammo_ > 0 && shotCooldown_ <= 0.0F &&
         dodgeTimer_ <= 0.0F) {
         const float direction = static_cast<float>(facingDirection_);
         const Vector2 muzzle{
@@ -291,7 +317,7 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         --ammo_;
         shotCooldown_ = kFireInterval;
         audio.PlayGunshot(ammo_);
-    } else if (IsKeyPressed(KEY_J) && reloading_) {
+    } else if (settings.Pressed(GameAction::Attack) && reloading_) {
         audio.PlayEmptyClick();
     }
 
@@ -301,7 +327,7 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         audio.PlayReload();
     }
 
-    firing_ = IsKeyDown(KEY_J) && !reloading_ && ammo_ > 0 &&
+    firing_ = settings.Down(GameAction::Attack) && !reloading_ && ammo_ > 0 &&
               dodgeTimer_ <= 0.0F;
     if (firing_) {
         attackAnimationTime_ += deltaTime;
@@ -312,7 +338,8 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
 
 void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
                                float enemyRadius,
-                               std::vector<Bullet>& bullets) {
+                               std::vector<Bullet>& bullets,
+                               const GameSettings& settings) {
     texasAttackEffectTimer_ =
         std::max(0.0F, texasAttackEffectTimer_ - deltaTime);
     texasRainBurstTimer_ =
@@ -330,7 +357,7 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
         }
     }
 
-    if (IsKeyPressed(KEY_E) && texasRainBurstTimer_ <= 0.0F) {
+    if (settings.Pressed(GameAction::SkillTwo) && texasRainBurstTimer_ <= 0.0F) {
         texasRainMode_ = !texasRainMode_;
         texasRainBurstTimer_ = texasRainMode_ ? kTexasRainEnterDuration
                                               : kTexasRainExitDuration;
@@ -357,13 +384,13 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
     } else {
         swordRainCooldown_ = std::max(0.0F, swordRainCooldown_ - deltaTime);
     }
-    if (IsKeyPressed(KEY_Q) && swordRainTimer_ <= 0.0F &&
+    if (settings.Pressed(GameAction::SkillOne) && swordRainTimer_ <= 0.0F &&
         swordRainCooldown_ <= 0.0F) {
         swordRainTimer_ = kSwordRainDuration;
         swordRainSpawnTimer_ = 0.0F;
     }
 
-    if (IsKeyDown(KEY_J) && shotCooldown_ <= 0.0F && dodgeTimer_ <= 0.0F) {
+    if (settings.Down(GameAction::Attack) && shotCooldown_ <= 0.0F && dodgeTimer_ <= 0.0F) {
         const float direction = static_cast<float>(facingDirection_);
         const float range = texasRainMode_ ? kTexasRainMeleeRange
                                            : kTexasMeleeRange;
@@ -388,7 +415,7 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
                     false, 0.0F,
                     texasRainMode_ ? static_cast<float>(strike) * 0.16F
                                    : 0.0F,
-                    strike});
+                    strike, facingDirection_});
             }
         } else if (swordWaveCharges_ > 0) {
             bullets.push_back({
@@ -427,6 +454,11 @@ void Player::SetHorizontalBounds(float left, float right) {
 }
 
 void Player::Draw(const CharacterArt& art) const {
+    if (!IsDead()) {
+        const Vector2 ringCenter{position_.x, GameConfig::kFloorY + 2.0F};
+        art.DrawFacingRing(ringCenter, facingDirection_);
+    }
+
     if (character_) {
         const auto& c = character_->Definition();
         const Color tint = IsDead() ? Fade(WHITE, 0.3F) : IsInvincible() ? Fade(SKYBLUE, 0.65F) : WHITE;
@@ -444,7 +476,7 @@ void Player::Draw(const CharacterArt& art) const {
         animation = ChibiAnimation::Run;
     }
     const bool moving = !airborne && std::abs(velocity_.x) > 1.0F;
-    const float walkWave = std::sin(animationTime_ * 14.0F);
+    const float walkWave = std::sin(animationTime_ * 10.0F);
     const float walkBob = moving
                               ? std::abs(walkWave) * 1.5F
                               : 0.0F;
@@ -460,16 +492,6 @@ void Player::Draw(const CharacterArt& art) const {
         const float transitionProgress = transitioning
             ? 1.0F - texasRainBurstTimer_ / transitionDuration
             : 1.0F;
-        const float pulse = 0.5F + 0.5F * std::sin(animationTime_ * 7.5F);
-        DrawEllipse(static_cast<int>(position_.x),
-                    static_cast<int>(GameConfig::kFloorY + 1.0F),
-                    84.0F + pulse * 5.0F, 14.0F + pulse * 2.0F,
-                    Fade(Color{132, 7, 18, 255},
-                         texasRainMode_ ? 0.17F : 0.08F));
-        DrawEllipse(static_cast<int>(position_.x),
-                    static_cast<int>(GameConfig::kFloorY),
-                    64.0F, 10.0F, Fade(BLACK, 0.28F));
-
         for (int streak = 0; streak < 5; ++streak) {
             const float phase = std::fmod(
                 animationTime_ * 1.35F + static_cast<float>(streak) * 0.213F,
@@ -590,105 +612,119 @@ void Player::Draw(const CharacterArt& art) const {
 }
 
 void Player::DrawHud(const UiFont& font, const CharacterArt& art,
-                     const char* operatorName) const {
+                     const char* operatorName, const GameSettings* settings) const {
+    const int maxHealth = character_ ? character_->Definition().stats.health
+                                     : kMaxHealth;
+    const char* displayName = character_ ? character_->Definition().name.c_str()
+                                         : operatorName;
+    const char* role = character_
+                           ? (character_->Definition().attack.type ==
+                                      EffectType::Melee
+                                  ? "GUARD // 近卫"
+                                  : "RANGED // 远程")
+                           : operatorKind_ == OperatorKind::Texas
+                                 ? "GUARD // 近卫"
+                                 : "SNIPER // 狙击";
+    const Rectangle statusPanel{32.0F, 28.0F, 405.0F, 116.0F};
+    TacticalUi::DrawCutPanel(statusPanel, TacticalUi::kPanel,
+                             Fade(RAYWHITE, 0.22F), 18.0F, 1.0F);
+    font.Skin().Draw("panel", statusPanel);
+    font.Draw(role, 53.0F, 39.0F, 13.0F, TacticalUi::kMuted);
+    font.Draw(displayName, 53.0F, 58.0F, 27.0F, TacticalUi::kPaper);
+    font.Draw(TextFormat("HP  %i / %i", health_, maxHealth),
+              53.0F, 97.0F, 15.0F, TacticalUi::kPaper);
+    TacticalUi::DrawProgressLine(
+        {143.0F, 108.0F}, 210.0F,
+        static_cast<float>(health_) / static_cast<float>(maxHealth),
+        health_ <= 1 ? TacticalUi::kRed : TacticalUi::kCyan, 7.0F);
+    font.Draw("DODGE", 358.0F, 91.0F, 11.0F, TacticalUi::kMuted);
+    DrawRectangleRec({378.0F, 110.0F, 27.0F, 5.0F},
+                     dodgeCharges_ > 0 ? TacticalUi::kPaper
+                                       : Color{66, 72, 78, 255});
+
+    const Rectangle helpPanel{32.0F, 669.0F, 570.0F, 27.0F};
+    TacticalUi::DrawCutPanel(helpPanel, Fade(TacticalUi::kInk, 0.82F),
+                             BLANK, 7.0F);
+    const std::string controls = settings
+        ? "MOVE " + GameSettings::KeyName(settings->Key(GameAction::MoveLeft)) + "/" +
+          GameSettings::KeyName(settings->Key(GameAction::MoveRight)) +
+          "  JUMP " + GameSettings::KeyName(settings->Key(GameAction::Jump)) +
+          "  DODGE " + GameSettings::KeyName(settings->Key(GameAction::Dodge)) +
+          "  ATTACK " + GameSettings::KeyName(settings->Key(GameAction::Attack)) +
+          "  SKILL " + GameSettings::KeyName(settings->Key(GameAction::SkillOne)) + "/" +
+          GameSettings::KeyName(settings->Key(GameAction::SkillTwo))
+        : "A/D MOVE   W/K JUMP   J ATTACK   S/L DODGE   E/Q SKILL";
+    font.Draw(controls.c_str(), 45.0F, 675.0F, 13.0F, Fade(RAYWHITE, 0.76F));
+
     if (character_) {
         const auto& c = character_->Definition();
-        DrawRectangle(70, 70, 455, 150, Fade(BLACK, 0.75F));
-        font.Draw(c.name.c_str(), 88, 82, 24, RAYWHITE);
-        font.Draw("A/D 移动   W/K/空格 跳跃   J 攻击", 88, 116, 17, RAYWHITE);
-        font.Draw("S/L/Shift 闪避   E/Q 技能", 88, 143, 17, RAYWHITE);
-        font.Draw(TextFormat("生命 %i/%i   闪避 %i", health_, c.stats.health, dodgeCharges_), 88, 178, 19, SKYBLUE);
         for (std::size_t i = 0; i < c.skills.size(); ++i) {
             const auto& skill = c.skills[i]; const auto& state = character_->Skills()[i];
-            const float x = 940 + static_cast<float>(i) * 160;
-            DrawRectangleRec({x, 546, 152, 102}, Fade(BLACK, 0.8F));
-            art.DrawCustomSkill(c.id, static_cast<int>(i), {x + 5, 551, 40, 40});
-            font.Draw(i == 0 ? "E" : "Q", x + 51, 553, 23, SKYBLUE);
-            const float size = std::min(18.0F, 138.0F / std::max(1.0F, font.Measure(skill.name.c_str(), 18)) * 18);
-            font.Draw(skill.name.c_str(), x + 6, 595, size, RAYWHITE);
+            const float x = 978.0F + static_cast<float>(i) * 145.0F;
+            constexpr float y = 604.0F;
+            const Rectangle skillPanel{x, y, 137.0F, 92.0F};
+            font.Skin().Draw("skill_shadow", {x - 8, y - 8, 150, 110});
+            TacticalUi::DrawCutPanel(skillPanel, TacticalUi::kPanel,
+                                     state.cooldown <= 0.0F
+                                         ? Color{185, 221, 66, 255}
+                                         : Fade(RAYWHITE, 0.30F),
+                                     12.0F, state.cooldown <= 0.0F ? 2.0F : 1.0F);
+            art.DrawCustomSkill(c.id, static_cast<int>(i),
+                                {x + 6.0F, y + 6.0F, 48.0F, 48.0F});
+            font.Draw(i == 0 ? "E" : "Q", x + 61.0F, y + 7.0F, 20.0F,
+                      TacticalUi::kCyan);
+            const float size = std::min(16.0F, 124.0F / std::max(1.0F, font.Measure(skill.name.c_str(), 16)) * 16);
+            font.Draw(skill.name.c_str(), x + 8.0F, y + 59.0F, size, RAYWHITE);
             font.Draw(state.remaining > 0 ? TextFormat("生效 %.1f", state.remaining) :
-                      state.cooldown > 0 ? TextFormat("冷却 %.1f", state.cooldown) : "就绪", x + 6, 621, 16, ORANGE);
+                      state.cooldown > 0 ? TextFormat("冷却 %.1f", state.cooldown) : "READY",
+                      x + 78.0F, y + 31.0F, 13.0F,
+                      state.cooldown <= 0.0F ? Color{185, 221, 66, 255}
+                                            : TacticalUi::kMuted);
         }
         return;
     }
-    const char* operatorText = TextFormat("当前干员：%s", operatorName);
-    font.Draw(operatorText, 72.0F, 42.0F, 18.0F, RAYWHITE);
-    DrawRectangle(70, 70, 420, 150, Fade(BLACK, 0.72F));
-    font.Draw("A/D 移动   W/K/空格 二段跳", 88.0F, 82.0F, 17.0F, RAYWHITE);
-    font.Draw(operatorKind_ == OperatorKind::Texas
-                  ? "按住 J 近战/剑气并锁定朝向"
-                  : "按住 J 射击并锁定朝向   R 换弹",
-              88.0F, 108.0F, 17.0F, RAYWHITE);
-    font.Draw("S/L/Shift 闪避", 88.0F, 134.0F, 17.0F, RAYWHITE);
-
-    font.Draw("生命", 88.0F, 170.0F, 18.0F, RAYWHITE);
-    for (int heart = 0; heart < kMaxHealth; ++heart) {
-        const Rectangle healthBlock{125.0F + static_cast<float>(heart) * 32.0F,
-                                    169.0F, 24.0F, 20.0F};
-        DrawRectangleRec(healthBlock, heart < health_ ? RED : Color{70, 76, 86, 255});
-        DrawRectangleLinesEx(healthBlock, 2.0F, RAYWHITE);
-    }
-
-    font.Draw("闪避", 238.0F, 170.0F, 16.0F, RAYWHITE);
-    for (int charge = 0; charge < kMaxDodgeCharges; ++charge) {
-        const Rectangle segment{306.0F + static_cast<float>(charge) * 40.0F,
-                                169.0F, 32.0F, 20.0F};
-        DrawRectangleRec(segment,
-                         charge < dodgeCharges_ ? SKYBLUE : Color{70, 76, 86, 255});
-        DrawRectangleLinesEx(segment, 2.0F, RAYWHITE);
-    }
-
-    constexpr float ammoPanelX = 70.0F;
-    constexpr float ammoPanelY = 234.0F;
-    constexpr float ammoPanelWidth = 108.0F;
-    constexpr float ammoPanelHeight = 302.0F;
-    DrawRectangleRec({ammoPanelX, ammoPanelY, ammoPanelWidth, ammoPanelHeight},
-                     Fade(BLACK, 0.76F));
+    constexpr float ammoPanelX = 32.0F;
+    constexpr float ammoPanelY = 158.0F;
+    constexpr float ammoPanelWidth = 190.0F;
+    constexpr float ammoPanelHeight = 82.0F;
+    TacticalUi::DrawCutPanel(
+        {ammoPanelX, ammoPanelY, ammoPanelWidth, ammoPanelHeight},
+        TacticalUi::kPanelSoft, Fade(RAYWHITE, 0.18F), 13.0F);
     if (operatorKind_ == OperatorKind::Texas) {
-        font.Draw("剑气", ammoPanelX + 37.0F, ammoPanelY + 12.0F,
-                  17.0F, RAYWHITE);
+        font.Draw("SWORD WAVE // 剑气", ammoPanelX + 15.0F,
+                  ammoPanelY + 10.0F, 13.0F, TacticalUi::kMuted);
         for (int charge = 0; charge < kMaxSwordWaveCharges; ++charge) {
-            const float y = ammoPanelY + 238.0F -
-                            static_cast<float>(charge) * 34.0F;
-            const Rectangle segment{ammoPanelX + 31.0F, y, 46.0F, 25.0F};
+            const Rectangle segment{
+                ammoPanelX + 15.0F + static_cast<float>(charge) * 23.0F,
+                ammoPanelY + 43.0F, 17.0F, 8.0F};
             DrawRectangleRec(segment,
                              charge < swordWaveCharges_
-                                 ? Color{221, 235, 244, 255}
+                                 ? TacticalUi::kPaper
                                  : Color{55, 61, 69, 255});
-            DrawRectangleLinesEx(segment, 2.0F, RAYWHITE);
         }
         if (swordWaveCharges_ < kMaxSwordWaveCharges) {
             const float restoreRatio = std::clamp(
                 1.0F - swordWaveRechargeTimer_ / kSwordWaveRechargeDuration,
                 0.0F, 1.0F);
-            DrawRectangle(static_cast<int>(ammoPanelX + 18.0F),
-                          static_cast<int>(ammoPanelY + 274.0F), 72, 6,
-                          Color{55, 61, 69, 255});
-            DrawRectangle(static_cast<int>(ammoPanelX + 18.0F),
-                          static_cast<int>(ammoPanelY + 274.0F),
-                          static_cast<int>(72.0F * restoreRatio), 6, RAYWHITE);
+            TacticalUi::DrawProgressLine({ammoPanelX + 15.0F,
+                                           ammoPanelY + 65.0F},
+                                          132.0F, restoreRatio,
+                                          TacticalUi::kCyan, 4.0F);
         }
     } else {
-        font.Draw("冲锋枪", ammoPanelX + 21.0F, ammoPanelY + 10.0F,
-                  16.0F, RAYWHITE);
-        font.Draw("弹匣", ammoPanelX + 37.0F, ammoPanelY + 34.0F,
-                  16.0F, Fade(RAYWHITE, 0.72F));
-        const Rectangle ammoBar{ammoPanelX + 38.0F, ammoPanelY + 66.0F,
-                                32.0F, 188.0F};
-        DrawRectangleRec(ammoBar, Color{61, 66, 74, 255});
+        font.Draw("SMG // 弹匣", ammoPanelX + 15.0F, ammoPanelY + 10.0F,
+                  13.0F, TacticalUi::kMuted);
         const float ammoRatio = static_cast<float>(ammo_) /
                                 static_cast<float>(kMagazineCapacity);
-        const float ammoFillHeight = ammoBar.height * ammoRatio;
-        DrawRectangleRec({ammoBar.x,
-                          ammoBar.y + ammoBar.height - ammoFillHeight,
-                          ammoBar.width, ammoFillHeight},
-                         reloading_ ? ORANGE : SKYBLUE);
-        DrawRectangleLinesEx(ammoBar, 2.0F, RAYWHITE);
+        TacticalUi::DrawProgressLine({ammoPanelX + 15.0F,
+                                       ammoPanelY + 51.0F},
+                                      105.0F, ammoRatio,
+                                      reloading_ ? TacticalUi::kOrange
+                                                 : TacticalUi::kCyan,
+                                      7.0F);
         const char* ammoText = TextFormat("%02i/%02i", ammo_, kMagazineCapacity);
-        const float ammoTextWidth = font.Measure(ammoText, 17.0F);
-        font.Draw(ammoText,
-                  ammoPanelX + (ammoPanelWidth - ammoTextWidth) / 2.0F,
-                  ammoPanelY + 268.0F, 17.0F, RAYWHITE);
+        font.Draw(ammoText, ammoPanelX + 124.0F, ammoPanelY + 40.0F,
+                  15.0F, TacticalUi::kPaper);
     }
 
     const auto drawSkillIcon = [&font, &art, this](float x, const char* key,
@@ -698,9 +734,17 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
                                        int skillIndex,
                                        bool showActiveTimer = true) {
         constexpr float size = 86.0F;
-        const Rectangle icon{x, 552.0F, size, size};
+        const Rectangle icon{x, 604.0F, size, size};
         const bool active = activeTimer > 0.0F;
         const bool coolingDown = !active && cooldownTimer > 0.0F;
+        font.Skin().Draw("skill_shadow", {icon.x - 13, icon.y - 12, 115, 112});
+        TacticalUi::DrawCutPanel(
+            {icon.x - 7.0F, icon.y - 8.0F,
+             icon.width + 14.0F, icon.height + 14.0F},
+            TacticalUi::kPanel,
+            active ? color : coolingDown ? Fade(RAYWHITE, 0.20F)
+                                         : Color{185, 221, 66, 255},
+            12.0F, active || !coolingDown ? 2.0F : 1.0F);
         DrawRectangleRec(icon, active ? Fade(color, 0.82F)
                                      : (coolingDown
                                             ? Color{25, 29, 35, 248}
@@ -715,12 +759,13 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
             font.Draw(key, icon.x + 31.0F, icon.y + 24.0F,
                       34.0F, RAYWHITE);
         }
-        DrawRectangleLinesEx(icon, active ? 4.0F : 2.0F,
-                             active ? color : RAYWHITE);
+        DrawRectangleLinesEx(icon, active ? 3.0F : 1.0F,
+                             active ? color : Fade(RAYWHITE, 0.68F));
 
-        DrawRectangleRec({icon.x + 5.0F, icon.y + 5.0F, 22.0F, 22.0F},
-                         Fade(BLACK, 0.72F));
-        font.Draw(key, icon.x + 10.0F, icon.y + 6.0F, 17.0F, RAYWHITE);
+        DrawRectangleRec({icon.x - 4.0F, icon.y - 4.0F, 27.0F, 25.0F},
+                         coolingDown ? Fade(BLACK, 0.82F)
+                                     : Color{85, 110, 35, 255});
+        font.Draw(key, icon.x + 4.0F, icon.y - 3.0F, 18.0F, RAYWHITE);
         if (coolingDown) {
             const float progress = std::clamp(
                 1.0F - cooldownTimer / cooldownDuration, 0.0F, 1.0F);
@@ -739,8 +784,13 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
         }
         DrawRectangleRec({icon.x + 2.0F, icon.y + 62.0F,
                           icon.width - 4.0F, 22.0F},
-                         Fade(BLACK, 0.62F));
+                         Fade(BLACK, 0.76F));
         font.Draw(name, icon.x + 8.0F, icon.y + 65.0F, 14.0F, RAYWHITE);
+        if (!active && !coolingDown) {
+            DrawRectangleRec({icon.x + 2.0F, icon.y + icon.height - 3.0F,
+                              icon.width - 4.0F, 4.0F},
+                             TacticalUi::kOrange);
+        }
         if ((active && showActiveTimer) || coolingDown) {
             const float timer = active ? activeTimer : cooldownTimer;
             const char* timerText = TextFormat("%.1f", timer);
@@ -753,16 +803,16 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
         }
     };
     if (operatorKind_ == OperatorKind::Texas) {
-        drawSkillIcon(1064.0F, "E", texasRainMode_ ? "阵雨连绵" : "初始",
+        drawSkillIcon(1082.0F, "E", texasRainMode_ ? "阵雨连绵" : "初始",
                       texasRainMode_ ? 1.0F : 0.0F, 0.0F, 1.0F,
                       Color{207, 45, 48, 255}, 0, false);
-        drawSkillIcon(1156.0F, "Q", "剑雨", swordRainTimer_,
+        drawSkillIcon(1176.0F, "Q", "剑雨", swordRainTimer_,
                       swordRainCooldown_, kSwordRainCooldownDuration,
                       Color{230, 235, 242, 255}, 1);
     } else {
-        drawSkillIcon(1064.0F, "E", "扫射", barrageTimer_, barrageCooldown_,
+        drawSkillIcon(1082.0F, "E", "扫射", barrageTimer_, barrageCooldown_,
                       kBarrageCooldownDuration, SKYBLUE, 0);
-        drawSkillIcon(1156.0F, "Q", "过载", overloadTimer_, overloadCooldown_,
+        drawSkillIcon(1176.0F, "Q", "过载", overloadTimer_, overloadCooldown_,
                       kOverloadCooldownDuration, ORANGE, 1);
     }
 

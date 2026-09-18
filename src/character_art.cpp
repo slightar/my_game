@@ -33,7 +33,7 @@ struct AnimationStrip {
 AnimationStrip StripFor(ChibiAnimation animation) {
     switch (animation) {
         case ChibiAnimation::Run:
-            return {1, 8, 12.0F, true};
+            return {1, 8, 9.0F, true};
         case ChibiAnimation::Jump:
             return {4, 5, 10.0F, false};
         case ChibiAnimation::Dodge:
@@ -219,7 +219,29 @@ void CharacterArt::DrawCustomSkill(const std::string& id, int slot, Rectangle de
     DrawTexturePro(t, {0, 0, static_cast<float>(t.width), static_cast<float>(t.height)}, destination, {}, 0, WHITE);
 }
 
+void CharacterArt::DrawFacingRing(Vector2 ground, int facing) const {
+    DrawEllipse(int(ground.x), int(ground.y), 34, 7, Fade(BLACK, 0.25F));
+    if (facingRing_.id) {
+        DrawTexturePro(facingRing_, {0, 0, float(facingRing_.width), float(facingRing_.height)},
+                       {ground.x - 39, ground.y - 10, 78, 20}, {}, 0, Fade(WHITE, 0.8F));
+    } else DrawEllipseLines(int(ground.x), int(ground.y), 34, 8, WHITE);
+    if (facingArrow_.id) {
+        DrawTexturePro(facingArrow_, {0, 0, float(facingArrow_.width) * (facing < 0 ? -1 : 1), float(facingArrow_.height)},
+                       {ground.x + facing * 40 - 8, ground.y - 4, 16, 8}, {}, 0, WHITE);
+    }
+}
+
 CharacterArt::CharacterArt() {
+    const auto ringPath = AssetPath("assets/ui/client/ring.png");
+    const auto arrowPath = AssetPath("assets/ui/client/direction.png");
+    if (FileExists(ringPath.c_str())) {
+        facingRing_ = LoadTexture(ringPath.c_str());
+        SetTextureFilter(facingRing_, TEXTURE_FILTER_BILINEAR);
+    }
+    if (FileExists(arrowPath.c_str())) {
+        facingArrow_ = LoadTexture(arrowPath.c_str());
+        SetTextureFilter(facingArrow_, TEXTURE_FILTER_BILINEAR);
+    }
     const std::string portraitPath =
         AssetPath("assets/operators/exusiai_portrait.png");
     if (FileExists(portraitPath.c_str())) {
@@ -314,6 +336,8 @@ void CharacterArt::ClearCustomCharacters() {
 }
 
 CharacterArt::~CharacterArt() {
+    if (facingRing_.id) UnloadTexture(facingRing_);
+    if (facingArrow_.id) UnloadTexture(facingArrow_);
     ClearCustomCharacters();
     if (IsTextureValid(texasSkill2Impact_)) {
         UnloadTexture(texasSkill2Impact_);
@@ -494,6 +518,57 @@ void CharacterArt::DrawChibi(OperatorKind operatorKind, Vector2 feetPosition,
 void CharacterArt::DrawExusiai(Vector2 feetPosition, int facingDirection, ChibiAnimation movement,
                                 bool attacking, bool defeated, float movementTime, float attackTime,
                                 float defeatTime, Color tint) const {
+    // Keep the authored gun pose while borrowing the walking sheet's lower body.
+    // This lets Exusiai move and fire without making her weapon disappear.
+    if (!defeated && attacking && movement == ChibiAnimation::Run &&
+        HasChibi() && HasBattleChibi()) {
+        const float walkFrameWidth = static_cast<float>(chibi_.width) /
+                                     static_cast<float>(kChibiColumns);
+        const float walkFrameHeight = static_cast<float>(chibi_.height) /
+                                      static_cast<float>(kChibiRows);
+        const AnimationStrip walkStrip = StripFor(ChibiAnimation::Run);
+        const int walkFrame =
+            static_cast<int>(movementTime * walkStrip.framesPerSecond) %
+            walkStrip.frameCount;
+        const int walkRow = facingDirection >= 0
+                                ? walkStrip.row
+                                : walkStrip.row + 1;
+        constexpr float lowerBodyStart = 0.48F;
+        constexpr float walkHeight = 132.0F;
+        const float walkWidth = walkHeight * walkFrameWidth / walkFrameHeight;
+        const float lowerBodyHeight = walkHeight * (1.0F - lowerBodyStart);
+        DrawTexturePro(
+            chibi_,
+            {walkFrameWidth * static_cast<float>(walkFrame),
+             walkFrameHeight * (static_cast<float>(walkRow) + lowerBodyStart),
+             walkFrameWidth, walkFrameHeight * (1.0F - lowerBodyStart)},
+            {feetPosition.x, feetPosition.y, walkWidth, lowerBodyHeight},
+            {walkWidth / 2.0F, lowerBodyHeight}, 0.0F, tint);
+
+        const float attackFrameWidth = static_cast<float>(battleChibi_.width) /
+                                       static_cast<float>(kBattleColumns);
+        const float attackFrameHeight = static_cast<float>(battleChibi_.height) /
+                                        static_cast<float>(kBattleRows);
+        constexpr int raisedGunFirstFrame = 3;
+        constexpr int raisedGunFrameCount = 6;
+        const int attackFrame = raisedGunFirstFrame +
+            static_cast<int>(attackTime * 18.0F) % raisedGunFrameCount;
+        constexpr float upperBodyEnd = 0.72F;
+        constexpr float attackHeight = 120.0F;
+        const float attackWidth =
+            attackHeight * attackFrameWidth / attackFrameHeight;
+        DrawTexturePro(
+            battleChibi_,
+            {attackFrameWidth * static_cast<float>(attackFrame),
+             attackFrameHeight,
+             facingDirection < 0 ? -attackFrameWidth : attackFrameWidth,
+             attackFrameHeight * upperBodyEnd},
+            {feetPosition.x, feetPosition.y,
+             attackWidth, attackHeight * upperBodyEnd},
+            {attackWidth / 2.0F, attackHeight}, 0.0F, tint);
+        return;
+    }
+
     // The 12x3 combat sheet has no locomotion. Use the authored directional walk sheet.
     if (!defeated && !attacking && movement != ChibiAnimation::Idle && HasChibi()) {
         DrawChibi(OperatorKind::Exusiai, {feetPosition.x, feetPosition.y + 4.0F}, facingDirection,
