@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib.h"
+#include <vector>
 
 namespace GameConfig {
 
@@ -48,4 +49,5 @@ struct Bullet {
     int visualVariant = 0;
     int facingDirection = 0;
     bool hasHit = false;
+    std::vector<unsigned> hitEnemyIds; // A melee swing may hit each mob once, including multiple targets.
 };

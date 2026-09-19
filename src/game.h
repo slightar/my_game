@@ -2,6 +2,8 @@
 
 #include "audio_system.h"
 #include "boss.h"
+#include "enemy_system.h"
+#include "enemy_renderer.h"
 #include "character_art.h"
 #include "game_types.h"
 #include "main_menu.h"
@@ -19,6 +21,7 @@ public:
     void Update(float deltaTime);
     void Draw(float displayScale, Vector2 displayOffset) const;
     [[nodiscard]] bool ShouldQuit() const;
+    [[nodiscard]] int RemainingTrialEnemies() const { return enemyTrial_ ? enemies_.Remaining() : 0; }
 
 private:
     void Reset();
@@ -30,6 +33,7 @@ private:
     void DrawMap() const;
     void DrawEncounterBanner() const;
     void DrawPauseMenu() const;
+    bool EncounterCleared() const;
 
     AudioSystem audio_;
     UiFont uiFont_;
@@ -39,6 +43,9 @@ private:
     Player* player_ = &operators_[0];
     int activeOperator_ = 0;
     Boss boss_;
+    EnemySystem enemies_;
+    EnemyRenderer enemyRenderer_;
+    bool enemyTrial_ = false;
     std::vector<Bullet> bullets_;
     bool inBattle_ = false;
     bool paused_ = false;

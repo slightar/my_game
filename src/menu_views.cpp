@@ -22,6 +22,7 @@ void MainMenu::DrawBackground(const UiFont& font, const char* section) const {
     TerminalUi::Background(font, section, "RHODES ISLAND / OPERATIONS SYSTEM");
 }
 void MainMenu::Draw(const UiFont& font, const CharacterArt& art) const {
+    TerminalUi::SetPointerState(pointer_.position, pointer_.down, pointer_.valid);
     switch (page_) {
     case Page::Splash:
         TerminalUi::Background(font, "ARKNIGHTS-GO", "FAN PROJECT / DEVELOPMENT BUILD", false);
@@ -54,6 +55,7 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
     const auto* chapter = current ? StoryData::FindChapter(current->chapterId) : nullptr;
     Surface({43, 397, 163, 42}, Ink);
     font.Draw("行动协助 / 能天使", 54, 410, 17, Paper);
+    Button(font, EnemyTrialButton, "小怪试炼 / N", pointer_.Hit(EnemyTrialButton), Ink, Paper);
     Surface({43, 457, 607, 174}, Fade(Ink, .87F));
     DrawRectangle(43, 457, 5, 174, Orange);
     font.Draw("CURRENT OPERATION", 65, 472, 12, Muted);
@@ -66,23 +68,25 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
     font.Draw(TextFormat("真相  %02d", progress_.Truth()), 903, 116, 17, Paper);
     font.Draw(TextFormat("记忆  %02d", progress_.MemoryIntegrity()), 1064, 116, 17, Paper);
     const auto main = HomeButtons[0];
-    Surface(main, Paper);
-    if (!font.Skin().Draw("home_battle", main)) font.Draw("终端", 750, 176, 47, Ink);
-    DrawRectangle(720, 260, 492, 44, Ink);
-    font.Draw("探索地图", 744, 270, 25, Paper);
-    font.Draw("REGION / ACCESS  >", 1007, 277, 12, Muted);
-    if (homeSelection_ == 0 || pointer_.Hit(main)) DrawRectangle(720, 300, 492, 4, Orange);
+    const auto mainDraw = PressedRect(main);
+    Surface(mainDraw, Paper);
+    if (!font.Skin().Draw("home_battle", mainDraw)) font.Draw("终端", mainDraw.x + 30, mainDraw.y + 19, 47, Ink);
+    DrawRectangle(int(mainDraw.x), int(mainDraw.y + 103), 492, 44, Ink);
+    font.Draw("探索地图", mainDraw.x + 24, mainDraw.y + 113, 25, Paper);
+    font.Draw("REGION / ACCESS  >", mainDraw.x + 287, mainDraw.y + 120, 12, Muted);
+    if (homeSelection_ == 0 || pointer_.Hit(main)) DrawRectangle(int(mainDraw.x), int(mainDraw.y + 143), 492, 4, Orange);
     const char* names[] = {"探索地图", "档案", "装备", "设置", "继续行动", "退出"};
     const char* subtitles[] = {"", "ARCHIVES", "EQUIPMENT", "SETTINGS", "CONTINUE OPERATION", "EXIT"};
     for (int i = 1; i < 6; ++i) {
         const auto r = HomeButtons[i];
         const bool selected = i == homeSelection_ || pointer_.Hit(r);
         const bool primary = i == 4;
-        Surface(r, primary ? Blue : Paper);
+        Surface(PressedRect(r), primary ? Blue : Paper);
         if (i == 1 || i == 2) Emblem({r.x + r.width - 45, r.y + 45}, 33, i - 1, {190, 198, 200, 255});
-        font.Draw(names[i], r.x + 22, r.y + (i < 3 ? 17 : 11), i < 3 ? 36 : 27, primary ? Paper : Ink);
-        font.Draw(subtitles[i], r.x + 24, r.y + r.height - 23, 11, primary ? Paper : Color{86, 94, 99, 255});
-        if (selected) DrawRectangleRec({r.x, r.y + r.height - 4, r.width, 4}, primary ? Paper : Orange);
+        const auto draw = PressedRect(r);
+        font.Draw(names[i], draw.x + 22, draw.y + (i < 3 ? 17 : 11), i < 3 ? 36 : 27, primary ? Paper : Ink);
+        font.Draw(subtitles[i], draw.x + 24, draw.y + draw.height - 23, 11, primary ? Paper : Color{86, 94, 99, 255});
+        if (selected) DrawRectangleRec({draw.x, draw.y + draw.height - 4, draw.width, 4}, primary ? Paper : Orange);
     }
     int exits = 0;
     if (current) for (const auto& e : current->exits) if (progress_.ExitAvailable(e)) ++exits;
@@ -93,55 +97,42 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
         slots += item ? std::string(KindName(item->kind)) + " / " : "空 / ";
     }
     Fit(font, slots, {912, 603, 300, 27}, 15, Paper);
-    Footer(font, "点击功能块 / ↑↓ 选择 · Enter 确认    B 战斗演示    F6/F7/F8/F10/F11 开发调试");
+    Footer(font, "点击功能块 / ↑↓ 选择 · Enter 确认    B 弑君者演示    N 小怪试炼    F6/F7/F8/F10/F11 调试");
 }
 
 void MainMenu::DrawMap(const UiFont& font) const {
     const auto* node = progress_.CurrentNode(); if (!node) return;
-    const auto* chapter = StoryData::FindChapter(node->chapterId);
-    DrawBackground(font, "终端 / 区域观测");
-    Fit(font, chapter ? chapter->title : "当前区域", {64, 106, 660, 31}, 28, Paper);
-    font.Draw(("当前位置 / " + node->name).c_str(), 67, 147, 19, Paper);
-    font.Draw("LOCAL AREA / EXIT CONNECTIONS", 861, 119, 13, Muted);
-    Surface(MapArea, {38, 44, 49, 244});
-    // TODO: Replace the traversable schematic with authored terrain and physical exit triggers.
-    for (int x = 109; x < 1195; x += 40) DrawLine(x, 184, x, 596, {71, 78, 82, 85});
-    for (int y = 196; y < 596; y += 40) DrawLine(85, y, 1195, y, {71, 78, 82, 85});
-    const Rectangle blocks[] = {{120, 251, 142, 102}, {145, 411, 179, 95}, {442, 279, 96, 79}, {481, 456, 151, 76}, {851, 226, 130, 105}, {944, 465, 169, 82}};
-    for (auto r : blocks) { DrawRectangleRec(r, {56, 63, 68, 255}); DrawRectangleLinesEx(r, 1, {84, 92, 96, 255}); }
-    font.Draw("N", 116, 213, 15, Muted);
-    DrawLine(120, 245, 120, 233, Paper);
-    for (const auto& exit : node->exits) {
-        const bool visible = progress_.ExitVisible(exit), available = progress_.ExitAvailable(exit);
-        const Color color = exit.hidden ? Warm : Paper;
-        if (!visible) {
-            // Undiscovered exits show only a faint environmental hint, never the target name.
-            DrawLineEx({exit.x - 16, exit.y + 8}, {exit.x + 8, exit.y - 8}, 1, Fade(Warm, .36F));
-            Fit(font, exit.hint, {exit.x - 115, exit.y + 15, 220, 22}, 12, Fade(Paper, .45F));
-            continue;
+    DrawBackground(font, "终端 / 全局行动地图");
+    font.Draw("全局行动地图", 64, 106, 30, Paper);
+    font.Draw("所有区域已建立关联 · 点击节点选择行动起点", 67, 147, 17, Muted);
+    Surface({52, 180, 1176, 430}, {35, 42, 48, 245});
+    const auto& nodes = progress_.Nodes();
+    const auto point = [](int i) { return Vector2{105.0F + (i % 8) * 145.0F, 238.0F + (i / 8) * 92.0F}; };
+    for (int i = 0; i < static_cast<int>(nodes.size()); ++i) {
+        const auto a = point(i);
+        for (const auto& e : nodes[i].exits) {
+            const auto it = std::find_if(nodes.begin(), nodes.end(), [&](const MapNode& n){ return n.id == e.targetId; });
+            if (it == nodes.end()) continue;
+            const auto b = point(static_cast<int>(std::distance(nodes.begin(), it)));
+            DrawLineEx(a, b, 2, Fade(e.hidden ? Warm : Blue, progress_.IsUnlocked(nodes[i].id) ? .7F : .22F));
         }
-        const Vector2 bend{exit.x, 390};
-        DrawLineEx({640, 390}, bend, available ? 3 : 1, Fade(color, available ? .8F : .3F));
-        DrawLineEx(bend, {exit.x, exit.y}, available ? 3 : 1, Fade(color, available ? .8F : .3F));
-        DrawPoly({exit.x, exit.y}, 4, 24, 0, color);
-        DrawPoly({exit.x, exit.y}, 4, 19, 0, Ink);
-        DrawPoly({exit.x, exit.y}, 4, 8, 0, available ? color : Muted);
-        const float labelY = exit.y < 240 ? exit.y + 30 : exit.y - 64;
-        Surface({exit.x - 104, labelY, 208, 29}, color);
-        Fit(font, exit.label, {exit.x - 96, labelY, 192, 29}, 17, Ink);
-        font.Draw(available ? (exit.hidden ? "记忆裂隙 / 可进入" : "主线出口 / 可进入") : "任务完成后开放",
-                  exit.x - 90, labelY + 33, 12, available ? color : Muted);
     }
-    DrawPoly({640, 390}, 4, 36, 0, Paper);
-    DrawPoly({640, 390}, 4, 29, 0, Ink);
-    font.Draw(progress_.IsCompleted(node->id) ? "已完成" : "行动中", 613, 435, 15, Paper);
-    DrawCircleV(explorer_, 11, Blue);
-    DrawCircleLines(int(explorer_.x), int(explorer_.y), 15, Paper);
-    if (walkingToPointer_) DrawCircleLines(int(walkTarget_.x), int(walkTarget_.y), 10, Fade(Paper, .65F));
-    Button(font, MapTask, "当前行动详情  /  完成任务  >", pointer_.Hit(MapTask), Paper, Ink);
-    const auto* exit = NearbyExit();
-    Fit(font, exit ? "Enter 通过当前出口" : "点击地图移动 · 点击出口前往", {575, 605, 601, 27}, 18, Paper);
-    Footer(font, "WASD / 方向键移动    Enter 查看任务或通过出口    鼠标点地面移动、点出口前往    返回箭头 / Esc 主页");
+    for (int i = 0; i < static_cast<int>(nodes.size()); ++i) {
+        const auto& n = nodes[i]; const auto p = point(i);
+        const bool unlocked = progress_.IsUnlocked(n.id), completed = progress_.IsCompleted(n.id), current = n.id == progress_.SelectedNode();
+        const Color color = n.type == NodeType::Hidden ? Warm : n.type == NodeType::Boss ? Orange : unlocked ? Blue : Muted;
+        DrawCircleV(p, current ? 17.0F : 12.0F, current ? Paper : Fade(color, unlocked ? .95F : .32F));
+        DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), current ? 23 : 17, current ? Orange : Fade(color, .65F));
+        if (completed) DrawCircleV(p, 5, Ink);
+        const std::string label = unlocked ? n.name : "???? / 未解锁";
+        Fit(font, label, {p.x - 66, p.y + 21, 132, 25}, 13, unlocked ? Paper : Muted);
+        font.Draw(unlocked ? NodeTypeName(n.type) : "LOCKED", p.x - 34, p.y - 37, 10, color);
+    }
+    Surface({835, 520, 365, 70}, Ink);
+    Fit(font, "当前起点 / " + node->name, {855, 532, 325, 24}, 17, Paper);
+    Fit(font, "Enter 打开节点详情", {855, 558, 325, 18}, 13, Muted);
+    Button(font, MapTask, "打开当前行动详情  >", pointer_.Hit(MapTask), Paper, Ink);
+    Footer(font, "点击节点选择起点 · Enter 查看节点 · 节点之间完全连通 · 返回箭头 / Esc 主页");
 }
 
 void MainMenu::DrawArchive(const UiFont& font) const {

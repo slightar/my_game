@@ -5,6 +5,7 @@
 #include "player.h"
 #include "ui_font.h"
 #include "menu_render_checks.h"
+#include "enemy_render_checks.h"
 #include <iostream>
 #include <fstream>
 
@@ -40,6 +41,7 @@ int main() {
             if (!saved) throw std::runtime_error("Cannot export render");
         };
         render("menu.png", [&] { menu.Draw(font, art); });
+        CheckEnemyRendering(font, render);
         menu.OpenHome();
         render("home.png", [&] { menu.Draw(font, art); });
         menu.OpenStageSelect();

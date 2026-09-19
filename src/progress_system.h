@@ -40,6 +40,7 @@ public:
     const EquipmentItem* FindEquipment(const std::string& id) const { return StoryData::FindEquipment(id); }
     const MapNode* CurrentNode() const { return FindNode(progress_.currentNode); }
     const std::string& SelectedNode() const { return progress_.currentNode; }
+    bool SelectNode(const std::string& id);
     const std::array<std::string, 3>& Slots() const { return progress_.slots; }
     NodeState State(const std::string& id) const;
     bool IsUnlocked(const std::string& id) const { return progress_.unlockedNodes.contains(id); }

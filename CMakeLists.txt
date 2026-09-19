@@ -26,6 +26,9 @@ add_executable(my_game
         src/character_art.cpp
         src/player.cpp
         src/boss.cpp
+        src/enemy_data.cpp
+        src/enemy_system.cpp
+        src/enemy_renderer.cpp
         src/audio_system.cpp
         src/game_settings.cpp
         src/main_menu.cpp
@@ -49,9 +52,18 @@ if (BUILD_TESTING)
     target_include_directories(settings_tests PRIVATE src third_party)
     target_link_libraries(settings_tests PRIVATE raylib)
     add_test(NAME settings_tests COMMAND settings_tests)
+    add_executable(enemy_tests tests/enemy_tests.cpp src/enemy_data.cpp src/enemy_system.cpp)
+    target_include_directories(enemy_tests PRIVATE src)
+    target_link_libraries(enemy_tests PRIVATE raylib)
+    add_test(NAME enemy_tests COMMAND enemy_tests)
     add_executable(character_render_smoke tests/character_render_smoke.cpp
-        src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp src/menu_views.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
+        src/enemy_data.cpp src/enemy_system.cpp src/enemy_renderer.cpp src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp src/menu_views.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
     target_link_libraries(character_render_smoke PRIVATE character_core)
+    add_executable(game_enemy_smoke tests/game_enemy_smoke.cpp
+        src/game.cpp src/boss.cpp src/enemy_data.cpp src/enemy_system.cpp src/enemy_renderer.cpp
+        src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp
+        src/menu_views.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
+    target_link_libraries(game_enemy_smoke PRIVATE character_core)
 endif()
 
 add_custom_command(TARGET my_game POST_BUILD
@@ -64,7 +76,7 @@ if (WIN32)
     if (MINGW)
         set(GAME_EXECUTABLES my_game character_tool)
         if (BUILD_TESTING)
-            list(APPEND GAME_EXECUTABLES character_tests character_render_smoke progress_tests settings_tests)
+            list(APPEND GAME_EXECUTABLES character_tests character_render_smoke progress_tests settings_tests enemy_tests game_enemy_smoke)
         endif()
         get_filename_component(MINGW_RUNTIME_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
         foreach(GAME_EXECUTABLE IN LISTS GAME_EXECUTABLES)

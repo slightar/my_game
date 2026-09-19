@@ -64,6 +64,7 @@ void Game::Reset() {
     activeOperator_ = 0;
     player_ = &operators_[0];
     boss_.Reset();
+    if (enemyTrial_) enemies_.ResetTrial(); else enemies_.Clear();
     bossActive_ = false;
     cameraX_ = static_cast<float>(GameConfig::kScreenWidth) / 2.0F;
     gateCloseTimer_ = 0.0F;
@@ -110,7 +111,8 @@ void Game::Update(float deltaTime) {
         const MenuAction action = mainMenu_.Update(deltaTime);
         SetMasterVolume(mainMenu_.Settings().MasterVolume() / 100.0F);
         audio_.SetEffectsVolume(mainMenu_.Settings().SoundVolume() / 100.0F);
-        if (action == MenuAction::StartBattle) {
+        if (action == MenuAction::StartBattle || action == MenuAction::StartEnemyTrial) {
+            enemyTrial_ = action == MenuAction::StartEnemyTrial;
             Reset();
             inBattle_ = true;
         } else if (action == MenuAction::Quit) {
@@ -152,11 +154,11 @@ void Game::Update(float deltaTime) {
     if (player_->IsDead() && !operators_[1 - activeOperator_].IsDead()) {
         SwitchOperator(1 - activeOperator_);
     }
-    if (player_->IsDead() || (bossActive_ && boss_.IsDefeated())) {
+    if (player_->IsDead() || (bossActive_ && EncounterCleared())) {
         if (player_->IsDead()) {
             player_->UpdateDefeatAnimation(deltaTime);
         }
-        if (bossActive_ && boss_.IsDefeated()) {
+        if (bossActive_ && !enemyTrial_ && boss_.IsDefeated()) {
             boss_.Update(deltaTime, player_->Position(),
                          player_->FacingDirection());
         }
@@ -174,7 +176,9 @@ void Game::Update(float deltaTime) {
 
     if (mainMenu_.Settings().Pressed(GameAction::OperatorOne)) SwitchOperator(0);
     else if (mainMenu_.Settings().Pressed(GameAction::OperatorTwo)) SwitchOperator(1);
-    player_->Update(deltaTime, boss_.Position(), boss_.Radius(), bullets_, audio_, mainMenu_.Settings());
+    const auto target = enemyTrial_ ? enemies_.Target(player_->Position(), player_->FacingDirection())
+                                    : EnemyTarget{boss_.Position(), boss_.Radius()};
+    player_->Update(deltaTime, target.position, target.radius, bullets_, audio_, mainMenu_.Settings(), enemyTrial_);
 
     if (!bossActive_ && player_->Position().x >= GameConfig::kBossTriggerX) {
         bossActive_ = true;
@@ -191,17 +195,22 @@ void Game::Update(float deltaTime) {
         gateCloseTimer_ = std::max(0.0F, gateCloseTimer_ - deltaTime);
         encounterBannerTimer_ =
             std::max(0.0F, encounterBannerTimer_ - deltaTime);
-        boss_.Update(deltaTime, player_->Position(), player_->FacingDirection());
+        if (enemyTrial_) enemies_.Update(deltaTime, player_->Position());
+        else boss_.Update(deltaTime, player_->Position(), player_->FacingDirection());
     }
     UpdateBullets(deltaTime);
     UpdateCamera(deltaTime);
 
-    const bool touchingBoss = bossActive_ && boss_.CanDealContactDamage() &&
+    const bool touchingBoss = bossActive_ && !enemyTrial_ && boss_.CanDealContactDamage() &&
                               CheckCollisionCircleRec(boss_.Position(), boss_.Radius(),
                                                       player_->Hitbox());
-    const bool hitByBossAttack = bossActive_ && !boss_.IsDefeated() &&
+    const bool hitByBossAttack = bossActive_ && !enemyTrial_ && !boss_.IsDefeated() &&
                                  boss_.AttackHits(player_->Hitbox(),
                                                   player_->ProjectileHitbox());
+    Vector2 enemySource{};
+    if (bossActive_ && enemyTrial_ && enemies_.AttackHits(player_->Hitbox(), player_->ProjectileHitbox(), enemySource)) {
+        if (player_->TakeDamage(enemySource)) audio_.PlayPlayerHit();
+    }
     if (touchingBoss || hitByBossAttack) {
         if (player_->TakeDamage(boss_.Position())) {
             audio_.PlayPlayerHit();
@@ -219,6 +228,8 @@ void Game::UpdateCamera(float deltaTime) {
     const float blend = 1.0F - std::exp(-kCameraFollowSharpness * deltaTime);
     cameraX_ += (desiredX - cameraX_) * blend;
 }
+
+bool Game::EncounterCleared() const { return enemyTrial_ ? enemies_.Cleared() : boss_.IsDefeated(); }
 
 bool Game::ShouldQuit() const {
     return quitRequested_;
@@ -293,16 +304,22 @@ void Game::UpdateBullets(float deltaTime) {
                 std::max(0.0F, bullet.activationDelay - deltaTime);
             continue;
         }
+        const Vector2 previous = bullet.position;
         bullet.position.x += bullet.velocity.x * deltaTime;
         bullet.position.y += bullet.velocity.y * deltaTime;
         bullet.lifetime -= deltaTime;
 
         if (bullet.destroysEnemyProjectile &&
-            boss_.DestroyProjectileAt(bullet.position, bullet.radius + 7.0F)) {
+            (enemyTrial_ ? enemies_.DestroyBolt(bullet.position, bullet.radius + 7.0F)
+                         : boss_.DestroyProjectileAt(bullet.position, bullet.radius + 7.0F))) {
             bullet.lifetime = 0.0F;
             continue;
         }
 
+        if (enemyTrial_) {
+            if (bossActive_ && enemies_.ResolveBullet(bullet, previous)) audio_.PlayBossHit();
+            continue;
+        }
         if (!bullet.hasHit && bossActive_ && !boss_.IsDefeated() &&
             CheckCollisionCircles(bullet.position, bullet.radius,
                                   boss_.Position(), boss_.Radius())) {
@@ -425,7 +442,7 @@ void Game::DrawEncounterBanner() const {
     DrawRectangleRec({0.0F, 286.0F,
                       static_cast<float>(GameConfig::kScreenWidth), 112.0F},
                      Fade(BLACK, alpha * 0.68F));
-    const char* title = "目标出现：弑君者";
+    const char* title = enemyTrial_ ? "小怪试炼：五类威胁" : "目标出现：弑君者";
     const float titleWidth = uiFont_.Measure(title, 38.0F);
     uiFont_.Draw(title,
                  static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
@@ -549,19 +566,23 @@ void Game::Draw(float displayScale, Vector2 displayOffset) const {
         DrawCircleV(bullet.position, bullet.radius * 0.42F, RAYWHITE);
     }
 
-    boss_.Draw(uiFont_);
+    if (enemyTrial_) enemyRenderer_.Draw(enemies_, uiFont_);
+    else boss_.Draw(uiFont_);
     player_->Draw(characterArt_);
     EndMode2D();
 
     BeginMode2D(uiCamera);
     player_->DrawHud(uiFont_, characterArt_, activeOperator_ == 0 ? "能天使" : "德克萨斯", &mainMenu_.Settings());
     DrawOperatorSlots();
-    if (bossActive_) {
-        boss_.DrawHud(uiFont_);
+    if (bossActive_ && !enemyTrial_) boss_.DrawHud(uiFont_);
+    if (enemyTrial_) {
+        DrawRectangle(340, 49, 650, 74, Fade(TacticalUi::kInk, .90F));
+        uiFont_.Draw(TextFormat("小怪试炼 / 剩余 %d / 6", enemies_.Remaining()), 361, 62, 23, RAYWHITE);
+        uiFont_.Draw("看前摇 · 躲红圈 · 绕后破盾 · 1/2 切换角色", 361, 96, 17, TacticalUi::kPaper);
     }
     DrawEncounterBanner();
 
-    const bool showResult = (bossActive_ && boss_.IsDefeated()) ||
+    const bool showResult = (bossActive_ && EncounterCleared()) ||
                             (player_->IsDead() &&
                              player_->DefeatAnimationFinished());
     if (showResult) {
@@ -577,7 +598,7 @@ void Game::Draw(float displayScale, Vector2 displayOffset) const {
                       static_cast<int>(resultPanel.width - 30.0F), 6,
                       player_->IsDead() ? TacticalUi::kRed
                                        : TacticalUi::kOrange);
-        const char* title = player_->IsDead() ? "任务失败" : "弑君者已击败";
+        const char* title = player_->IsDead() ? "任务失败" : enemyTrial_ ? "小怪试炼完成" : "弑君者已击败";
         const float titleWidth = uiFont_.Measure(title, 46.0F);
         uiFont_.Draw(title,
                      static_cast<float>(GameConfig::kScreenWidth) / 2.0F -

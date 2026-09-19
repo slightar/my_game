@@ -16,6 +16,7 @@ inline constexpr Rectangle HomeButtons[] = {
     {720, 157, 492, 147}, {720, 407, 238, 99}, {974, 407, 238, 99},
     {720, 522, 238, 66}, {720, 320, 492, 71}, {974, 522, 238, 66}};
 inline constexpr int HomeOrder[]{0, 4, 1, 2, 3, 5};
+inline constexpr Rectangle EnemyTrialButton{432, 397, 218, 42};
 inline constexpr Rectangle MapArea{85, 184, 1110, 412};
 inline constexpr Rectangle MapTask{85, 602, 440, 34};
 inline constexpr Rectangle Confirm{790, 545, 385, 52};
@@ -27,6 +28,8 @@ void Background(const UiFont& font, const char* title, const char* subtitle, boo
 void Surface(Rectangle rect, Color fill = Ink, Color stripe = BLANK);
 void Button(const UiFont& font, Rectangle rect, const char* title, bool selected = false,
             Color fill = Paper, Color text = Ink);
+void SetPointerState(Vector2 position, bool down, bool valid);
+Rectangle PressedRect(Rectangle rect);
 void Footer(const UiFont& font, const char* text);
 void Fit(const UiFont& font, const std::string& text, Rectangle rect, float size, Color color);
 void Wrap(const UiFont& font, const std::string& text, Rectangle rect, float size, Color color);

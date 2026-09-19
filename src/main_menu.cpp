@@ -73,9 +73,10 @@ MenuAction MainMenu::Update(float deltaTime) {
     switch (page_) {
     case Page::Splash:
         if (IsKeyPressed(KEY_ESCAPE)) return MenuAction::Quit;
-        if (IsKeyPressed(KEY_ENTER) || pointer_.pressed) page_ = Page::Home;
+        if (IsKeyPressed(KEY_ENTER) || pointer_.Clicked({430, 546, 420, 64})) page_ = Page::Home;
         break;
     case Page::Home:
+        if (IsKeyPressed(KEY_N) || pointer_.Clicked(TerminalUi::EnemyTrialButton)) return MenuAction::StartEnemyTrial;
         if (IsKeyPressed(KEY_B)) return MenuAction::StartBattle;
         if (Up() || Down()) {
             for (int i = 0; i < 6; ++i) if (TerminalUi::HomeOrder[i] == homeSelection_) {
@@ -97,28 +98,15 @@ MenuAction MainMenu::Update(float deltaTime) {
     case Page::Map:
         if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { page_ = Page::Home; walkingToPointer_ = false; pendingExit_.clear(); }
         else {
-            if (pointer_.Clicked(TerminalUi::MapTask)) { page_ = Page::NodeDetail; walkingToPointer_ = false; pendingExit_.clear(); break; }
-            if (pointer_.Clicked(TerminalUi::MapArea)) {
-                walkTarget_ = {std::clamp(pointer_.position.x, 195.0F, 1100.0F), std::clamp(pointer_.position.y, 215.0F, 555.0F)};
-                walkingToPointer_ = true; pendingExit_.clear();
-                if (const auto* node = progress_.CurrentNode()) for (const auto& exit : node->exits) {
-                    if (!progress_.ExitVisible(exit)) continue;
-                    const float labelY = exit.y < 240 ? exit.y + 30 : exit.y - 64;
-                    if (pointer_.Hit({exit.x - 27, exit.y - 27, 54, 54}) || pointer_.Hit({exit.x - 104, labelY, 208, 29})) {
-                        walkTarget_ = {exit.x, exit.y}; pendingExit_ = exit.id; break;
-                    }
+            if (pointer_.Clicked(TerminalUi::MapTask)) { page_ = Page::NodeDetail; break; }
+            const auto& nodes = progress_.Nodes();
+            const auto point = [](int i) { return Vector2{105.0F + (i % 8) * 145.0F, 238.0F + (i / 8) * 92.0F}; };
+            if (pointer_.released) for (int i = 0; i < static_cast<int>(nodes.size()); ++i) {
+                if (CheckCollisionPointCircle(pointer_.position, point(i), 27.0F) && progress_.IsUnlocked(nodes[i].id)) {
+                    progress_.SelectNode(nodes[i].id); mapSelection_ = i; status_ = "已选择行动起点"; break;
                 }
             }
-            MoveExplorer(deltaTime);
-            const auto* nearby = NearbyExit();
-            const bool autoEnter = nearby && !pendingExit_.empty() && nearby->id == pendingExit_;
-            if (IsKeyPressed(KEY_ENTER) || autoEnter) {
-                if (nearby) {
-                    if (progress_.Travel(nearby->id)) { explorer_ = {640, 390}; status_ = "已通过出口进入下一地图"; }
-                    else status_ = "出口尚未开放：请先完成当前任务或调查线索";
-                } else page_ = Page::NodeDetail;
-                walkingToPointer_ = false; pendingExit_.clear();
-            }
+            if (IsKeyPressed(KEY_ENTER)) page_ = Page::NodeDetail;
         }
         break;
     case Page::Archive: {

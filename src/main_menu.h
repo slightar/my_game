@@ -8,7 +8,7 @@
 class UiFont;
 class CharacterArt;
 
-enum class MenuAction { None, StartBattle, Quit };
+enum class MenuAction { None, StartBattle, StartEnemyTrial, Quit };
 
 class MainMenu {
 public:
@@ -55,6 +55,7 @@ private:
     int archiveCategory_ = 0, archiveSelection_ = 0;
     int equipmentSlot_ = 0, equipmentSelection_ = 0;
     int settingsSelection_ = 0, keySelection_ = 0;
+    int mapSelection_ = 0;
     bool capturingKey_ = false;
     Vector2 explorer_{640.0F, 390.0F};
     Vector2 walkTarget_{640.0F, 390.0F};

@@ -74,6 +74,13 @@ bool ProgressSystem::Travel(const std::string& exitId) {
     }
     return false;
 }
+
+bool ProgressSystem::SelectNode(const std::string& id) {
+    if (!StoryData::FindNode(id) || !progress_.unlockedNodes.contains(id)) return false;
+    progress_.currentNode = id;
+    Save();
+    return true;
+}
 bool ProgressSystem::HasEquippedProtocol() const {
     for (const auto& id : progress_.slots) if (const auto* item = FindEquipment(id))
         if (item->kind == EquipmentKind::Protocol) return true;

@@ -118,7 +118,7 @@ void Player::PlaceAt(Vector2 position, int facing) {
 }
 
 void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
-                    std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings) {
+                    std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings, bool assistEnemyAim) {
     hurtInvincibilityTimer_ = std::max(0.0F, hurtInvincibilityTimer_ - deltaTime);
     animationTime_ += deltaTime;
     if (IsDead()) {
@@ -278,6 +278,10 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         const Vector2 muzzle{
             position_.x + direction * (kHitboxWidth / 2.0F + 30.0F),
             position_.y - 16.0F};
+        // Trial-only aim assist lets horizontal gunfire reach low-profile enemies.
+        const float aimAngle = assistEnemyAim && (enemyPosition.x - muzzle.x) * direction > 0
+            ? std::clamp(std::atan2(enemyPosition.y - muzzle.y, std::abs(enemyPosition.x - muzzle.x)), -.65F, .65F)
+            : 0.0F;
         const bool barrageActive = barrageTimer_ > 0.0F;
         const bool overloadActive = overloadTimer_ > 0.0F;
         float bulletDamage = 1.0F;
@@ -298,7 +302,7 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
             const float fanOffset =
                 static_cast<float>(fanIndex - fanCount / 2) *
                 kOverloadFanStepRadians;
-            const float angle = fanOffset + randomSpread;
+            const float angle = aimAngle + fanOffset + randomSpread;
             const Vector2 velocity{direction * std::cos(angle) * kBulletSpeed,
                                    std::sin(angle) * kBulletSpeed};
             const Vector2 perpendicular{-velocity.y / kBulletSpeed,

@@ -18,7 +18,8 @@ public:
     void Reset(const Character& character);
     void PlaceAt(Vector2 position, int facing);
     void Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
-                std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings);
+                std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings,
+                bool assistEnemyAim = false);
     void UpdateDefeatAnimation(float deltaTime);
     void SetHorizontalBounds(float left, float right);
     void Draw(const CharacterArt& art) const;

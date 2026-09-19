@@ -4,6 +4,12 @@
 #include <cmath>
 
 namespace TerminalUi {
+namespace { Vector2 pointerPosition{}; bool pointerDown=false, pointerValid=false; }
+void SetPointerState(Vector2 position, bool down, bool valid) { pointerPosition=position; pointerDown=down; pointerValid=valid; }
+Rectangle PressedRect(Rectangle rect) {
+    return (pointerDown && pointerValid && CheckCollisionPointRec(pointerPosition, rect))
+        ? Rectangle{rect.x, rect.y + 5.0F, rect.width, rect.height} : rect;
+}
 void Surface(Rectangle r, Color fill, Color stripe) {
     DrawRectangleRec({r.x + 4, r.y + 5, r.width, r.height}, Fade(BLACK, .17F));
     DrawRectangleRec(r, fill);
@@ -31,12 +37,13 @@ void Wrap(const UiFont& font, const std::string& text, Rectangle r, float size, 
     if (y + size <= r.y + r.height) font.Draw(line.c_str(), r.x, y, size, color);
 }
 void Button(const UiFont& font, Rectangle r, const char* title, bool selected, Color fill, Color text) {
-    Surface(r, fill);
+    const Rectangle drawRect=PressedRect(r);
+    Surface(drawRect, fill);
     if (selected) {
-        DrawRectangleRec({r.x, r.y + r.height - 4, r.width, 4}, Blue);
-        DrawRectangleLinesEx({r.x - 3, r.y - 3, r.width + 6, r.height + 6}, 1, Fade(Paper, .85F));
+        DrawRectangleRec({drawRect.x, drawRect.y + drawRect.height - 4, drawRect.width, 4}, Blue);
+        DrawRectangleLinesEx({drawRect.x - 3, drawRect.y - 3, drawRect.width + 6, drawRect.height + 6}, 1, Fade(Paper, .85F));
     }
-    Fit(font, title, {r.x + 22, r.y, r.width - 44, r.height}, 26, text);
+    Fit(font, title, {drawRect.x + 22, drawRect.y, drawRect.width - 44, drawRect.height}, 26, text);
 }
 void Background(const UiFont& font, const char* title, const char* subtitle, bool back) {
     ClearBackground({103, 113, 120, 255});
