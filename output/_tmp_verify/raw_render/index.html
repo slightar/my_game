@@ -1,0 +1,50 @@
+<!doctype html><meta charset="utf-8">
+<body>
+<script src="pixi.js"></script><script src="spine.js"></script>
+<script>
+window.addEventListener('load', () => {
+// Render the ORIGINAL shield skeleton at its setup pose and at several points of the
+// Idle / Move / Attack clips, then hand every frame back to the host as a data URL so
+// the direction can be measured from the author's own model instead of the baked sheet.
+(async () => {
+  try {
+    const key='shield', name='enemy_1006_shield';
+    const app = new PIXI.Application({width:192,height:192,backgroundAlpha:0,antialias:true,preserveDrawingBuffer:true});
+    app.stop(); document.body.appendChild(app.view);
+    const loader = new PIXI.Loader();
+    await new Promise((res,rej)=>{loader.onError.add(rej);loader.add('m',`${key}/${name}.skel`).load(res);});
+    const rig = new PIXI.spine.Spine(loader.resources.m.spineData);
+    rig.autoUpdate=false; app.stage.addChild(rig);
+    const animations = rig.spineData.animations;
+    const names = ['Idle','Move','Attack','Die'].map(n =>
+      animations.find(a=>a.name.toLowerCase()===n.toLowerCase())?.name ||
+      animations.find(a=>a.name.toLowerCase()===(n+'_Loop').toLowerCase())?.name);
+
+    const out = {};
+    // 1) setup pose, no animation at all - the clearest statement of authored facing
+    rig.skeleton.setToSetupPose(); rig.state.clearTracks(); rig.update(0);
+    app.renderer.render(app.stage);
+    out['setup'] = app.view.toDataURL('image/png').split(',')[1];
+
+    // 2) normalise exactly like the bake script so the framing matches the sheet
+    function pose(row,col,speed){
+      rig.skeleton.setToSetupPose(); rig.state.clearTracks();
+      const e=rig.state.setAnimation(0,names[row],false);
+      rig.update(e.animation.duration*col/(speed||10));
+    }
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for(let r=0;r<4;r++) for(let c=0;c<10;c++){pose(r,c);const b=rig.getBounds();
+      minX=Math.min(minX,b.x);minY=Math.min(minY,b.y);maxX=Math.max(maxX,b.x+b.width);maxY=Math.max(maxY,b.y+b.height);}
+    const scale=Math.min(174/(maxX-minX),164/(maxY-minY));
+    rig.scale.set(scale); rig.position.set(96-(minX+maxX)*scale/2,180-maxY*scale);
+
+    for(const r of [0,1,2,3]) for(let c=0;c<10;c++){
+      pose(r,c); app.renderer.render(app.stage);
+      out['r'+r+'f'+c]=app.view.toDataURL('image/png').split(',')[1];
+    }
+    await fetch('/frames',{method:'POST',body:JSON.stringify(out)});
+  } catch(e){ await fetch('/error',{method:'POST',body:String(e.stack||e)}); }
+})();
+});
+</script>
+</body>

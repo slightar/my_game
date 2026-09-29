@@ -26,6 +26,44 @@ void MainMenu::SyncError() {
 }
 void MainMenu::OpenHome() { progress_.SetProtocolSuppressed(false); page_ = Page::Home; }
 
+void MainMenu::OpenCharacterSelect() {
+    draftCharacterLineup_ = characterLineup_;
+    characterSlot_ = 0;
+    characterSelection_ = characterLineup_[0];
+    page_ = Page::CharacterSelect;
+}
+
+void MainMenu::SetCustomCharacters(std::vector<Character> characters) {
+    customCharacters_ = std::move(characters);
+    const int count = 2 + static_cast<int>(customCharacters_.size());
+    for (int slot = 0; slot < 2; ++slot) {
+        if (characterLineup_[slot] < 0 || characterLineup_[slot] >= count)
+            characterLineup_[slot] = slot;
+    }
+    if (characterLineup_[0] == characterLineup_[1])
+        characterLineup_ = {0, 1};
+    draftCharacterLineup_ = characterLineup_;
+    characterSelection_ = std::clamp(characterSelection_, 0, count - 1);
+}
+
+int MainMenu::SelectedCharacterIndex(int slot) const {
+    return slot >= 0 && slot < 2 ? characterLineup_[slot] : 0;
+}
+
+const Character* MainMenu::CharacterForSelection(int selection) const {
+    const int custom = selection - 2;
+    return custom >= 0 && custom < static_cast<int>(customCharacters_.size())
+               ? &customCharacters_[custom]
+               : nullptr;
+}
+
+std::string MainMenu::CharacterNameForSelection(int selection) const {
+    if (selection == 0) return "能天使";
+    if (selection == 1) return "德克萨斯";
+    if (const auto* character = CharacterForSelection(selection)) return character->name;
+    return "未配置";
+}
+
 void MainMenu::MoveExplorer(float deltaTime) {
     float x = static_cast<float>(IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) -
               static_cast<float>(IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT));
@@ -53,7 +91,7 @@ const MapExit* MainMenu::NearbyExit() const {
 }
 
 MenuAction MainMenu::Update(float deltaTime) {
-    pointer_ = ReadUiPointer(touchPreviouslyDown_);
+    pointer_ = ReadUiPointer(pointerState_);
     if (page_ != Page::Splash && page_ != Page::Home && pointer_.Clicked(TerminalUi::Back)) {
         if (page_ == Page::KeyBindings && capturingKey_) { capturingKey_ = false; return MenuAction::None; }
         progress_.SetProtocolSuppressed(false);
@@ -76,6 +114,10 @@ MenuAction MainMenu::Update(float deltaTime) {
         if (IsKeyPressed(KEY_ENTER) || pointer_.Clicked({430, 546, 420, 64})) page_ = Page::Home;
         break;
     case Page::Home:
+        if (IsKeyPressed(KEY_C) || pointer_.Clicked(TerminalUi::OperatorButton)) {
+            OpenCharacterSelect();
+            break;
+        }
         if (IsKeyPressed(KEY_N) || pointer_.Clicked(TerminalUi::EnemyTrialButton)) return MenuAction::StartEnemyTrial;
         if (IsKeyPressed(KEY_B)) return MenuAction::StartBattle;
         if (Up() || Down()) {
@@ -87,27 +129,54 @@ MenuAction MainMenu::Update(float deltaTime) {
         if (IsKeyPressed(KEY_ESCAPE)) return MenuAction::Quit;
         for (int i = 0; i < 6; ++i) if (pointer_.Clicked(TerminalUi::HomeButtons[i])) homeSelection_ = i;
         if (IsKeyPressed(KEY_ENTER) || pointer_.Clicked(TerminalUi::HomeButtons[homeSelection_])) {
-            if (homeSelection_ == 0) page_ = Page::Map;
+            if (homeSelection_ == 0) OpenStageSelect();
             else if (homeSelection_ == 1) page_ = Page::Archive;
             else if (homeSelection_ == 2) page_ = Page::Equipment;
             else if (homeSelection_ == 3) page_ = Page::Settings;
-            else if (homeSelection_ == 4) page_ = Page::Map;
+            else if (homeSelection_ == 4) OpenStageSelect();
             else return MenuAction::Quit;
         }
         break;
-    case Page::Map:
-        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { page_ = Page::Home; walkingToPointer_ = false; pendingExit_.clear(); }
-        else {
-            if (pointer_.Clicked(TerminalUi::MapTask)) { page_ = Page::NodeDetail; break; }
-            const auto& nodes = progress_.Nodes();
-            const auto point = [](int i) { return Vector2{105.0F + (i % 8) * 145.0F, 238.0F + (i / 8) * 92.0F}; };
-            if (pointer_.released) for (int i = 0; i < static_cast<int>(nodes.size()); ++i) {
-                if (CheckCollisionPointCircle(pointer_.position, point(i), 27.0F) && progress_.IsUnlocked(nodes[i].id)) {
-                    progress_.SelectNode(nodes[i].id); mapSelection_ = i; status_ = "已选择行动起点"; break;
-                }
-            }
-            if (IsKeyPressed(KEY_ENTER)) page_ = Page::NodeDetail;
+    case Page::CharacterSelect: {
+        if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) {
+            draftCharacterLineup_ = characterLineup_;
+            page_ = Page::Home;
+            break;
         }
+        const int count = 2 + static_cast<int>(customCharacters_.size());
+        const float wheel = GetMouseWheelMove();
+        if (Up() || wheel > 0)
+            characterSelection_ = (characterSelection_ + count - 1) % count;
+        if (Down() || wheel < 0)
+            characterSelection_ = (characterSelection_ + 1) % count;
+        if (Left()) characterSlot_ = 0;
+        if (Right()) characterSlot_ = 1;
+        const int start = std::clamp(characterSelection_ - 3, 0, std::max(0, count - 6));
+        for (int row = 0; row < std::min(6, count - start); ++row) {
+            if (pointer_.Clicked({68, 171.0F + row * 67.0F, 350, 57}))
+                characterSelection_ = start + row;
+        }
+        for (int slot = 0; slot < 2; ++slot)
+            if (pointer_.Clicked(TerminalUi::CharacterSlots[slot])) characterSlot_ = slot;
+        const bool assign = IsKeyPressed(KEY_ENTER) ||
+                            pointer_.Clicked(TerminalUi::CharacterAssign);
+        if (assign) {
+            const int other = 1 - characterSlot_;
+            if (draftCharacterLineup_[other] == characterSelection_)
+                std::swap(draftCharacterLineup_[characterSlot_], draftCharacterLineup_[other]);
+            else
+                draftCharacterLineup_[characterSlot_] = characterSelection_;
+            status_ = "已编入 " + CharacterNameForSelection(characterSelection_);
+        }
+        if (IsKeyPressed(KEY_C) || pointer_.Clicked(TerminalUi::CharacterConfirm)) {
+            characterLineup_ = draftCharacterLineup_;
+            status_ = "出战编队已保存";
+            page_ = Page::Home;
+        }
+        break;
+    }
+    case Page::Map:
+        UpdateMap(deltaTime);
         break;
     case Page::Archive: {
         if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { page_ = Page::Home; break; }

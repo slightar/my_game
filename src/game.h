@@ -39,6 +39,7 @@ private:
     UiFont uiFont_;
     CharacterArt characterArt_;
     MainMenu mainMenu_;
+    std::vector<Character> customCharacters_;
     std::array<Player, 2> operators_;
     Player* player_ = &operators_[0];
     int activeOperator_ = 0;
@@ -55,5 +56,7 @@ private:
     float gateCloseTimer_ = 0.0F;
     float encounterBannerTimer_ = 0.0F;
     int pauseSelection_ = 0;
-    bool touchPreviouslyDown_ = false;
+    UiPointerState pointerState_;
+    // Latest pointer snapshot, reused by the pause menu so buttons share the global press feedback.
+    UiPointer pointer_{};
 };

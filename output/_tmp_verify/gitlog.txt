@@ -1,0 +1,25 @@
+38335c0 新增多种敌方单位
+bdcb15d 设置了新的ui，去除了自定义角色系统
+83f39e2 设置了新的ui，去除了自定义角色系统
+2d35350 Merge remote-tracking branch 'origin/master'
+6ffb18a 修复 CLion 推送配置并忽略特效缓存
+2342b24 修复 CLion 推送配置并忽略特效缓存
+9cb05f3 更新了角色类，使扩展性更强了，并且修复了行走动画
+7e711a9 成功优化特效，token吃光了
+e9b17a6 新增角色德克萨斯，二技能特效待优化
+36f043b 技能图标修正
+08bd180 新增技能机制
+47b468f 修复bug：角色受伤有一个小球存在、主页面无法退出游戏、局内小人死板 加入角色移动跳跃动画，子弹散射
+385eb5c 成功更新了角色小人，存在以下bug：角色受伤有一个小球存在、主页面无法退出游戏、局内小人死板
+cb2f025 更新了新的主页，支持选择角色、关卡（制作中）
+af656fe readme修复
+2688ac3 Merge remote-tracking branch 'origin/master'
+4874ce5 新增了各个板块，有了第一个自己角色demo小球，设计了一个boss弑君者
+d8c4311 Initialize README with project details and disclaimer
+c45aeed docs: 添加非商业同人项目免责声明
+51090f7 设置窗口标题为“arknights-go”
+768a6c7 在main.cpp中去除了两处调试语句
+7fd8492 Revert "在main.cpp中加入了cout<<“test”"
+7ecfbf1 在main.cpp中加入了cout<<“test”
+4496280 在main.cpp中加入了cout<<“hello”
+ab02619 Initial commit

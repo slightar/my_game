@@ -1,5 +1,6 @@
 #include "game.h"
 #include "ui_theme.h"
+#include "terminal_ui.h"
 #include "file_path.h"
 
 #include <algorithm>
@@ -47,20 +48,34 @@ void Game::ReloadCharacters() {
         } catch (const std::exception& e) { errors += e.what(); TraceLog(LOG_WARNING, "%s", e.what()); }
     }
     std::vector<Character> characters;
-    std::string glyphs = errors;
+    // Enemy names and combat labels come from the data table rather than a manually
+    // maintained glyph list, so a newly added unit cannot silently render as '?'.
+    std::string glyphs = errors + EnemyGlyphText();
     for (auto& [id, c] : entries) {
         glyphs += c.name + c.description;
         for (const auto& skill : c.skills) glyphs += skill.name + skill.description;
         characters.push_back(std::move(c));
     }
+    customCharacters_ = characters;
+    mainMenu_.SetCustomCharacters(customCharacters_);
     uiFont_.SetAdditionalText(glyphs);
     mainMenu_.SetStatus(errors.empty() ? "" : "配置文件: " + errors);
 }
 
 void Game::Reset() {
     bullets_.clear();
-    operators_[0].Reset(OperatorKind::Exusiai);
-    operators_[1].Reset(OperatorKind::Texas);
+    for (int slot = 0; slot < 2; ++slot) {
+        const int selection = mainMenu_.SelectedCharacterIndex(slot);
+        if (selection == 0)
+            operators_[slot].Reset(OperatorKind::Exusiai);
+        else if (selection == 1)
+            operators_[slot].Reset(OperatorKind::Texas);
+        else if (const auto* character = mainMenu_.CharacterForSelection(selection))
+            operators_[slot].Reset(*character);
+        else
+            operators_[slot].Reset(slot == 0 ? OperatorKind::Exusiai
+                                             : OperatorKind::Texas);
+    }
     activeOperator_ = 0;
     player_ = &operators_[0];
     boss_.Reset();
@@ -121,7 +136,7 @@ void Game::Update(float deltaTime) {
         return;
     }
 
-    const UiPointer pointer = ReadUiPointer(touchPreviouslyDown_);
+    pointer_ = ReadUiPointer(pointerState_);
     if ((!paused_ && mainMenu_.Settings().Pressed(GameAction::Pause)) || IsKeyPressed(KEY_ESCAPE)) {
         paused_ = !paused_;
         pauseSelection_ = 0;
@@ -129,8 +144,8 @@ void Game::Update(float deltaTime) {
     }
 
     if (paused_) {
-        if (pointer.Clicked({470, 310, 340, 65})) { paused_ = false; return; }
-        if (pointer.Clicked({470, 395, 340, 65})) {
+        if (pointer_.Clicked({470, 310, 340, 65})) { paused_ = false; return; }
+        if (pointer_.Clicked({470, 395, 340, 65})) {
             paused_ = false; inBattle_ = false; mainMenu_.OpenHome(); return;
         }
         if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) {
@@ -166,7 +181,7 @@ void Game::Update(float deltaTime) {
             if (IsKeyPressed(KEY_ENTER)) {
                 Reset();
             }
-            if (IsKeyPressed(KEY_BACKSPACE) || pointer.pressed) {
+            if (IsKeyPressed(KEY_BACKSPACE) || pointer_.pressed) {
                 inBattle_ = false;
                 mainMenu_.OpenHome();
             }
@@ -208,8 +223,9 @@ void Game::Update(float deltaTime) {
                                  boss_.AttackHits(player_->Hitbox(),
                                                   player_->ProjectileHitbox());
     Vector2 enemySource{};
-    if (bossActive_ && enemyTrial_ && enemies_.AttackHits(player_->Hitbox(), player_->ProjectileHitbox(), enemySource)) {
-        if (player_->TakeDamage(enemySource)) audio_.PlayPlayerHit();
+    bool corrosive = false;
+    if (bossActive_ && enemyTrial_ && enemies_.AttackHits(player_->Hitbox(), player_->ProjectileHitbox(), enemySource, &corrosive)) {
+        if (player_->TakeDamage(enemySource, corrosive)) audio_.PlayPlayerHit();
     }
     if (touchingBoss || hitByBossAttack) {
         if (player_->TakeDamage(boss_.Position())) {
@@ -236,7 +252,6 @@ bool Game::ShouldQuit() const {
 }
 
 void Game::DrawOperatorSlots() const {
-    constexpr const char* names[] = {"能天使", "德克萨斯", "未开放", "未开放"};
     for (int slot = 0; slot < 4; ++slot) {
         const Rectangle box{618.0F + 108.0F * slot, 646.0F, 100.0F, 50.0F};
         const bool active = slot == activeOperator_;
@@ -252,7 +267,10 @@ void Game::DrawOperatorSlots() const {
                                          ? Color{198, 84, 87, 255}
                                          : available ? RAYWHITE : Fade(RAYWHITE, 0.37F);
         uiFont_.Draw(TextFormat("%d", slot + 1), box.x + 12, box.y + 4, 23, color);
-        uiFont_.Draw(names[slot], box.x + 36, box.y + 16, 15, color);
+        const std::string name = available
+            ? mainMenu_.CharacterNameForSelection(mainMenu_.SelectedCharacterIndex(slot))
+            : "未开放";
+        TerminalUi::Fit(uiFont_, name, {box.x + 36, box.y + 8, 58, 34}, 15, color);
     }
 }
 
@@ -292,6 +310,7 @@ void Game::DrawPauseMenu() const {
                      options[index].x + (options[index].width - labelWidth) / 2.0F,
                      options[index].y + 18.0F, 25.0F,
                      selected ? TacticalUi::kInk : RAYWHITE);
+        TerminalUi::PressedVeil(options[index]);
     }
     uiFont_.Draw("W/S 选择   Enter 确认   Esc 继续",
                  486.0F, 496.0F, 18.0F, Fade(RAYWHITE, 0.72F));
@@ -329,6 +348,8 @@ void Game::UpdateBullets(float deltaTime) {
             }
             audio_.PlayBossHit();
             bullet.hasHit = true;
+            // The melee swing is an arc rather than a projectile, so it stays alive for
+            // its full animation instead of being consumed on the hit.
             if (bullet.kind != BulletKind::MeleeSlash) {
                 bullet.lifetime = 0.0F;
             }
@@ -442,7 +463,11 @@ void Game::DrawEncounterBanner() const {
     DrawRectangleRec({0.0F, 286.0F,
                       static_cast<float>(GameConfig::kScreenWidth), 112.0F},
                      Fade(BLACK, alpha * 0.68F));
-    const char* title = enemyTrial_ ? "小怪试炼：五类威胁" : "目标出现：弑君者";
+    // Counted from the definition table rather than spelled out: the roster grew past the
+    // hard-coded "五类威胁" and the banner kept under-reporting the trial.
+    const char* title = enemyTrial_
+        ? TextFormat("小怪试炼：%d 类威胁", static_cast<int>(EnemyDefinitions().size()))
+        : "目标出现：弑君者";
     const float titleWidth = uiFont_.Measure(title, 38.0F);
     uiFont_.Draw(title,
                  static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
@@ -542,13 +567,29 @@ void Game::Draw(float displayScale, Vector2 displayOffset) const {
             continue;
         }
         if (bullet.kind == BulletKind::FallingSword) {
-            DrawLineEx({bullet.position.x, bullet.position.y - 34.0F},
-                       {bullet.position.x, bullet.position.y + 22.0F},
-                       7.0F, RAYWHITE);
-            DrawLineEx({bullet.position.x - 12.0F, bullet.position.y - 7.0F},
-                       {bullet.position.x + 12.0F, bullet.position.y - 7.0F},
-                       5.0F, Color{95, 174, 231, 255});
-            DrawCircleV(bullet.position, 22.0F, Fade(SKYBLUE, 0.12F));
+            // 剑雨's falling blades: the operator's own sword art, tip down, plus a warm
+            // glow and a short streak above it so a fast-moving sprite stays readable
+            // against the map. The baked art already points down, so no rotation is needed
+            // - the blade really does point the way it is travelling.
+            constexpr float kBladeLength = 88.0F;
+            const Color glow{255, 243, 214, 255};
+            DrawCircleV({bullet.position.x, bullet.position.y - 10.0F}, 18.0F,
+                        Fade(glow, 0.10F));
+            DrawLineEx({bullet.position.x, bullet.position.y - kBladeLength * 1.04F},
+                       {bullet.position.x, bullet.position.y - kBladeLength * 0.58F},
+                       3.0F, Fade(glow, 0.30F));
+            if (characterArt_.HasTexasSword()) {
+                characterArt_.DrawTexasSword(bullet.position, kBladeLength);
+            } else {
+                // No blade art on disk: keep a readable shape so the skill never renders
+                // as nothing at all.
+                DrawLineEx({bullet.position.x, bullet.position.y - 34.0F},
+                           {bullet.position.x, bullet.position.y + 22.0F},
+                           7.0F, RAYWHITE);
+                DrawLineEx({bullet.position.x - 12.0F, bullet.position.y - 7.0F},
+                           {bullet.position.x + 12.0F, bullet.position.y - 7.0F},
+                           5.0F, Color{95, 174, 231, 255});
+            }
             continue;
         }
         const float speed = std::sqrt(bullet.velocity.x * bullet.velocity.x +
@@ -572,12 +613,18 @@ void Game::Draw(float displayScale, Vector2 displayOffset) const {
     EndMode2D();
 
     BeginMode2D(uiCamera);
-    player_->DrawHud(uiFont_, characterArt_, activeOperator_ == 0 ? "能天使" : "德克萨斯", &mainMenu_.Settings());
+    const std::string activeName = mainMenu_.CharacterNameForSelection(
+        mainMenu_.SelectedCharacterIndex(activeOperator_));
+    player_->DrawHud(uiFont_, characterArt_, activeName.c_str(), &mainMenu_.Settings());
     DrawOperatorSlots();
     if (bossActive_ && !enemyTrial_) boss_.DrawHud(uiFont_);
     if (enemyTrial_) {
         DrawRectangle(340, 49, 650, 74, Fade(TacticalUi::kInk, .90F));
-        uiFont_.Draw(TextFormat("小怪试炼 / 剩余 %d / 6", enemies_.Remaining()), 361, 62, 23, RAYWHITE);
+        // Derived from the roster: this read "剩余 %d / 6" long after the table had grown,
+        // so the denominator silently lied about how many enemies were left.
+        uiFont_.Draw(TextFormat("小怪试炼 / 剩余 %d / %d", enemies_.Remaining(),
+                                static_cast<int>(EnemyDefinitions().size())),
+                     361, 62, 23, RAYWHITE);
         uiFont_.Draw("看前摇 · 躲红圈 · 绕后破盾 · 1/2 切换角色", 361, 96, 17, TacticalUi::kPaper);
     }
     DrawEncounterBanner();
@@ -615,6 +662,8 @@ void Game::Draw(float displayScale, Vector2 displayOffset) const {
     }
 
     if (paused_) {
+        // The pause buttons share the menu's press feedback; the action still lands on release.
+        TerminalUi::SetPointerState(pointer_);
         DrawPauseMenu();
     }
     EndMode2D();

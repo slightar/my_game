@@ -47,6 +47,7 @@ public:
     [[nodiscard]] bool HasBattleChibi() const;
     [[nodiscard]] bool HasTexasSkill2Battle() const;
     [[nodiscard]] bool HasTexasSkill2Effects() const;
+    [[nodiscard]] bool HasTexasSword() const;
     [[nodiscard]] bool HasSkillIcon(int skillIndex) const;
     [[nodiscard]] bool HasSkillIcon(OperatorKind operatorKind,
                                     int skillIndex) const;
@@ -80,6 +81,12 @@ public:
     void DrawTexasSkill2Slash(Vector2 center, int facingDirection,
                               bool secondStrike, bool artsDamage,
                               float remainingLife, float radius) const;
+    // 德克萨斯「剑雨」's falling blade. `center` is the middle of the blade, `length` its
+    // full height in pixels, `rotationDegrees` a clockwise tilt (0 = straight down, which
+    // is how the blades fall in game). The art already points tip-down.
+    void DrawTexasSword(Vector2 center, float length,
+                        float rotationDegrees = 0.0F,
+                        Color tint = WHITE) const;
     void DrawSkillIcon(int skillIndex, Rectangle destination,
                        Color tint = WHITE) const;
     void DrawSkillIcon(OperatorKind operatorKind, int skillIndex,
@@ -108,5 +115,6 @@ private:
     Texture2D texasSkill2DarkTrail_{};
     Texture2D texasSkill2Arc_{};
     Texture2D texasSkill2Impact_{};
+    Texture2D texasSword_{};
     Texture2D texasSkillIcons_[2]{};
 };

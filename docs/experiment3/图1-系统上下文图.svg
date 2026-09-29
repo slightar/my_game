@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#40566b"/></marker></defs>
+  <style>.bg{fill:#fff}.box{fill:#f7f9fb;stroke:#40566b;stroke-width:2}.core{fill:#e7f3fa;stroke:#007fae;stroke-width:3}.ext{fill:#fbf7ee;stroke:#8a6d3b;stroke-width:2}.t{font-family:'Microsoft YaHei',sans-serif;fill:#20262d;text-anchor:middle}.h{font-size:26px;font-weight:700}.m{font-size:20px}.s{font-size:16px}.line{stroke:#40566b;stroke-width:2;fill:none;marker-end:url(#a)}</style>
+  <rect class="bg" width="1280" height="720"/>
+  <text x="640" y="48" class="t h">arknights-go 软件与外部环境关系</text>
+  <rect x="430" y="180" width="420" height="340" rx="18" class="core"/>
+  <text x="640" y="225" class="t h">arknights-go</text>
+  <text x="640" y="267" class="t m">Windows 本地游戏</text>
+  <text x="640" y="310" class="t s">界面与输入 · 主线与 Boss 挑战</text>
+  <text x="640" y="342" class="t s">战斗规则 · 进度与设置 · 自定义角色</text>
+  <text x="640" y="374" class="t s">AI 请求编排 · 输出校验 · 本地降级</text>
+  <rect x="70" y="165" width="240" height="120" rx="14" class="box"/>
+  <text x="190" y="215" class="t m">玩家</text><text x="190" y="250" class="t s">键盘/鼠标操作、图片与技能描述</text>
+  <rect x="70" y="410" width="240" height="120" rx="14" class="box"/>
+  <text x="190" y="460" class="t m">开发者</text><text x="190" y="495" class="t s">关卡、数值、素材与测试</text>
+  <rect x="970" y="125" width="250" height="130" rx="14" class="ext"/>
+  <text x="1095" y="175" class="t m">云端模型服务</text><text x="1095" y="210" class="t s">旁白文本与角色方案生成</text>
+  <rect x="970" y="315" width="250" height="115" rx="14" class="ext"/>
+  <text x="1095" y="360" class="t m">服务端 API 网关</text><text x="1095" y="397" class="t s">保管密钥、限流与内容检查</text>
+  <rect x="970" y="500" width="250" height="120" rx="14" class="box"/>
+  <text x="1095" y="548" class="t m">本地文件系统</text><text x="1095" y="582" class="t s">JSON 存档、设置、角色与缓存</text>
+  <path d="M310 225 L430 260" class="line"/><text x="363" y="220" class="t s">操作/资料</text>
+  <path d="M430 445 L310 470" class="line"/><text x="368" y="492" class="t s">运行结果</text>
+  <path d="M850 335 L970 370" class="line"/><text x="910" y="329" class="t s">HTTPS/JSON</text>
+  <path d="M1095 315 L1095 255" class="line"/><text x="1165" y="288" class="t s">模型请求</text>
+  <path d="M850 470 L970 548" class="line"/><text x="902" y="530" class="t s">读写</text>
+  <path d="M310 470 L430 405" class="line"/>
+</svg>

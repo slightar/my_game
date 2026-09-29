@@ -314,6 +314,12 @@ CharacterArt::CharacterArt() {
                              TEXTURE_FILTER_BILINEAR);
         }
     }
+    const std::string texasSwordPath =
+        AssetPath("assets/operators/texas_sword.png");
+    if (FileExists(texasSwordPath.c_str())) {
+        texasSword_ = LoadTexture(texasSwordPath.c_str());
+        SetTextureFilter(texasSword_, TEXTURE_FILTER_BILINEAR);
+    }
     const char* texasSkillPaths[2] = {
         "assets/operators/texas_skill_e.png",
         "assets/operators/texas_skill_q.png"};
@@ -341,6 +347,9 @@ CharacterArt::~CharacterArt() {
     ClearCustomCharacters();
     if (IsTextureValid(texasSkill2Impact_)) {
         UnloadTexture(texasSkill2Impact_);
+    }
+    if (IsTextureValid(texasSword_)) {
+        UnloadTexture(texasSword_);
     }
     if (IsTextureValid(texasSkill2Arc_)) {
         UnloadTexture(texasSkill2Arc_);
@@ -430,6 +439,10 @@ bool CharacterArt::HasTexasSkill2Effects() const {
            IsTextureValid(texasSkill2DarkTrail_) &&
            IsTextureValid(texasSkill2Arc_) &&
            IsTextureValid(texasSkill2Impact_);
+}
+
+bool CharacterArt::HasTexasSword() const {
+    return IsTextureValid(texasSword_);
 }
 
 bool CharacterArt::HasSkillIcon(int skillIndex) const {
@@ -988,6 +1001,21 @@ void CharacterArt::DrawTexasSkill2Slash(Vector2 center, int facingDirection,
         (secondStrike ? 18.0F : -12.0F) * direction,
         Fade(RAYWHITE, impactAlpha));
     EndBlendMode();
+}
+
+void CharacterArt::DrawTexasSword(Vector2 center, float length,
+                                  float rotationDegrees, Color tint) const {
+    if (!IsTextureValid(texasSword_) || length <= 0.0F) {
+        return;
+    }
+    const float scale = length / static_cast<float>(texasSword_.height);
+    const float drawWidth = static_cast<float>(texasSword_.width) * scale;
+    const float drawHeight = static_cast<float>(texasSword_.height) * scale;
+    DrawTexturePro(texasSword_,
+                   {0.0F, 0.0F, static_cast<float>(texasSword_.width),
+                    static_cast<float>(texasSword_.height)},
+                   {center.x, center.y, drawWidth, drawHeight},
+                   {drawWidth / 2.0F, drawHeight / 2.0F}, rotationDegrees, tint);
 }
 
 void CharacterArt::DrawSkillIcon(int skillIndex, Rectangle destination,

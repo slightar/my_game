@@ -1,0 +1,33 @@
+
+[Bug 2] press grays the control, release commits the action
+        idle=28,31,34  held=88,94,101  released=28,31,34
+  ok    held button is grayer than its idle colour
+  ok    held button visibly changes (the gray veil is drawn)
+  ok    the gray veil disappears again after release
+        tile idle=239,240,237  held=158,164,168
+  ok    home tile uses the same unified gray press reaction
+  ok    60 held frames never fire the action
+  ok    release over the button fires the action once
+  ok    the action does not repeat on later frames
+  ok    releasing away from the button does not fire
+        volume row idle=239,240,237  held=158,164,168  volume=49
+  ok    volume slider still commits the dragged value
+  ok    releasing the slider does not apply the value twice
+  ok    settings row uses the same unified gray press reaction
+
+[Bug 1] shield bash faces the way it attacks
+  ok    shield sprite loaded
+        silhouette bias from feet.x (px, negative = faces left)
+          idle facing left  : -2.47661
+          idle facing right : 1.49875
+          bash facing left  : -26.0897
+          bash facing right : 25.115
+  ok    idle pose mirrors with facing
+  ok    left-facing bash silhouette points left (the fix)
+  ok    right-facing bash silhouette points right
+  ok    left-facing guard bashes the same way it idles
+  ok    right-facing guard bashes the same way it idles
+  ok    wrote shield-fix-sheet.png for visual review
+        contact sheet: D:\my_game\cmake-build-debug\shield-fix-sheet.png
+
+ALL CHECKS PASSED

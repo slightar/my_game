@@ -1,0 +1,78 @@
+<!doctype html><meta charset="utf-8">
+<script src="pixi.js"></script><script src="spine.js"></script>
+<script>
+// Diagnostic only: why does one rig bake to an empty sheet while its neighbour is fine?
+// Loads the same way the baker does, then reports skins, slots and per-pose bounds.
+(async () => {
+  try {
+    const models = await (await fetch('models.json')).json();
+    const app = new PIXI.Application({width:192,height:192,backgroundAlpha:0,antialias:true,preserveDrawingBuffer:true});
+    app.stop(); document.body.appendChild(app.view);
+    const report = {};
+    for (const [key, name] of Object.entries(models)) {
+      const loader = new PIXI.Loader();
+      await new Promise((resolve,reject) => { loader.onError.add(reject); loader.add('model',`${key}/${name}.skel`).load(resolve); });
+      const rig = new PIXI.spine.Spine(loader.resources.model.spineData);
+      rig.autoUpdate = false; app.stage.addChild(rig);
+      const sd = rig.spineData;
+      const info = {
+        animations: sd.animations.map(a => a.name),
+        skinNames: (sd.skins || []).map(s => s.name),
+        defaultSkin: rig.skeleton.data.defaultSkin ? rig.skeleton.data.defaultSkin.name : null,
+        currentSkin: rig.skeleton.skin ? rig.skeleton.skin.name : null,
+        slots: rig.skeleton.slots.map(s => ({
+          name: s.data.name,
+          attachment: s.getAttachment() ? s.getAttachment().name : null,
+        })),
+        attachmentsPerSkin: {},
+        boundsSetup: null,
+        boundsIdle: [],
+        boundsAfterSkinFix: null,
+      };
+      for (const sk of (sd.skins || [])) {
+        const list = [];
+        try {
+          for (const idx of sk.attachments) {
+            if (idx === undefined) continue;
+            for (const k in idx) if (idx[k]) list.push(idx[k].name);
+          }
+        } catch (e) { list.push('ENUM_ERROR:' + String(e)); }
+        info.attachmentsPerSkin[sk.name] = list;
+      }
+      const nm = ['Idle','Move','Attack','Die'].map(n =>
+        sd.animations.find(a => a.name.toLowerCase() === n.toLowerCase())?.name ||
+        sd.animations.find(a => a.name.toLowerCase() === (n+'_Loop').toLowerCase())?.name);
+      info.resolvedAnimationNames = nm;
+      const pose = (row,col) => {
+        rig.skeleton.setToSetupPose(); rig.state.clearTracks();
+        if (!nm[row]) return;
+        const entry = rig.state.setAnimation(0, nm[row], false);
+        rig.update(entry.animation.duration * col / (row < 2 ? 10 : 9));
+      };
+      rig.skeleton.setToSetupPose();
+      rig.update(0);
+      let b = rig.getBounds();
+      info.boundsSetup = {x:b.x, y:b.y, w:b.width, h:b.height};
+      pose(0,0); b = rig.getBounds();
+      info.boundsIdle = [{x:b.x, y:b.y, w:b.width, h:b.height}];
+      for (const col of [3,6,9]) { pose(0,col); const q = rig.getBounds(); info.boundsIdle.push({x:q.x,y:q.y,w:q.width,h:q.height}); }
+      // Hypothesis: the rig's attachments live in a named skin that is not applied by default.
+      if (sd.skins && sd.skins.length && info.defaultSkin === null) {
+        const target = sd.skins.find(s => s.name && s.name !== 'default');
+        if (target) {
+          try {
+            rig.skeleton.setSkinByName(target.name);
+            rig.skeleton.setSlotsToSetupPose();
+            pose(0,0);
+            const q = rig.getBounds();
+            info.boundsAfterSkinFix = {skin: target.name, x:q.x, y:q.y, w:q.width, h:q.height};
+          } catch (e) { info.boundsAfterSkinFix = {error: String(e)}; }
+        }
+      }
+      report[key] = info;
+      app.stage.removeChild(rig); rig.destroy();
+    }
+    await fetch('/done',{method:'POST',body:JSON.stringify(report,null,1)});
+  } catch(e) { await fetch('/error',{method:'POST',body:String(e.stack || e)}); }
+})();
+</script>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="820" viewBox="0 0 1280 820">
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#425466"/></marker></defs>
+  <style>.bg{fill:#fff}.layer{fill:#f7f9fb;stroke:#425466;stroke-width:2}.ai{fill:#fff4df;stroke:#bf7b1f;stroke-width:2}.data{fill:#eef7ef;stroke:#4b7f52;stroke-width:2}.t{font-family:'Microsoft YaHei',sans-serif;fill:#20262d;text-anchor:middle}.h{font-size:26px;font-weight:700}.m{font-size:19px;font-weight:600}.s{font-size:15px}.line{stroke:#425466;stroke-width:2;fill:none;marker-end:url(#a)}</style>
+  <rect class="bg" width="1280" height="820"/><text x="640" y="42" class="t h">分层架构与主要调用方向</text>
+  <rect x="120" y="80" width="1040" height="120" rx="14" class="layer"/>
+  <text x="210" y="115" class="t m">表现层</text>
+  <rect x="300" y="105" width="190" height="65" rx="10" class="layer"/><text x="395" y="144" class="t s">MainMenu / menu_views</text>
+  <rect x="530" y="105" width="190" height="65" rx="10" class="layer"/><text x="625" y="144" class="t s">Game / 战斗 HUD</text>
+  <rect x="760" y="105" width="190" height="65" rx="10" class="layer"/><text x="855" y="135" class="t s">角色生成页</text><text x="855" y="157" class="t s">旁白字幕层（计划）</text>
+  <rect x="120" y="245" width="1040" height="140" rx="14" class="layer"/>
+  <text x="210" y="285" class="t m">应用层</text>
+  <rect x="300" y="275" width="180" height="70" rx="10" class="layer"/><text x="390" y="306" class="t s">游戏流程协调</text><text x="390" y="329" class="t s">Game / MainMenu</text>
+  <rect x="520" y="275" width="180" height="70" rx="10" class="layer"/><text x="610" y="306" class="t s">角色导入与刷新</text><text x="610" y="329" class="t s">Repository Adapter</text>
+  <rect x="740" y="275" width="190" height="70" rx="10" class="ai"/><text x="835" y="306" class="t s">AI 请求编排</text><text x="835" y="329" class="t s">异步/限流/降级（计划）</text>
+  <rect x="120" y="430" width="1040" height="155" rx="14" class="layer"/>
+  <text x="210" y="472" class="t m">领域层</text>
+  <rect x="290" y="465" width="170" height="80" rx="10" class="layer"/><text x="375" y="500" class="t s">Player / Boss</text><text x="375" y="525" class="t s">EnemySystem</text>
+  <rect x="490" y="465" width="180" height="80" rx="10" class="layer"/><text x="580" y="500" class="t s">Character</text><text x="580" y="525" class="t s">CharacterRuntime</text>
+  <rect x="700" y="465" width="180" height="80" rx="10" class="layer"/><text x="790" y="500" class="t s">ProgressSystem</text><text x="790" y="525" class="t s">StoryData</text>
+  <rect x="120" y="630" width="1040" height="135" rx="14" class="data"/>
+  <text x="210" y="672" class="t m">基础设施层</text>
+  <rect x="300" y="660" width="180" height="70" rx="10" class="data"/><text x="390" y="692" class="t s">raylib / 音频</text><text x="390" y="716" class="t s">输入与纹理资源</text>
+  <rect x="520" y="660" width="190" height="70" rx="10" class="data"/><text x="615" y="692" class="t s">JSON 本地存储</text><text x="615" y="716" class="t s">存档/设置/角色</text>
+  <rect x="750" y="660" width="200" height="70" rx="10" class="ai"/><text x="850" y="692" class="t s">HTTP API / 模型服务</text><text x="850" y="716" class="t s">网关与缓存（计划）</text>
+  <path d="M640 200 L640 245" class="line"/><path d="M640 385 L640 430" class="line"/><path d="M640 585 L640 630" class="line"/>
+  <text x="690" y="226" class="t s">用户命令</text><text x="695" y="412" class="t s">调用领域规则</text><text x="704" y="615" class="t s">读写/外部调用</text>
+</svg>

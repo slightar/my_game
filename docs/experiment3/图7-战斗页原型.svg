@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <style>.sky{fill:#d7dce0}.ground{fill:#777e83}.wall{fill:#a7adb1}.hud{fill:#202428;fill-opacity:.9}.blue{fill:#0099cc}.red{fill:#b84b4b}.t{font-family:'Microsoft YaHei',sans-serif}.white{fill:#fff}.ink{fill:#20262d}.h{font-size:25px;font-weight:700}.m{font-size:18px}.s{font-size:14px}.note{fill:#fff8e8;stroke:#b67b26;stroke-width:2}</style>
+  <rect width="1280" height="720" class="sky"/><rect y="570" width="1280" height="150" class="ground"/><rect x="800" y="210" width="390" height="360" class="wall"/>
+  <rect x="35" y="28" width="410" height="85" class="hud"/><text x="60" y="61" class="t white m">德克萨斯　HP 3 / 5</text><rect x="60" y="77" width="340" height="13" fill="#555"/><rect x="60" y="77" width="205" height="13" class="blue"/>
+  <rect x="800" y="28" width="445" height="85" class="hud"/><text x="825" y="61" class="t white m">弑君者　HP 18%</text><rect x="825" y="77" width="375" height="13" fill="#555"/><rect x="825" y="77" width="68" height="13" class="red"/>
+  <circle cx="300" cy="510" r="38" fill="#4b5965"/><rect x="276" y="545" width="48" height="25" fill="#303840"/><text x="300" y="615" text-anchor="middle" class="t white s">玩家</text>
+  <circle cx="1010" cy="490" r="55" fill="#674b55"/><path d="M340 500 L940 490" stroke="#f5d65b" stroke-width="7"/><text x="1010" y="580" text-anchor="middle" class="t white s">Boss</text>
+  <rect x="315" y="135" width="650" height="90" rx="12" class="hud"/><text x="640" y="172" text-anchor="middle" class="t white m">“十八个百分点。你确定现在才想认真吗？”</text><text x="640" y="201" text-anchor="middle" class="t white s">AI 旁白 · 决战语气 · 4 秒后淡出</text>
+  <rect x="35" y="630" width="540" height="65" class="hud"/><text x="60" y="658" class="t white s">A/D 移动　W 跳跃　J 攻击　E/Q 技能　Esc 暂停</text><text x="60" y="681" class="t white s">技能：阵雨连绵 2.3s　剑雨 READY</text>
+  <rect x="820" y="625" width="395" height="70" rx="8" class="note"/><text x="1017" y="653" text-anchor="middle" class="t ink s">动态元素：生命、技能冷却、旁白字幕</text><text x="1017" y="678" text-anchor="middle" class="t ink s">错误状态：API 超时则显示预设旁白或静默</text>
+</svg>

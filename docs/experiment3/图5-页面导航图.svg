@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#40566b"/></marker></defs>
+  <style>.bg{fill:#fff}.p{fill:#f7f9fb;stroke:#40566b;stroke-width:2}.core{fill:#e7f3fa;stroke:#007fae;stroke-width:2}.ai{fill:#fff4df;stroke:#b67b26;stroke-width:2}.t{font-family:'Microsoft YaHei',sans-serif;fill:#20262d;text-anchor:middle}.h{font-size:26px;font-weight:700}.m{font-size:17px}.s{font-size:14px}.line{stroke:#40566b;stroke-width:2;fill:none;marker-end:url(#a)}</style>
+  <rect class="bg" width="1280" height="720"/><text x="640" y="42" class="t h">页面结构与导航关系</text>
+  <rect x="70" y="100" width="170" height="70" rx="12" class="p"/><text x="155" y="142" class="t m">启动页</text>
+  <rect x="300" y="100" width="190" height="70" rx="12" class="core"/><text x="395" y="142" class="t m">首页</text>
+  <rect x="580" y="75" width="200" height="70" rx="12" class="p"/><text x="680" y="117" class="t m">主线地图/节点详情</text>
+  <rect x="580" y="180" width="200" height="70" rx="12" class="p"/><text x="680" y="222" class="t m">Boss 挑战选择</text>
+  <rect x="580" y="285" width="200" height="70" rx="12" class="ai"/><text x="680" y="327" class="t m">AI 角色创建</text>
+  <rect x="580" y="390" width="200" height="70" rx="12" class="p"/><text x="680" y="432" class="t m">档案/装备/设置</text>
+  <rect x="880" y="160" width="200" height="75" rx="12" class="p"/><text x="980" y="192" class="t m">干员选择</text><text x="980" y="216" class="t s">已有角色与自定义角色</text>
+  <rect x="880" y="300" width="200" height="85" rx="12" class="core"/><text x="980" y="334" class="t m">战斗页</text><text x="980" y="359" class="t s">HUD + AI 旁白字幕</text>
+  <rect x="880" y="470" width="200" height="75" rx="12" class="core"/><text x="980" y="502" class="t m">结果页</text><text x="980" y="526" class="t s">重试/下一关/返回</text>
+  <rect x="300" y="560" width="190" height="70" rx="12" class="p"/><text x="395" y="602" class="t m">退出确认</text>
+  <path d="M240 135 L300 135" class="line"/><path d="M490 125 L580 105" class="line"/><path d="M490 135 L580 215" class="line"/><path d="M490 145 L580 320" class="line"/><path d="M490 155 L580 425" class="line"/>
+  <path d="M780 110 L880 180" class="line"/><path d="M780 215 L880 205" class="line"/><path d="M780 320 L880 205" class="line"/>
+  <path d="M980 235 L980 300" class="line"/><path d="M980 385 L980 470" class="line"/><path d="M880 508 C700 560 620 530 490 585" class="line"/>
+  <path d="M880 510 C730 600 530 520 430 170" class="line"/><text x="690" y="588" class="t s">返回首页</text>
+  <path d="M300 595 C210 590 190 420 300 170" class="line"/>
+</svg>

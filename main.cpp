@@ -6,7 +6,7 @@ int main() {
 
     const auto lang = "C++";
 
-s
+
     std::cout << "Hello and welcome to " << lang << "!\n";
 
     for (int i = 1; i <= 5; i++) {

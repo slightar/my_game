@@ -1,0 +1,51 @@
+<!doctype html><meta charset="utf-8">
+<script src="pixi.js"></script><script src="spine.js"></script>
+<script>
+// Developer-only offline renderer: Pixi 6.5.10 + pixi-spine 3.1.2 (Spine 3.8).
+// Neither library is shipped with, linked to, or loaded by the C++ game.
+(async () => {
+  try {
+    const models = await (await fetch('models.json')).json();
+    const app = new PIXI.Application({width:192,height:192,backgroundAlpha:0,antialias:true,preserveDrawingBuffer:true});
+    app.stop(); document.body.appendChild(app.view);
+    const metadata = {};
+    for (const [key, name] of Object.entries(models)) {
+      const loader = new PIXI.Loader();
+      await new Promise((resolve,reject) => { loader.onError.add(reject); loader.add('model',`${key}/${name}.skel`).load(resolve); });
+      const rig = new PIXI.spine.Spine(loader.resources.model.spineData);
+      rig.autoUpdate = false; app.stage.addChild(rig);
+      const animations = rig.spineData.animations;
+      const names = ['Idle','Move','Attack','Die'].map(n =>
+        animations.find(a => a.name.toLowerCase() === n.toLowerCase())?.name ||
+        animations.find(a => a.name.toLowerCase() === (n+'_Loop').toLowerCase())?.name);
+      if (names.some(n => !n)) throw Error(`${key}: missing animation; found ${animations.map(a=>a.name)}`);
+      function pose(row,col) {
+        rig.skeleton.setToSetupPose(); rig.state.clearTracks();
+        const entry = rig.state.setAnimation(0,names[row],false);
+        rig.update(entry.animation.duration * col / (row < 2 ? 10 : 9));
+      }
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      for(let row=0;row<4;row++) for(let col=0;col<10;col++) {
+        pose(row,col); const b=rig.getBounds();
+        minX=Math.min(minX,b.x);minY=Math.min(minY,b.y);maxX=Math.max(maxX,b.x+b.width);maxY=Math.max(maxY,b.y+b.height);
+      }
+      const scale = Math.min(174/(maxX-minX),164/(maxY-minY));
+      rig.scale.set(scale);rig.position.set(96-(minX+maxX)*scale/2,180-maxY*scale);
+      pose(0,0); const idleBounds=rig.getBounds();
+      const anchor=[idleBounds.x+idleBounds.width/2,idleBounds.y+idleBounds.height];
+      const sheet=document.createElement('canvas');sheet.width=1920;sheet.height=768;
+      const ctx=sheet.getContext('2d');
+      for(let row=0;row<4;row++) for(let col=0;col<10;col++) {
+        pose(row,col);app.renderer.render(app.stage);ctx.drawImage(app.view,col*192,row*192);
+      }
+      metadata[key]={model:name,columns:10,rows:4,cell:192,animations:names,
+        durations:names.map(n=>animations.find(a=>a.name===n).duration),
+        facing:key==='shield'?[-1,1,-1,-1]:[1,1,1,1],
+        scale,origin:[rig.x,rig.y],anchor};
+      await fetch('/bake/'+key,{method:'POST',body:sheet.toDataURL('image/png').split(',')[1]});
+      app.stage.removeChild(rig);rig.destroy();
+    }
+    await fetch('/done',{method:'POST',body:JSON.stringify(metadata,null,2)});
+  } catch(e) { await fetch('/error',{method:'POST',body:String(e.stack || e)}); }
+})();
+</script>

@@ -1,0 +1,30 @@
+ M src/enemy_renderer.cpp
+ M src/game.cpp
+ M src/game.h
+ M src/menu_views.cpp
+ M src/terminal_ui.cpp
+ M src/terminal_ui.h
+ M src/ui_input.h
+?? .workbuddy/
+?? output/_tmp_enemy_rows/
+?? output/_tmp_verify/
+?? output/verify_run.txt
+?? tools/__pycache__/
+=== DIFFSTAT vs HEAD ===
+warning: in the working copy of 'src/enemy_renderer.cpp', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/game.cpp', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/game.h', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/menu_views.cpp', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/terminal_ui.cpp', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/terminal_ui.h', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/ui_input.h', LF will be replaced by CRLF the next time Git touches it
+ src/enemy_renderer.cpp | 15 +++++++++++++--
+ src/game.cpp           | 12 ++++++++----
+ src/game.h             |  2 ++
+ src/menu_views.cpp     |  7 +++++++
+ src/terminal_ui.cpp    | 18 +++++++++++++++---
+ src/terminal_ui.h      |  6 ++++++
+ src/ui_input.h         | 10 +++++++++-
+ 7 files changed, 60 insertions(+), 10 deletions(-)
+=== LOG for enemy_renderer.cpp ===
+38335c0 新增多种敌方单位

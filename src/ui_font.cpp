@@ -24,7 +24,9 @@ constexpr const char* kUiGlyphs =
     "保持有效所有已装备原石信息特蕾西娅化为留下储存在游戏中的等待与你重逢"
     "损坏碎片遗失利首次重置痕迹火力维生增益显示附近死亡后保留一条"
     "系统建议既定路线强直接造成伤害提升获得额外生命照亮汇聚探索发现效率低语"
-    "当前继续退出分类选择返回主页面左右上下切换按键确定指令归档";
+    "当前继续退出分类选择返回主页面左右上下切换按键确定指令归档"
+    // Character lineup page.
+    "编队预览仅影响输出擅长持续与幕压制范围查看详情位置";
 
 constexpr int kFontAtlasSize = 128;
 
@@ -94,4 +96,20 @@ void UiFont::Draw(const char* text, float x, float y, float size, Color color) c
 
 float UiFont::Measure(const char* text, float size) const {
     return MeasureTextEx(font_, text, size, 1.0F).x;
+}
+
+bool UiFont::SupportsText(const std::string& text) const {
+    int count = 0;
+    int* codepoints = LoadCodepoints(text.c_str(), &count);
+    bool supported = true;
+    for (int i = 0; i < count; ++i) {
+        const int glyph = GetGlyphIndex(font_, codepoints[i]);
+        if (glyph < 0 || glyph >= font_.glyphCount ||
+            font_.glyphs[glyph].value != codepoints[i]) {
+            supported = false;
+            break;
+        }
+    }
+    UnloadCodepoints(codepoints);
+    return supported;
 }

@@ -1,0 +1,61 @@
+
+--- initial (chapter index 1, stage index 3) | title=第一章 黑暗时代 · 下 | act=Act initium
+    spine top=87px height=448px
+    conn top= 128px left=313.5px h=30
+    tile top=  46px tile done              code=1-1  imgs=[plate,rank,code]  bytes=7968/3348
+    conn top= 240px left=313.5px h=30
+    tile top= 158px tile done              code=1-2  imgs=[plate,rank,code]  bytes=7968/3348
+    conn top= 352px left=313.5px h=30
+    tile top= 270px tile done              code=1-3  imgs=[plate,rank,code]  bytes=7968/3348
+    conn top= 464px left=313.5px h=30
+    mark top=347.5px abs trackmark
+    mark top=355.5px abs trackdot
+    tile top= 382px tile current sel       code=1-4  imgs=[plate,rank,code]  bytes=15244/2860
+    tile top= 494px tile locked            code=1-5  imgs=[plate,lock,code]  bytes=7968/572
+    panel code=1-4 state=可挑战 btn="abs"
+
+--- after clicking 第二章 | title=第二章 异卵同生 | act=Act initium
+    spine top=87px height=448px
+    conn top= 128px left=313.5px h=30
+    tile top=  46px tile done              code=2-1  imgs=[plate,rank,code]  bytes=7968/3348
+    conn top= 240px left=313.5px h=30
+    tile top= 158px tile done              code=2-2  imgs=[plate,rank,code]  bytes=7968/3348
+    conn top= 352px left=313.5px h=30
+    mark top=235.5px abs trackmark
+    mark top=243.5px abs trackdot
+    tile top= 270px tile current sel       code=2-3  imgs=[plate,rank,code]  bytes=15244/2860
+    conn top= 464px left=313.5px h=30
+    tile top= 382px tile locked            code=2-4  imgs=[plate,lock,code]  bytes=7968/572
+    tile top= 494px tile locked            code=2-5  imgs=[plate,lock,code]  bytes=7968/572
+    panel code=2-3 state=可挑战 btn="abs"
+
+--- after clicking locked stage 5 | title=第二章 异卵同生 | act=Act initium
+    spine top=87px height=448px
+    conn top= 128px left=313.5px h=30
+    tile top=  46px tile done              code=2-1  imgs=[plate,rank,code]  bytes=7968/3348
+    conn top= 240px left=313.5px h=30
+    tile top= 158px tile done              code=2-2  imgs=[plate,rank,code]  bytes=7968/3348
+    conn top= 352px left=313.5px h=30
+    mark top=235.5px abs trackmark
+    mark top=243.5px abs trackdot
+    tile top= 270px tile current           code=2-3  imgs=[plate,rank,code]  bytes=15244/2860
+    conn top= 464px left=313.5px h=30
+    tile top= 382px tile locked            code=2-4  imgs=[plate,lock,code]  bytes=7968/572
+    tile top= 494px tile locked sel        code=2-5  imgs=[plate,lock,code]  bytes=7968/572
+    panel code=2-5 state=未解锁 btn="abs off"
+
+--- after clicking 序章 (0 cleared=5) | title=序章 黑暗时代 · 上 | act=Act initium
+    spine top=87px height=448px
+    conn top= 128px left=313.5px h=30
+    tile top=  46px tile done              code=0-1  imgs=[plate,rank,code]  bytes=7968/3348
+    conn top= 240px left=313.5px h=30
+    tile top= 158px tile done              code=0-2  imgs=[plate,rank,code]  bytes=7968/3348
+    conn top= 352px left=313.5px h=30
+    tile top= 270px tile done              code=0-3  imgs=[plate,rank,code]  bytes=7968/3348
+    conn top= 464px left=313.5px h=30
+    tile top= 382px tile done              code=0-4  imgs=[plate,rank,code]  bytes=7968/3348
+    tile top= 494px tile done sel          code=0-5  imgs=[plate,rank,code]  bytes=5836/3348
+    panel code=0-5 state=已通关 btn="abs"
+
+plates created=0  without data-uri=0
+distinct plate byte-lengths: 

@@ -1,0 +1,31 @@
+=== diff HEAD vs worktree: enemy_renderer.cpp ===
+warning: in the working copy of 'src/enemy_renderer.cpp', LF will be replaced by CRLF the next time Git touches it
+diff --git a/src/enemy_renderer.cpp b/src/enemy_renderer.cpp
+index 18683e8..7019f8d 100644
+--- a/src/enemy_renderer.cpp
++++ b/src/enemy_renderer.cpp
+@@ -70,8 +70,19 @@ void EnemyRenderer::DrawUnit(const EnemyUnit& u,const UiFont& font)const {
+     if(u.state==EnemyState::Strike){row=2;frame=4+std::clamp(int(u.animationTime/.22F*4),0,3);}
+     if(u.state==EnemyState::Recover && !u.turning && u.stun<=0){row=2;frame=8+std::min(1,int(u.animationTime/std::max(.01F,d.recovery)*2));}
+     if(u.state==EnemyState::Dead){row=3;frame=std::min(9,int(u.animationTime/.8F*10));}
+-    // Native direction differs between the shield's idle and walking clips.
+-    const bool flip=u.facing!=facing_[i][row];
++    // The shield's attack clip mixes two native directions, which a single per-row
++    // table cannot express. Measured on shield_v2.png (alpha centroid of each cell
++    // relative to the cell centre): frames 0-3 sit at -3..-12 and frame 9 is exactly
++    // the idle pose, so they were drawn like the idle clip (native left). Frames 4-8
++    // sit at +9..+31 and match the walking clip (native right). Without this, the
++    // per-row table marks the whole row as left-facing, so a left-facing guard swings
++    // its shield to the right - away from the player it is actually hitting.
++    static constexpr std::array<bool,10> kShieldAttackNativeRight{
++        false,false,false,false, true,true,true,true,true, false};
++    const int nativeFacing = (i==static_cast<unsigned>(EnemyKind::Shield) && row==2)
++                                 ? (kShieldAttackNativeRight[std::clamp(frame,0,9)] ? 1 : -1)
++                                 : facing_[i][row];
++    const bool flip=u.facing!=nativeFacing;
+     const float anchorX=flip?192-anchors_[i].x:anchors_[i].x;
+     Color tint=WHITE;
+     if(u.flash>0)tint=u.blocked?SKYBLUE:Color{255,134,134,255};
+
+=== HEAD commit date ===
+38335c0 2026-09-19 10:58:11 +0800 新增多种敌方单位

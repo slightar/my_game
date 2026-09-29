@@ -22,7 +22,7 @@ void MainMenu::DrawBackground(const UiFont& font, const char* section) const {
     TerminalUi::Background(font, section, "RHODES ISLAND / OPERATIONS SYSTEM");
 }
 void MainMenu::Draw(const UiFont& font, const CharacterArt& art) const {
-    TerminalUi::SetPointerState(pointer_.position, pointer_.down, pointer_.valid);
+    TerminalUi::SetPointerState(pointer_);
     switch (page_) {
     case Page::Splash:
         TerminalUi::Background(font, "ARKNIGHTS-GO", "FAN PROJECT / DEVELOPMENT BUILD", false);
@@ -31,6 +31,7 @@ void MainMenu::Draw(const UiFont& font, const CharacterArt& art) const {
         Button(font, {430, 546, 420, 64}, "点击或按 Enter 接入终端", true);
         break;
     case Page::Home: DrawHome(font, art); break;
+    case Page::CharacterSelect: DrawCharacterSelect(font, art); break;
     case Page::Map: DrawMap(font); break;
     case Page::Archive: DrawArchive(font); break;
     case Page::Equipment: DrawEquipment(font); break;
@@ -49,12 +50,18 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
     // TODO: Allow the player to choose an assistant and an authored scene background.
     font.Draw("RHODES", 39, 131, 86, Fade(Paper, .12F));
     font.Draw("ISLAND", 41, 221, 86, Fade(Paper, .12F));
-    art.DrawPortrait(OperatorKind::Exusiai, {10, 85, 737, 760});
+    const int leader = characterLineup_[0];
+    if (const auto* custom = CharacterForSelection(leader))
+        art.DrawCustomPortrait(custom->id, {10, 85, 737, 760});
+    else
+        art.DrawPortrait(leader == 1 ? OperatorKind::Texas : OperatorKind::Exusiai,
+                         {10, 85, 737, 760});
     DrawRectangleGradientH(546, 90, 182, 560, BLANK, Fade(Ink, .26F));
     const auto* current = progress_.CurrentNode();
     const auto* chapter = current ? StoryData::FindChapter(current->chapterId) : nullptr;
-    Surface({43, 397, 163, 42}, Ink);
-    font.Draw("行动协助 / 能天使", 54, 410, 17, Paper);
+    const std::string leaderName = CharacterNameForSelection(leader);
+    Button(font, OperatorButton, ("编队 / " + leaderName).c_str(),
+           pointer_.Hit(OperatorButton), Ink, Paper);
     Button(font, EnemyTrialButton, "小怪试炼 / N", pointer_.Hit(EnemyTrialButton), Ink, Paper);
     Surface({43, 457, 607, 174}, Fade(Ink, .87F));
     DrawRectangle(43, 457, 5, 174, Orange);
@@ -75,6 +82,7 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
     font.Draw("探索地图", mainDraw.x + 24, mainDraw.y + 113, 25, Paper);
     font.Draw("REGION / ACCESS  >", mainDraw.x + 287, mainDraw.y + 120, 12, Muted);
     if (homeSelection_ == 0 || pointer_.Hit(main)) DrawRectangle(int(mainDraw.x), int(mainDraw.y + 143), 492, 4, Orange);
+    PressedVeil(main);
     const char* names[] = {"探索地图", "档案", "装备", "设置", "继续行动", "退出"};
     const char* subtitles[] = {"", "ARCHIVES", "EQUIPMENT", "SETTINGS", "CONTINUE OPERATION", "EXIT"};
     for (int i = 1; i < 6; ++i) {
@@ -87,6 +95,7 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
         font.Draw(names[i], draw.x + 22, draw.y + (i < 3 ? 17 : 11), i < 3 ? 36 : 27, primary ? Paper : Ink);
         font.Draw(subtitles[i], draw.x + 24, draw.y + draw.height - 23, 11, primary ? Paper : Color{86, 94, 99, 255});
         if (selected) DrawRectangleRec({draw.x, draw.y + draw.height - 4, draw.width, 4}, primary ? Paper : Orange);
+        PressedVeil(r);
     }
     int exits = 0;
     if (current) for (const auto& e : current->exits) if (progress_.ExitAvailable(e)) ++exits;
@@ -97,42 +106,113 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
         slots += item ? std::string(KindName(item->kind)) + " / " : "空 / ";
     }
     Fit(font, slots, {912, 603, 300, 27}, 15, Paper);
-    Footer(font, "点击功能块 / ↑↓ 选择 · Enter 确认    B 弑君者演示    N 小怪试炼    F6/F7/F8/F10/F11 调试");
+    Footer(font, "点击功能块 / ↑↓ 选择 · Enter 确认    C 角色编队    B 弑君者演示    N 小怪试炼    F6/F7/F8/F10/F11 调试");
 }
 
-void MainMenu::DrawMap(const UiFont& font) const {
-    const auto* node = progress_.CurrentNode(); if (!node) return;
-    DrawBackground(font, "终端 / 全局行动地图");
-    font.Draw("全局行动地图", 64, 106, 30, Paper);
-    font.Draw("所有区域已建立关联 · 点击节点选择行动起点", 67, 147, 17, Muted);
-    Surface({52, 180, 1176, 430}, {35, 42, 48, 245});
-    const auto& nodes = progress_.Nodes();
-    const auto point = [](int i) { return Vector2{105.0F + (i % 8) * 145.0F, 238.0F + (i / 8) * 92.0F}; };
-    for (int i = 0; i < static_cast<int>(nodes.size()); ++i) {
-        const auto a = point(i);
-        for (const auto& e : nodes[i].exits) {
-            const auto it = std::find_if(nodes.begin(), nodes.end(), [&](const MapNode& n){ return n.id == e.targetId; });
-            if (it == nodes.end()) continue;
-            const auto b = point(static_cast<int>(std::distance(nodes.begin(), it)));
-            DrawLineEx(a, b, 2, Fade(e.hidden ? Warm : Blue, progress_.IsUnlocked(nodes[i].id) ? .7F : .22F));
+void MainMenu::DrawCharacterSelect(const UiFont& font, const CharacterArt& art) const {
+    DrawBackground(font, "角色选择 / 行动编队");
+    const int count = 2 + static_cast<int>(customCharacters_.size());
+    const int selected = std::clamp(characterSelection_, 0, count - 1);
+    const Character* custom = CharacterForSelection(selected);
+    const std::string name = CharacterNameForSelection(selected);
+    const OperatorKind kind = selected == 1 ? OperatorKind::Texas : OperatorKind::Exusiai;
+
+    Surface({48, 124, 390, 508}, Ink);
+    DrawRectangle(48, 124, 5, 508, Blue);
+    font.Draw("可用干员", 70, 143, 23, Paper);
+    font.Draw(TextFormat("ROSTER // %02d", count), 298, 150, 12, Muted);
+    const int start = std::clamp(selected - 3, 0, std::max(0, count - 6));
+    for (int row = 0; row < std::min(6, count - start); ++row) {
+        const int choice = start + row;
+        const Rectangle hit{68, 171.0F + row * 67.0F, 350, 57};
+        const Rectangle draw = PressedRect(hit);
+        const bool active = choice == selected;
+        const bool deployed = choice == draftCharacterLineup_[0] ||
+                              choice == draftCharacterLineup_[1];
+        Surface(draw, active ? Color{66, 75, 82, 255}
+                             : Color{38, 44, 49, 255});
+        DrawRectangleRec({draw.x, draw.y, active ? 6.0F : 3.0F, draw.height},
+                         active ? Blue : Fade(Paper, .30F));
+        Fit(font, CharacterNameForSelection(choice),
+            {draw.x + 20, draw.y + 7, 226, 27}, 21, Paper);
+        font.Draw(choice < 2 ? (choice == 0 ? "狙击 / 远程" : "先锋 / 近战")
+                             : "自定义 / 本地",
+                  draw.x + 21, draw.y + 35, 12, Muted);
+        if (deployed) {
+            const char* slot = draftCharacterLineup_[0] == choice ? "01" : "02";
+            Surface({draw.x + 294, draw.y + 13, 38, 29}, active ? Blue : Paper);
+            font.Draw(slot, draw.x + 304, draw.y + 19, 14,
+                      active ? Paper : Ink);
         }
+        PressedVeil(hit);
     }
-    for (int i = 0; i < static_cast<int>(nodes.size()); ++i) {
-        const auto& n = nodes[i]; const auto p = point(i);
-        const bool unlocked = progress_.IsUnlocked(n.id), completed = progress_.IsCompleted(n.id), current = n.id == progress_.SelectedNode();
-        const Color color = n.type == NodeType::Hidden ? Warm : n.type == NodeType::Boss ? Orange : unlocked ? Blue : Muted;
-        DrawCircleV(p, current ? 17.0F : 12.0F, current ? Paper : Fade(color, unlocked ? .95F : .32F));
-        DrawCircleLines(static_cast<int>(p.x), static_cast<int>(p.y), current ? 23 : 17, current ? Orange : Fade(color, .65F));
-        if (completed) DrawCircleV(p, 5, Ink);
-        const std::string label = unlocked ? n.name : "???? / 未解锁";
-        Fit(font, label, {p.x - 66, p.y + 21, 132, 25}, 13, unlocked ? Paper : Muted);
-        font.Draw(unlocked ? NodeTypeName(n.type) : "LOCKED", p.x - 34, p.y - 37, 10, color);
+
+    Surface({462, 124, 330, 508}, Paper);
+    DrawRectangle(462, 124, 5, 508, Orange);
+    font.Draw("OPERATOR PREVIEW", 483, 143, 12, Color{95, 104, 109, 255});
+    if (custom)
+        art.DrawCustomPortrait(custom->id, {478, 166, 298, 354});
+    else
+        art.DrawPortrait(kind, {478, 166, 298, 354});
+    DrawRectangleGradientV(462, 444, 330, 188, BLANK, Fade(Ink, .96F));
+    Surface({462, 514, 330, 118}, Fade(Ink, .94F));
+    DrawRectangle(462, 514, 330, 4, Orange);
+    Fit(font, name, {484, 530, 280, 39}, 30, Paper);
+    font.Draw(custom ? "CUSTOM / LOCAL ASSET" :
+              (selected == 0 ? "SNIPER / RHODES ISLAND" : "VANGUARD / RHODES ISLAND"),
+              485, 578, 12, Muted);
+    font.Draw("预览仅影响本地出战编队", 485, 603, 14, Paper);
+
+    Surface({816, 124, 416, 508}, Paper);
+    DrawRectangle(816, 124, 416, 5, Blue);
+    font.Draw("出战配置", 840, 144, 23, Ink);
+    for (int slot = 0; slot < 2; ++slot) {
+        const Rectangle hit = CharacterSlots[slot];
+        const Rectangle draw = PressedRect(hit);
+        Surface(draw, slot == characterSlot_ ? Ink : Color{218, 222, 221, 255});
+        font.Draw(TextFormat("SLOT %02d", slot + 1), draw.x + 14, draw.y + 10,
+                  12, slot == characterSlot_ ? Blue : Color{94, 103, 108, 255});
+        Fit(font, CharacterNameForSelection(draftCharacterLineup_[slot]),
+            {draw.x + 14, draw.y + 31, draw.width - 28, 32}, 21,
+            slot == characterSlot_ ? Paper : Ink);
+        if (slot == characterSlot_)
+            DrawRectangleRec({draw.x, draw.y + draw.height - 4, draw.width, 4}, Blue);
+        PressedVeil(hit);
     }
-    Surface({835, 520, 365, 70}, Ink);
-    Fit(font, "当前起点 / " + node->name, {855, 532, 325, 24}, 17, Paper);
-    Fit(font, "Enter 打开节点详情", {855, 558, 325, 18}, 13, Muted);
-    Button(font, MapTask, "打开当前行动详情  >", pointer_.Hit(MapTask), Paper, Ink);
-    Footer(font, "点击节点选择起点 · Enter 查看节点 · 节点之间完全连通 · 返回箭头 / Esc 主页");
+
+    const int health = custom ? custom->stats.health : 3;
+    const int speed = static_cast<int>(custom ? custom->stats.moveSpeed : 320.0F);
+    const int jump = static_cast<int>(custom ? custom->stats.jumpSpeed : 610.0F);
+    const float interval = custom ? custom->stats.attackInterval
+                                  : selected == 0 ? .12F : .25F;
+    Rule(840, 283, 368, Ink);
+    font.Draw("作战参数", 840, 296, 18, Ink);
+    font.Draw(TextFormat("HP  %d", health), 841, 332, 17, Ink);
+    font.Draw(TextFormat("MOVE  %d", speed), 1009, 332, 17, Ink);
+    font.Draw(TextFormat("JUMP  %d", jump), 841, 363, 17, Ink);
+    font.Draw(TextFormat("ATK RATE  %.2fs", interval), 1009, 363, 17, Ink);
+    Rule(840, 398, 368, Ink);
+    const std::string description = custom ? custom->description
+        : selected == 0 ? "高速远程输出，擅长持续火力与弹幕压制。"
+                        : "快速近战切入，擅长剑气与范围剑雨。";
+    Wrap(font, description, {840, 414, 365, 54}, 16, Ink);
+    for (int slot = 0; slot < 2; ++slot) {
+        const float y = 475.0F + slot * 35.0F;
+        std::string skill;
+        if (custom && slot < static_cast<int>(custom->skills.size()))
+            skill = custom->skills[slot].name;
+        else if (!custom)
+            skill = selected == 0 ? (slot == 0 ? "E / 扫射" : "Q / 过载")
+                                  : (slot == 0 ? "E / 初始" : "Q / 剑雨");
+        else
+            skill = slot == 0 ? "E / 未配置" : "Q / 未配置";
+        DrawRectangleRec({840, y, 368, 28}, Color{224, 227, 225, 255});
+        DrawRectangleRec({840, y, 4, 28}, slot == 0 ? Blue : Orange);
+        Fit(font, skill, {852, y, 344, 28}, 15, Ink);
+    }
+    Button(font, CharacterAssign, "编入当前栏", pointer_.Hit(CharacterAssign), Ink, Paper);
+    Button(font, CharacterConfirm, "保存编队", pointer_.Hit(CharacterConfirm), Blue, Paper);
+    Footer(font, "点击干员查看详情 · 点击 SLOT 选择位置 · Enter 编入 · C 保存编队 · ↑↓/滚轮选择 · Esc 返回");
 }
 
 void MainMenu::DrawArchive(const UiFont& font) const {
@@ -152,6 +232,7 @@ void MainMenu::DrawArchive(const UiFont& font) const {
         if (selected) DrawRectangle(340, int(y), 4, 45, Blue);
         font.Draw(TextFormat("%02d", i + 1), 351, y + 15, 14, selected ? Ink : Muted);
         Fit(font, e.unlocked ? e.name : "???? / 无法检索", {386, y, 307, 45}, 19, selected ? Ink : e.unlocked ? Paper : Muted);
+        PressedVeil({340, y, 367, 45});
     }
     font.Draw("滚轮 / ↑↓ 翻阅", 350, 592, 14, Muted);
     Surface({747, 109, 477, 518}, Paper);
@@ -181,6 +262,7 @@ void MainMenu::DrawEquipment(const UiFont& font) const {
         DrawRectangleRec({r.x, r.y + 101, r.width, 4}, i == equipmentSlot_ ? Blue : color);
         font.Draw(TextFormat("SLOT %02d", i + 1), r.x + 18, r.y + 14, 13, i == equipmentSlot_ ? Ink : Muted);
         Fit(font, item ? item->name : "未装备", {r.x + 18, r.y + 41, 332, 35}, 28, i == equipmentSlot_ ? Ink : Paper);
+        PressedVeil(r);
     }
     Surface({62, 281, 548, 348}, Ink);
     Surface({631, 281, 587, 348}, Paper);
@@ -197,6 +279,7 @@ void MainMenu::DrawEquipment(const UiFont& font) const {
             DrawRectangle(78, int(y), 4, 39, Accent(item));
             font.Draw(KindName(item.kind), 93, y + 9, 17, Accent(item));
             Fit(font, item.name, {158, y, 418, 39}, 20, Paper);
+            PressedVeil({78, y, 516, 39});
         }
         ++row;
     }
@@ -234,6 +317,7 @@ void MainMenu::DrawSettings(const UiFont& font) const {
             DrawRectangle(685 + 345 * value / 100, int(y + 22), 10, 27, selected ? Ink : Paper);
             font.Draw(TextFormat("%d%%", value), 1060, y + 21, 25, text);
         } else font.Draw(i == 3 ? "需再次确认  >" : "打开  >", 963, y + 24, 19, i == 3 ? Orange : text);
+        PressedVeil({84, y, 1115, 71});
     }
     Footer(font, "点击条目或拖动音量滑块    ↑↓ 选择    ←→ 调整音量    Enter 打开    返回箭头 / Esc 主页");
 }
@@ -249,6 +333,7 @@ void MainMenu::DrawKeyBindings(const UiFont& font) const {
         font.Draw(GameSettings::ActionName(static_cast<GameAction>(i)), 113, y + 3, 21, selected ? Ink : Paper);
         const auto value = capturingKey_ && selected ? "按下新键…" : GameSettings::KeyName(settings_.Key(static_cast<GameAction>(i)));
         font.Draw(value.c_str(), 849, y + 3, 22, selected ? Ink : Paper);
+        PressedVeil({81, 149.0F + i * 43, 1115, 40});
     }
     Footer(font, capturingKey_ ? "按任意可用键设置    Esc / 返回箭头取消    重复键位不可使用" : "点击操作修改键位    ↑↓ 选择    Enter 修改    返回箭头 / Esc 返回设置");
 }

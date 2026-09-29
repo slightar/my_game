@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760">
+  <style>.bg{fill:#1c1f22}.paper{fill:#eff0ed}.field{fill:#fff;stroke:#a8b1b7;stroke-width:2}.dark{fill:#282d31}.blue{fill:#0099cc}.orange{fill:#dd702d}.t{font-family:'Microsoft YaHei',sans-serif}.white{fill:#fff}.ink{fill:#20262d}.muted{fill:#777f85}.h{font-size:28px;font-weight:700}.m{font-size:18px}.s{font-size:14px}.note{fill:#fff8e8;stroke:#b67b26;stroke-width:2}</style>
+  <rect width="1280" height="760" class="bg"/><text x="55" y="58" class="t white h">AI 角色创建</text><text x="55" y="90" class="t muted s">上传图片并描述攻击与技能，生成后先预览再导入</text>
+  <rect x="55" y="125" width="700" height="555" class="paper"/>
+  <text x="85" y="168" class="t ink m">角色图片（PNG/JPG，≤ 32 MiB）</text><rect x="85" y="188" width="250" height="150" class="field"/><text x="210" y="258" text-anchor="middle" class="t muted m">拖入或选择图片</text><rect x="365" y="188" width="350" height="48" class="field"/><text x="380" y="219" class="t muted s">角色名：请输入 1–20 个字符</text>
+  <rect x="365" y="255" width="350" height="83" class="field"/><text x="380" y="285" class="t muted s">普通攻击描述</text><text x="380" y="314" class="t ink s">例：快速近战斩击，短距离物理伤害</text>
+  <text x="85" y="382" class="t ink m">E 技能</text><rect x="85" y="400" width="630" height="72" class="field"/><text x="105" y="442" class="t muted s">技能名称、效果、持续时间和期望风格</text>
+  <text x="85" y="512" class="t ink m">Q 技能</text><rect x="85" y="530" width="630" height="72" class="field"/><text x="105" y="572" class="t muted s">技能名称、效果、持续时间和期望风格</text>
+  <rect x="85" y="620" width="250" height="46" class="blue"/><text x="210" y="650" text-anchor="middle" class="t white m">生成预览</text><text x="365" y="648" class="t muted s">生成前检查必填项；处理中显示进度并可取消</text>
+  <rect x="790" y="125" width="435" height="555" class="dark"/><text x="825" y="170" class="t white m">生成预览</text><rect x="825" y="195" width="160" height="230" class="field"/><text x="905" y="315" text-anchor="middle" class="t muted s">角色立绘</text>
+  <text x="1015" y="220" class="t white m">自定义干员</text><text x="1015" y="255" class="t white s">HP 5　移速 320　跳跃 610</text><text x="1015" y="290" class="t white s">普攻：近战 / 伤害 2.0</text><text x="1015" y="330" class="t white s">E：冲刺斩　冷却 7s</text><text x="1015" y="365" class="t white s">Q：剑雨　冷却 12s</text>
+  <rect x="825" y="465" width="170" height="48" class="orange"/><text x="910" y="496" text-anchor="middle" class="t white m">重新生成</text><rect x="1015" y="465" width="170" height="48" class="blue"/><text x="1100" y="496" text-anchor="middle" class="t white m">确认导入</text>
+  <rect x="825" y="545" width="360" height="95" rx="8" class="note"/><text x="1005" y="575" text-anchor="middle" class="t ink s">确认点：图片、技能名称、数值范围</text><text x="1005" y="602" text-anchor="middle" class="t ink s">失败反馈：保留输入并显示可修改项</text><text x="1005" y="627" text-anchor="middle" class="t ink s">未确认的结果不进入角色库</text>
+</svg>

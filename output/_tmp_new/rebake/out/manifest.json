@@ -1,0 +1,134 @@
+{
+  "hound": {
+    "model": "enemy_1000_gopro",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      0.800000011920929,
+      1,
+      0.6666666865348816
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.5260189287701613,
+    "origin": [
+      86.3960731195051,
+      178.02999270323048
+    ],
+    "anchor": [
+      96,
+      180
+    ]
+  },
+  "stealth_crossbow": {
+    "model": "enemy_1019_jshoot",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.31298759417394656,
+    "origin": [
+      73.67895226263178,
+      143.58740411702632
+    ],
+    "anchor": [
+      92.74748134613037,
+      144.11900329589844
+    ]
+  },
+  "caster": {
+    "model": "enemy_1011_wizard",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      2,
+      1,
+      1.2000000476837158,
+      0.8333333134651184
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.4140078902565755,
+    "origin": [
+      49.142612123451876,
+      168.69037928823442
+    ],
+    "anchor": [
+      55.3216552734375,
+      169.94900512695312
+    ]
+  },
+  "acid_slug": {
+    "model": "enemy_1004_mslime",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      2,
+      2,
+      1.3333333730697632,
+      0.8333333134651184
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.504968687396547,
+    "origin": [
+      80.94975485252249,
+      177.94416792160487
+    ],
+    "anchor": [
+      96,
+      180
+    ]
+  }
+}

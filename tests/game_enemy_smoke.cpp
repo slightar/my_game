@@ -22,13 +22,19 @@ int main(){
             UnloadImage(image);UnloadRenderTexture(target);
         };
         press(KEY_ENTER);press(KEY_N);
-        if(game.RemainingTrialEnemies()!=6)throw std::runtime_error("N did not enter six-unit trial");
+        // Compare against the definition table, not a literal: this read "!= 6" while the
+        // roster had already grown to 11, so the trial entry check was checking nothing.
+        const int kinds=static_cast<int>(EnemyDefinitions().size());
+        if(game.RemainingTrialEnemies()!=kinds)throw std::runtime_error("N did not enter the full trial formation");
         key(KEY_D,true);frames(155);key(KEY_D,false);
         capture("trial-start.png");
         key(KEY_J,true);frames(190);key(KEY_J,false);
-        if(game.RemainingTrialEnemies()>=5)throw std::runtime_error("Gunfire failed to defeat low-profile target");
+        // The assist aim alone should be able to clear the nearest chaff from range.
+        if(game.RemainingTrialEnemies()>kinds-2)throw std::runtime_error("Gunfire failed to defeat low-profile target");
         capture("trial-gunfire.png");
-        press(KEY_TWO);press(KEY_Q);key(KEY_J,true);frames(24);key(KEY_J,false);
+        // Texas again for the melee frame.
+        press(KEY_TWO);press(KEY_Q);
+        key(KEY_J,true);frames(24);key(KEY_J,false);
         capture("trial-texas.png");
         press(KEY_ESCAPE);frames(60);capture("trial-paused.png");
         // Pause -> home -> original boss demonstration remains selectable.

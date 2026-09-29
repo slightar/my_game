@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <style>.bg{fill:#1c1f22}.panel{fill:#eff0ed}.dark{fill:#282d31}.blue{fill:#0099cc}.line{stroke:#a8b1b7;stroke-width:2}.t{font-family:'Microsoft YaHei',sans-serif}.white{fill:#f5f6f3}.ink{fill:#20262d}.muted{fill:#9da6ac}.h{font-size:30px;font-weight:700}.m{font-size:20px}.s{font-size:15px}.note{fill:#fff8e8;stroke:#b67b26;stroke-width:2}</style>
+  <rect class="bg" width="1280" height="720"/><rect x="0" y="0" width="18" height="720" class="blue"/>
+  <text x="58" y="70" class="t white h">PRTS // 罗德岛行动终端</text><text x="58" y="104" class="t muted s">ARKNIGHTS-GO · 本地档案已载入</text>
+  <rect x="60" y="150" width="560" height="430" class="dark"/><text x="95" y="205" class="t white m">当前行动</text>
+  <text x="95" y="255" class="t white h">切尔诺伯格外围</text><text x="95" y="295" class="t muted m">主线节点 02 · 清理敌方单位并进入 Boss 区域</text>
+  <path d="M105 400 L220 330 L335 385 L455 290 L560 350" class="line"/><circle cx="105" cy="400" r="12" class="blue"/><circle cx="220" cy="330" r="12" class="blue"/><circle cx="335" cy="385" r="12" fill="#69747b"/><circle cx="455" cy="290" r="12" fill="#69747b"/>
+  <text x="95" y="535" class="t muted s">方向键/鼠标选择　Enter 确认　Esc 返回</text>
+  <rect x="680" y="150" width="520" height="115" class="panel"/><rect x="680" y="150" width="10" height="115" class="blue"/><text x="720" y="195" class="t ink h">继续主线</text><text x="720" y="230" class="t ink s">从当前节点继续推进</text>
+  <rect x="680" y="285" width="250" height="95" class="panel"/><text x="715" y="328" class="t ink m">Boss 挑战</text><text x="715" y="355" class="t ink s">自由选择已解锁首领</text>
+  <rect x="950" y="285" width="250" height="95" class="panel"/><text x="985" y="328" class="t ink m">创建角色</text><text x="985" y="355" class="t ink s">图片与技能资料生成</text>
+  <rect x="680" y="400" width="250" height="78" class="panel"/><text x="715" y="448" class="t ink m">档案与装备</text>
+  <rect x="950" y="400" width="250" height="78" class="panel"/><text x="985" y="448" class="t ink m">设置</text>
+  <rect x="680" y="500" width="520" height="80" class="dark"/><text x="715" y="535" class="t white m">AI 旁白：开启</text><text x="715" y="560" class="t muted s">联网异常时自动使用本地预设文本</text>
+  <rect x="690" y="615" width="480" height="65" rx="8" class="note"/><text x="930" y="642" text-anchor="middle" class="t ink s">动态元素：当前节点、解锁状态、联网状态</text><text x="930" y="665" text-anchor="middle" class="t ink s">用户命令：首页按钮、返回、退出</text>
+</svg>

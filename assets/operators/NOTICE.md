@@ -35,6 +35,11 @@
   蒙版仅做了中性白处理，以便在运行时恢复原效果的蓝白粒子材质着色。
   暗色拖尾来自官方共享资源 `refs/fx/texture/trail.ab` 中由材质
   `texas2_daoguang_an` 引用的 `trail_47_C`，未修改纹理内容。
+- `texas_sword.png` 由 `.battle-staging/texas_atlas.png`（德克萨斯官方战斗 Spine
+  图集 `char_102_texas`，512x512）中 `F_Weapon` 区域（atlas 记为 108,468 尺寸
+  108x42）裁切得到，仅做「按墨迹主轴转正 + 垂直翻转（剑尖朝下）」的几何变换，
+  像素内容未修改。用作二技能「剑雨」的落剑贴图（`src/game.cpp` 的
+  `BulletKind::FallingSword` 分支）。
 - 上述来源不授予本项目对官方素材的再分发或商业使用权。若公开发布项目，需根据
   权利方规则重新确认授权范围，并优先让使用者自行取得素材。
 

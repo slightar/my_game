@@ -1,0 +1,76 @@
+=== commits (all refs) touching enemy_renderer.cpp ===
+38335c0 新增多种敌方单位
+
+=== newest codex checkpoint vs HEAD: stat ===
+ .workbuddy/memory/2026-09-20.md                    |   163 +
+ .workbuddy/memory/MEMORY.md                        |    85 +
+ output/_tmp_enemy_rows/bands.py                    |    45 +
+ output/_tmp_enemy_rows/compare.py                  |    56 +
+ output/_tmp_enemy_rows/crop.py                     |    53 +
+ output/_tmp_enemy_rows/fixab.py                    |    27 +
+ output/_tmp_enemy_rows/heads.py                    |    22 +
+ output/_tmp_enemy_rows/helmettpl.py                |    52 +
+ output/_tmp_enemy_rows/input_probe.exe             |   Bin 0 -> 4004111 bytes
+ output/_tmp_enemy_rows/legs.png                    |   Bin 0 -> 141305 bytes
+ output/_tmp_enemy_rows/legs.py                     |    33 +
+ output/_tmp_enemy_rows/legs2.py                    |    33 +
+ output/_tmp_enemy_rows/legs_only.png               |   Bin 0 -> 63563 bytes
+ output/_tmp_enemy_rows/orient.py                   |    39 +
+ output/_tmp_enemy_rows/orient2.py                  |    41 +
+ output/_tmp_enemy_rows/probe.cpp                   |    81 +
+ output/_tmp_enemy_rows/probe_cells.png             |   Bin 0 -> 403862 bytes
+ output/_tmp_enemy_rows/probe_fix_ab.png            |   Bin 0 -> 92152 bytes
+ output/_tmp_enemy_rows/probe_heads.png             |   Bin 0 -> 96634 bytes
+ output/_tmp_enemy_rows/probe_key_rows.png          |   Bin 0 -> 270780 bytes
+ output/_tmp_enemy_rows/rows13.py                   |    46 +
+ output/_tmp_enemy_rows/shield_attack_zoom.png      |   Bin 0 -> 139807 bytes
+ output/_tmp_enemy_rows/shield_compare.png          |   Bin 0 -> 174201 bytes
+ output/_tmp_enemy_rows/shield_heads.png            |   Bin 0 -> 79199 bytes
+ output/_tmp_enemy_rows/shield_row0_annotated.png   |   Bin 0 -> 120157 bytes
+ output/_tmp_enemy_rows/shield_row1_annotated.png   |   Bin 0 -> 199403 bytes
+ output/_tmp_enemy_rows/shield_row2_annotated.png   |   Bin 0 -> 218852 bytes
+ output/_tmp_enemy_rows/shield_row3_annotated.png   |   Bin 0 -> 215659 bytes
+ output/_tmp_enemy_rows/shield_zoom_grid.png        |   Bin 0 -> 134318 bytes
+ output/_tmp_enemy_rows/split.py                    |    26 +
+ output/_tmp_enemy_rows/split2.py                   |    27 +
+ output/_tmp_enemy_rows/tan.py                      |    31 +
+ output/_tmp_enemy_rows/visor.py                    |    67 +
+ output/_tmp_enemy_rows/zoom.py                     |    22 +
+ output/_tmp_enemy_rows/zoom2.py                    |    19 +
+ output/_tmp_verify/analyze_shield.py               |    51 +
+ output/_tmp_verify/asset_compare.py                |    81 +
+ output/_tmp_verify/attack_frames.py                |    49 +
+ output/_tmp_verify/attack_render.cpp               |   206 +
+ output/_tmp_verify/bash_trace.cpp                  |   155 +
+ output/_tmp_verify/build_inventory.py              |    48 +
+ output/_tmp_verify/cleanup.py                      |    62 +
+ output/_tmp_verify/compare_assets.py               |    49 +
+ output/_tmp_verify/continuity.py                   |    67 +
+ output/_tmp_verify/fix_verify.cpp                  |   294 +
+ output/_tmp_verify/imports.txt                     | 66209 +++++++++++++++++++
+ output/_tmp_verify/legs_band.py                    |    48 +
+ output/_tmp_verify/list_mobs.py                    |    29 +
+ output/_tmp_verify/native_vs_mirror.py             |    52 +
+ output/_tmp_verify/obj_check.py                    |    44 +
+ output/_tmp_verify/shield-attack-f0-f3.png         |   Bin 0 -> 639420 bytes
+ output/_tmp_verify/shield-attack-f4-f6.png         |   Bin 0 -> 378853 bytes
+ output/_tmp_verify/shield-attack-f7-f9.png         |   Bin 0 -> 374097 bytes
+ output/_tmp_verify/shield-attack-frames.png        |   Bin 0 -> 1281736 bytes
+ output/_tmp_verify/shield-bash-zoom.png            |   Bin 0 -> 56858 bytes
+ output/_tmp_verify/shield-legs-band.png            |   Bin 0 -> 913054 bytes
+ output/_tmp_verify/shield-native-vs-mirror.png     |   Bin 0 -> 184982 bytes
+ output/_tmp_verify/shield_blob.py                  |    85 +
+ output/_tmp_verify/true_facing.py                  |    69 +
+ output/_tmp_verify/zoom_bash.py                    |    21 +
+ output/verify_run.txt                              |    33 +
+ src/enemy_renderer.cpp                             |    15 +-
+ src/game.cpp                                       |    12 +-
+ src/game.h                                         |     2 +
+ src/menu_views.cpp                                 |     7 +
+ src/terminal_ui.cpp                                |    18 +-
+ src/terminal_ui.h                                  |     6 +
+ src/ui_input.h                                     |    10 +-
+ .../__pycache__/extract_client_ui.cpython-312.pyc  |   Bin 0 -> 3740 bytes
+ .../__pycache__/extract_client_ui.cpython-313.pyc  |   Bin 0 -> 3789 bytes
+ .../__pycache__/extract_client_ui.cpython-314.pyc  |   Bin 0 -> 3886 bytes
+ 71 files changed, 68680 insertions(+), 10 deletions(-)

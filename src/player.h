@@ -26,13 +26,16 @@ public:
     void DrawHud(const UiFont& font, const CharacterArt& art,
                  const char* operatorName, const GameSettings* settings = nullptr) const;
 
-    bool TakeDamage(Vector2 damageSource);
+    bool TakeDamage(Vector2 damageSource, bool corrosive = false);
     [[nodiscard]] Vector2 Position() const;
     [[nodiscard]] Rectangle Hitbox() const;
     [[nodiscard]] Rectangle ProjectileHitbox() const;
     [[nodiscard]] int FacingDirection() const;
     [[nodiscard]] bool IsDead() const;
     [[nodiscard]] bool IsInvincible() const;
+    // True while 酸液源石虫's corrosion is active, i.e. while post-hit invincibility is
+    // halved. Surfaced so the HUD can warn about it.
+    [[nodiscard]] bool IsCorroded() const;
     [[nodiscard]] bool DefeatAnimationFinished() const;
     [[nodiscard]] OperatorKind Kind() const;
 
@@ -64,6 +67,8 @@ private:
 
     int health_ = kMaxHealth;
     float hurtInvincibilityTimer_ = 0.0F;
+    // Counts down from kCorrosionDuration after an acid bolt connects.
+    float corrosionTimer_ = 0.0F;
 
     int dodgeCharges_ = kMaxDodgeCharges;
     int dodgeDirection_ = 1;
@@ -81,6 +86,8 @@ private:
     bool texasRainMode_ = false;
     float texasRainBurstTimer_ = 0.0F;
     float texasAttackEffectTimer_ = 0.0F;
+    // 剑雨's post-cast window (drives the HUD timer), its cooldown, and the timer that
+    // paces the falling swords.
     float swordRainTimer_ = 0.0F;
     float swordRainCooldown_ = 0.0F;
     float swordRainSpawnTimer_ = 0.0F;

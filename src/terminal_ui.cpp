@@ -4,11 +4,20 @@
 #include <cmath>
 
 namespace TerminalUi {
-namespace { Vector2 pointerPosition{}; bool pointerDown=false, pointerValid=false; }
-void SetPointerState(Vector2 position, bool down, bool valid) { pointerPosition=position; pointerDown=down; pointerValid=valid; }
+namespace {
+UiPointer pointerState;
+// Single shared veil so every control reacts to a press with the same gray.
+constexpr Color kPressedVeil{118, 126, 134, 170};
+}
+void SetPointerState(const UiPointer& pointer) { pointerState=pointer; }
+bool Pressed(Rectangle rect) {
+    return pointerState.Held(rect);
+}
 Rectangle PressedRect(Rectangle rect) {
-    return (pointerDown && pointerValid && CheckCollisionPointRec(pointerPosition, rect))
-        ? Rectangle{rect.x, rect.y + 5.0F, rect.width, rect.height} : rect;
+    return Pressed(rect) ? Rectangle{rect.x, rect.y + 5.0F, rect.width, rect.height} : rect;
+}
+void PressedVeil(Rectangle rect) {
+    if (Pressed(rect)) DrawRectangleRec({rect.x, rect.y + 5.0F, rect.width, rect.height}, kPressedVeil);
 }
 void Surface(Rectangle r, Color fill, Color stripe) {
     DrawRectangleRec({r.x + 4, r.y + 5, r.width, r.height}, Fade(BLACK, .17F));
@@ -43,7 +52,10 @@ void Button(const UiFont& font, Rectangle r, const char* title, bool selected, C
         DrawRectangleRec({drawRect.x, drawRect.y + drawRect.height - 4, drawRect.width, 4}, Blue);
         DrawRectangleLinesEx({drawRect.x - 3, drawRect.y - 3, drawRect.width + 6, drawRect.height + 6}, 1, Fade(Paper, .85F));
     }
-    Fit(font, title, {drawRect.x + 22, drawRect.y, drawRect.width - 44, drawRect.height}, 26, text);
+    const float padding=std::min(22.0F,drawRect.width*.18F);
+    Fit(font, title, {drawRect.x + padding, drawRect.y, drawRect.width - padding*2, drawRect.height}, 26, text);
+    // Pressed state stays purely visual; the action is committed by the caller on release.
+    PressedVeil(r);
 }
 void Background(const UiFont& font, const char* title, const char* subtitle, bool back) {
     ClearBackground({103, 113, 120, 255});
@@ -59,6 +71,7 @@ void Background(const UiFont& font, const char* title, const char* subtitle, boo
             Surface(Back, Paper);
             font.Draw("<", 62, 26, 32, Ink);
         }
+        PressedVeil(Back);
     }
     font.Draw(title, back ? 153 : 42, 20, 31, Paper);
     font.Draw(subtitle, back ? 155 : 44, 58, 11, Muted);

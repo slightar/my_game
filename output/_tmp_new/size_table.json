@@ -1,0 +1,57 @@
+{
+  "shield": {
+    "spriteSize": 138,
+    "height": 118,
+    "width": 240
+  },
+  "stealth_crossbow": {
+    "spriteSize": 184,
+    "height": 113,
+    "width": 355
+  },
+  "soldier": {
+    "spriteSize": 196,
+    "height": 110,
+    "width": 398
+  },
+  "crossbow": {
+    "spriteSize": 183,
+    "height": 108,
+    "width": 346
+  },
+  "caster": {
+    "spriteSize": 139,
+    "height": 104,
+    "width": 163
+  },
+  "hound": {
+    "spriteSize": 109,
+    "height": 77,
+    "width": 198
+  },
+  "irr_slug": {
+    "spriteSize": 140,
+    "height": 73,
+    "width": 205
+  },
+  "acid_slug": {
+    "spriteSize": 114,
+    "height": 70,
+    "width": 205
+  },
+  "slug_high": {
+    "spriteSize": 170,
+    "height": 64,
+    "width": 310
+  },
+  "drone": {
+    "spriteSize": 175,
+    "height": 64,
+    "width": 432
+  },
+  "slug": {
+    "spriteSize": 95,
+    "height": 56,
+    "width": 141
+  }
+}

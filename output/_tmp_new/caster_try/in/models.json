@@ -1,0 +1,10 @@
+{
+ "c_dmage": "enemy_1022_dmage",
+ "c_jmage": "enemy_1023_jmage",
+ "c_wizard": "enemy_1011_wizard",
+ "c_snmage": "enemy_1068_snmage",
+ "c_spmage": "enemy_1128_spmage",
+ "c_dkmage": "enemy_1225_dkmage",
+ "c_ltmage": "enemy_1241_ltmage",
+ "c_dumage": "enemy_1168_dumage"
+}

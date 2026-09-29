@@ -23,6 +23,11 @@ constexpr float kDodgeSpeed = 880.0F;
 constexpr float kDodgeDuration = 0.18F;
 constexpr float kDodgeRechargeDuration = 1.5F;
 constexpr float kHurtInvincibilityDuration = 1.0F;
+// 酸液源石虫's corrosion. The operator has no defence stat to lower, so the debuff is
+// expressed as shortened post-hit invincibility: while corroded, consecutive hits land
+// twice as often. Cleansed by simply staying out of the acid for a few seconds.
+constexpr float kCorrosionDuration = 5.0F;
+constexpr float kCorrodedInvincibilityScale = 0.5F;
 
 constexpr float kFireInterval = 0.085F;
 constexpr float kReloadDuration = 1.35F;
@@ -77,6 +82,7 @@ void Player::Reset(OperatorKind operatorKind) {
     firing_ = false;
     health_ = kMaxHealth;
     hurtInvincibilityTimer_ = 0.0F;
+    corrosionTimer_ = 0.0F;
     dodgeCharges_ = kMaxDodgeCharges;
     dodgeDirection_ = 1;
     dodgeTimer_ = 0.0F;
@@ -120,6 +126,7 @@ void Player::PlaceAt(Vector2 position, int facing) {
 void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
                     std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings, bool assistEnemyAim) {
     hurtInvincibilityTimer_ = std::max(0.0F, hurtInvincibilityTimer_ - deltaTime);
+    corrosionTimer_ = std::max(0.0F, corrosionTimer_ - deltaTime);
     animationTime_ += deltaTime;
     if (IsDead()) {
         return;
@@ -370,17 +377,22 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
     if (swordRainTimer_ > 0.0F) {
         swordRainTimer_ = std::max(0.0F, swordRainTimer_ - deltaTime);
         swordRainSpawnTimer_ -= deltaTime;
+        // A sustained drizzle, not one burst: swords fall one after another from above the
+        // target, spread over ±130px so the lane in front of Texas is covered rather than a
+        // single point. Each sword is Arts damage plus a short stun.
         while (swordRainSpawnTimer_ <= 0.0F && swordRainTimer_ > 0.0F) {
-            const float randomX = static_cast<float>(GetRandomValue(-130, 130));
-            bullets.push_back({
-                {std::clamp(enemyPosition.x + randomX,
-                            GameConfig::kRoom.x + 25.0F,
-                            GameConfig::kRoom.x + GameConfig::kRoom.width - 25.0F),
-                 GameConfig::kRoom.y + 18.0F},
-                {static_cast<float>(GetRandomValue(-35, 35)), 920.0F},
-                0.82F, 15.0F, kTexasSwordRainDamage, BulletKind::FallingSword,
-                DamageType::Arts, false, kSwordRainStunDuration});
             swordRainSpawnTimer_ += kSwordRainSpawnInterval;
+            const float offset = static_cast<float>(GetRandomValue(-130, 130));
+            bullets.push_back({
+                {enemyPosition.x + offset, GameConfig::kRoom.y + 18.0F},
+                {0.0F, 920.0F},
+                1.0F,
+                15.0F,
+                kTexasSwordRainDamage,
+                BulletKind::FallingSword,
+                DamageType::Arts,
+                false,
+                kSwordRainStunDuration});
         }
         if (swordRainTimer_ <= 0.0F) {
             swordRainCooldown_ = kSwordRainCooldownDuration;
@@ -646,6 +658,23 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
                      dodgeCharges_ > 0 ? TacticalUi::kPaper
                                        : Color{66, 72, 78, 255});
 
+    // 酸液源石虫's corrosion: a shortened post-hit-invincibility window has no visible
+    // cause on its own, so the operator gets an explicit badge with the time remaining.
+    // It sits in the shared header rather than in either branch below, because both the
+    // imported character and the built-in operator can be corroded. x starts at 1008 to
+    // clear the trial banner (which spans 340..990 on the same row).
+    if (corrosionTimer_ > 0.0F) {
+        const Color acid{132, 204, 88, 255};
+        const Rectangle badge{1008.0F, 49.0F, 258.0F, 74.0F};
+        TacticalUi::DrawCutPanel(badge, TacticalUi::kPanel, Fade(acid, 0.9F), 16.0F, 1.0F);
+        font.Skin().Draw("panel", badge);
+        font.Draw("腐蚀 // CORRODED", badge.x + 14.0F, badge.y + 8.0F, 12.0F, acid);
+        font.Draw(TextFormat("无敌帧 -50%%  剩余 %.1fs", corrosionTimer_),
+                  badge.x + 14.0F, badge.y + 27.0F, 13.0F, TacticalUi::kPaper);
+        TacticalUi::DrawProgressLine({badge.x + 14.0F, badge.y + 54.0F}, 230.0F,
+                                     corrosionTimer_ / kCorrosionDuration, acid, 6.0F);
+    }
+
     const Rectangle helpPanel{32.0F, 669.0F, 570.0F, 27.0F};
     TacticalUi::DrawCutPanel(helpPanel, Fade(TacticalUi::kInk, 0.82F),
                              BLANK, 7.0F);
@@ -829,9 +858,12 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
     }
 }
 
-bool Player::TakeDamage(Vector2 damageSource) {
+bool Player::TakeDamage(Vector2 damageSource, bool corrosive) {
     if (IsDead() || IsInvincible()) {
         return false;
+    }
+    if (corrosive) {
+        corrosionTimer_ = kCorrosionDuration;
     }
     --health_;
     if (character_) animator_.TriggerHurt();
@@ -844,7 +876,8 @@ bool Player::TakeDamage(Vector2 damageSource) {
         position_.y = GameConfig::kFloorY - kHitboxHeight / 2.0F;
         return true;
     }
-    hurtInvincibilityTimer_ = kHurtInvincibilityDuration;
+    hurtInvincibilityTimer_ = kHurtInvincibilityDuration *
+                              (corrosionTimer_ > 0.0F ? kCorrodedInvincibilityScale : 1.0F);
     velocity_.x = (position_.x >= damageSource.x ? 1.0F : -1.0F) * 430.0F;
     velocity_.y = -260.0F;
     return true;
@@ -878,6 +911,10 @@ bool Player::IsDead() const {
 
 bool Player::IsInvincible() const {
     return dodgeTimer_ > 0.0F || hurtInvincibilityTimer_ > 0.0F;
+}
+
+bool Player::IsCorroded() const {
+    return corrosionTimer_ > 0.0F;
 }
 
 bool Player::DefeatAnimationFinished() const {

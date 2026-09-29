@@ -1,5 +1,6 @@
 #pragma once
 #include "raylib.h"
+#include "ui_input.h"
 #include <string>
 class UiFont;
 
@@ -17,8 +18,13 @@ inline constexpr Rectangle HomeButtons[] = {
     {720, 522, 238, 66}, {720, 320, 492, 71}, {974, 522, 238, 66}};
 inline constexpr int HomeOrder[]{0, 4, 1, 2, 3, 5};
 inline constexpr Rectangle EnemyTrialButton{432, 397, 218, 42};
+inline constexpr Rectangle OperatorButton{43, 397, 163, 42};
+inline constexpr Rectangle CharacterSlots[] = {
+    {840, 183, 176, 78}, {1032, 183, 176, 78}};
+inline constexpr Rectangle CharacterAssign{840, 553, 176, 50};
+inline constexpr Rectangle CharacterConfirm{1032, 553, 176, 50};
 inline constexpr Rectangle MapArea{85, 184, 1110, 412};
-inline constexpr Rectangle MapTask{85, 602, 440, 34};
+inline constexpr Rectangle MapTask{219, 606, 300, 32};
 inline constexpr Rectangle Confirm{790, 545, 385, 52};
 inline constexpr Rectangle Equip{946, 554, 247, 43};
 inline constexpr Rectangle Unequip{655, 554, 270, 43};
@@ -28,8 +34,14 @@ void Background(const UiFont& font, const char* title, const char* subtitle, boo
 void Surface(Rectangle rect, Color fill = Ink, Color stripe = BLANK);
 void Button(const UiFont& font, Rectangle rect, const char* title, bool selected = false,
             Color fill = Paper, Color text = Ink);
-void SetPointerState(Vector2 position, bool down, bool valid);
+void SetPointerState(const UiPointer& pointer);
+// True while the primary pointer is held down over rect.
+bool Pressed(Rectangle rect);
+// Geometry of the press: the control shifts down a few pixels while held.
 Rectangle PressedRect(Rectangle rect);
+// Unified press feedback: every control grays out the same way while held.
+// Call after drawing the control so the veil covers its surface and label.
+void PressedVeil(Rectangle rect);
 void Footer(const UiFont& font, const char* text);
 void Fit(const UiFont& font, const std::string& text, Rectangle rect, float size, Color color);
 void Wrap(const UiFont& font, const std::string& text, Rectangle rect, float size, Color color);

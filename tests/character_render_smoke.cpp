@@ -22,13 +22,15 @@ int main() {
         if (!list.errors.empty() || list.characters.empty()) throw std::runtime_error("Missing/invalid bundled character");
         CharacterArt art;
         UiFont font;
-        std::string text;
+        std::string text = EnemyGlyphText();
         for (const auto& c : list.characters) {
             art.RegisterCharacter(c, repository.Root()); text += c.name + c.description;
             for (const auto& s : c.skills) text += s.name + s.description;
         }
         font.SetAdditionalText(text);
-        MainMenu menu; menu.OpenHome();
+        if (!font.SupportsText(EnemyGlyphText()))
+            throw std::runtime_error("Enemy names contain unloaded font glyphs");
+        MainMenu menu; menu.SetCustomCharacters(list.characters); menu.OpenHome();
         Player player; player.Reset(list.characters.front());
         const auto output = app / "character-qa"; std::filesystem::create_directories(output);
         const auto render = [&](const char* filename, auto draw) {
@@ -44,6 +46,8 @@ int main() {
         CheckEnemyRendering(font, render);
         menu.OpenHome();
         render("home.png", [&] { menu.Draw(font, art); });
+        menu.OpenCharacterSelect();
+        render("character-select.png", [&] { menu.Draw(font, art); });
         menu.OpenStageSelect();
         render("stage.png", [&] { menu.Draw(font, art); });
         menu.OpenArchive();
@@ -65,6 +69,19 @@ int main() {
             DrawRectangle(48, 644, 1184, 50, DARKGRAY);
             player.Draw(art); player.DrawHud(font, art, "");
         });
+        // 酸液源石虫's corrosion is a timer with no other on-screen tell, so capture the
+        // HUD badge while it is active. Uses the built-in operator because that branch
+        // (ammo panel instead of skill panels) is the one the trial is actually played in.
+        {
+            Player corroded;
+            corroded.Reset();
+            corroded.TakeDamage(Vector2{0.0F, 0.0F}, true);
+            render("corroded-hud.png", [&] {
+                DrawRectangle(48, 644, 1184, 50, DARKGRAY);
+                corroded.Draw(art);
+                corroded.DrawHud(font, art, "");
+            });
+        }
         auto guard = list.characters.front();
         // Simulate a previously imported definition with no frame metadata.
         guard.assets.rowFrameCounts.clear();
