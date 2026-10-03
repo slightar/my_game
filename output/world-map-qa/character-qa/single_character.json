@@ -1,0 +1,49 @@
+{
+  "assets": {
+    "animationMode": "auto",
+    "attackRow": -1,
+    "columns": 1,
+    "defeatedRow": -1,
+    "dodgeRow": -1,
+    "fallRow": -1,
+    "fps": 8.0,
+    "height": 138.0,
+    "hurtRow": -1,
+    "idleRow": 0,
+    "jumpRow": -1,
+    "motionStrength": 1.0,
+    "parts": {},
+    "portrait": "",
+    "rowFrameCounts": [],
+    "rows": 1,
+    "runRow": -1,
+    "sprite": "single_sprite.png"
+  },
+  "attack": {
+    "amount": 1.0,
+    "attackSpeedMultiplier": 1.0,
+    "count": 1,
+    "damageMultiplier": 1.0,
+    "damageType": "physical",
+    "destroysProjectiles": false,
+    "lifetime": 1.399999976158142,
+    "radius": 8.0,
+    "range": 110.0,
+    "speed": 900.0,
+    "spread": 0.11999999731779099,
+    "stun": 0.0,
+    "type": "melee"
+  },
+  "description": "",
+  "id": "single_demo",
+  "name": "Single sprite demo",
+  "schemaVersion": 1,
+  "skills": [],
+  "stats": {
+    "attackInterval": 0.25,
+    "health": 3,
+    "jumpSpeed": 610.0,
+    "jumps": 2,
+    "moveSpeed": 320.0
+  }
+}

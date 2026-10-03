@@ -1,0 +1,319 @@
+{
+  "slug": {
+    "model": "enemy_1007_slime",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "scale": 0.6073149641541746,
+    "origin": [
+      91.44553624515379,
+      178.54433461865733
+    ],
+    "anchor": [
+      96,
+      180
+    ]
+  },
+  "acid_slug": {
+    "model": "enemy_1004_mslime",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      2,
+      2,
+      1.3333333730697632,
+      0.8333333134651184
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.504968687396547,
+    "origin": [
+      80.94975485252249,
+      177.94416792160487
+    ],
+    "anchor": [
+      96,
+      180
+    ]
+  },
+  "slug_high": {
+    "model": "enemy_1021_bslime",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "scale": 0.3379107629835345,
+    "origin": [
+      67.97483803965089,
+      160.52716140461538
+    ],
+    "anchor": [
+      67.12028121948242,
+      172.17831420898438
+    ]
+  },
+  "irr_slug": {
+    "model": "enemy_1352_eslime",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      1,
+      1.2666666507720947,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.4121316936102562,
+    "origin": [
+      93.40345902149414,
+      153.28562060164052
+    ],
+    "anchor": [
+      88.70154285430908,
+      163.42236328125
+    ]
+  },
+  "soldier": {
+    "model": "enemy_1002_nsabr",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "scale": 0.29430868379794184,
+    "origin": [
+      88.17455996070665,
+      151.09173655955635
+    ],
+    "anchor": [
+      109.11970138549805,
+      152.4940948486328
+    ]
+  },
+  "crossbow": {
+    "model": "enemy_1003_ncbow",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "scale": 0.3143970827036548,
+    "origin": [
+      73.64045760278127,
+      143.42342593645526
+    ],
+    "anchor": [
+      91.22078895568848,
+      143.95742797851562
+    ]
+  },
+  "caster": {
+    "model": "enemy_1011_wizard",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      2,
+      1,
+      1.2000000476837158,
+      0.8333333134651184
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.4140078902565755,
+    "origin": [
+      49.142612123451876,
+      168.69037928823442
+    ],
+    "anchor": [
+      55.3216552734375,
+      169.94900512695312
+    ]
+  },
+  "hound": {
+    "model": "enemy_1000_gopro",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      0.800000011920929,
+      1,
+      0.6666666865348816
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.5260189287701613,
+    "origin": [
+      86.3960731195051,
+      178.02999270323048
+    ],
+    "anchor": [
+      96,
+      180
+    ]
+  },
+  "stealth_crossbow": {
+    "model": "enemy_1019_jshoot",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.31298759417394656,
+    "origin": [
+      73.67895226263178,
+      143.58740411702632
+    ],
+    "anchor": [
+      92.74748134613037,
+      144.11900329589844
+    ]
+  },
+  "shield": {
+    "model": "enemy_1006_shield",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      2,
+      1.2000000476837158,
+      1,
+      0.8999999761581421
+    ],
+    "facing": [
+      -1,
+      1,
+      -1,
+      -1
+    ],
+    "scale": 0.4181110759942779,
+    "origin": [
+      102.1123002093905,
+      176.37664208496443
+    ],
+    "anchor": [
+      95.99999713897705,
+      180
+    ],
+    "file": "shield_v2.png"
+  },
+  "drone": {
+    "model": "enemy_1005_yokai",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      2,
+      2,
+      1,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.3289101333501703,
+    "origin": [
+      88.14500961022412,
+      116.94249311224246
+    ],
+    "anchor": [
+      96,
+      122
+    ],
+    "file": "drone.png"
+  }
+}

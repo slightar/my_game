@@ -1,0 +1,172 @@
+{
+  "bg_infirmary": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_in_0.ab",
+    "object": -1509487869464044972,
+    "sha256": "b01919a00ec74ec7dd51065137970d3c05d16fd8eb1f128bcfc08f52a41f03f1",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_chercen_2": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_ch_0.ab",
+    "object": -9097872897889665690,
+    "sha256": "5358bc47a12fb7ba63ab136c04458ab02f4cabc56b4755127d046136a3b6a359",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_cher_9": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_ch_0.ab",
+    "object": -8890111266868392446,
+    "sha256": "5358bc47a12fb7ba63ab136c04458ab02f4cabc56b4755127d046136a3b6a359",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_cher_11": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_ch_0.ab",
+    "object": -8806169619894111772,
+    "sha256": "5358bc47a12fb7ba63ab136c04458ab02f4cabc56b4755127d046136a3b6a359",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_cher_3": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_ch_0.ab",
+    "object": -8659900913438907430,
+    "sha256": "5358bc47a12fb7ba63ab136c04458ab02f4cabc56b4755127d046136a3b6a359",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_cherunder_2": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_ch_0.ab",
+    "object": -7056441921467592168,
+    "sha256": "5358bc47a12fb7ba63ab136c04458ab02f4cabc56b4755127d046136a3b6a359",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_cher_4": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_ch_0.ab",
+    "object": -1405136671166747169,
+    "sha256": "5358bc47a12fb7ba63ab136c04458ab02f4cabc56b4755127d046136a3b6a359",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_cher_0": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_ch_0.ab",
+    "object": 1863904534089941642,
+    "sha256": "5358bc47a12fb7ba63ab136c04458ab02f4cabc56b4755127d046136a3b6a359",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_cher_5": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_ch_0.ab",
+    "object": 2402193252477070492,
+    "sha256": "5358bc47a12fb7ba63ab136c04458ab02f4cabc56b4755127d046136a3b6a359",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_cherunder": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_ch_0.ab",
+    "object": 5250546243511727606,
+    "sha256": "5358bc47a12fb7ba63ab136c04458ab02f4cabc56b4755127d046136a3b6a359",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_undergroud_f": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_un_0.ab",
+    "object": -5876762894806950193,
+    "sha256": "a505e06a65658f981400c1055cabbd33f011a03e83d4fc76bae73add13d8ba7e",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_undergroud_n": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_un_0.ab",
+    "object": -1154417361735565047,
+    "sha256": "a505e06a65658f981400c1055cabbd33f011a03e83d4fc76bae73add13d8ba7e",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_undergroundF": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_un_0.ab",
+    "object": 5924331244137394125,
+    "sha256": "a505e06a65658f981400c1055cabbd33f011a03e83d4fc76bae73add13d8ba7e",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_towerinside": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_to_0.ab",
+    "object": -7171505569510008191,
+    "sha256": "4cf0c6db4d67901a556e77b44ab5c7e683b8e10e03186f1e5554f5a587ae5167",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_topburning": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_to_0.ab",
+    "object": -416219908792992097,
+    "sha256": "4cf0c6db4d67901a556e77b44ab5c7e683b8e10e03186f1e5554f5a587ae5167",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "bg_top": {
+    "bundle": "avg/bg/avg_bkg_h1_bg_to_0.ab",
+    "object": 5470434502088873024,
+    "sha256": "4cf0c6db4d67901a556e77b44ab5c7e683b8e10e03186f1e5554f5a587ae5167",
+    "size": [
+      1024,
+      576
+    ],
+    "type": "Sprite"
+  },
+  "TX_Qcity_Common_A": {
+    "bundle": "arts/maps/map_chernobog_a/res.ab",
+    "object": 1429862288799386908,
+    "sha256": "8ed31dc7433803d37b090099d3f624575b8b2037838265ec6b238eab29d1df04",
+    "size": [
+      1024,
+      1024
+    ],
+    "type": "Texture2D"
+  }
+}

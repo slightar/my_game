@@ -37,6 +37,19 @@ Color BlastColor(EnemyKind kind) {
 }
 
 EnemyRenderer::EnemyRenderer() {
+    const auto entryPath=(Utf8Path(GetApplicationDirectory())/
+                          "assets/environment/red_gate/entry_front.png").string();
+    if(FileExists(entryPath.c_str())) {
+        entryTexture_=LoadTexture(entryPath.c_str());
+        if(entryTexture_.id) SetTextureFilter(entryTexture_,TEXTURE_FILTER_BILINEAR);
+    }
+    if(!entryTexture_.id) TraceLog(LOG_WARNING,"Client red gate sprite unavailable: %s",entryPath.c_str());
+    const auto entryAddPath=(Utf8Path(GetApplicationDirectory())/
+                             "assets/environment/red_gate/entry_add.png").string();
+    if(FileExists(entryAddPath.c_str())) {
+        entryAddTexture_=LoadTexture(entryAddPath.c_str());
+        if(entryAddTexture_.id)SetTextureFilter(entryAddTexture_,TEXTURE_FILTER_BILINEAR);
+    }
     const auto root=Utf8Path(GetApplicationDirectory())/"assets/enemies/mobs";
     nlohmann::json manifest;
     try {std::ifstream in(root/"manifest.json");if(in)in>>manifest;}
@@ -71,7 +84,11 @@ EnemyRenderer::EnemyRenderer() {
         if(!textures_[i].id) TraceLog(LOG_WARNING,"Enemy %s has no baked sheet; placeholder will draw",d.id);
     }
 }
-EnemyRenderer::~EnemyRenderer(){for(auto t:textures_)if(t.id)UnloadTexture(t);}
+EnemyRenderer::~EnemyRenderer(){
+    for(auto t:textures_)if(t.id)UnloadTexture(t);
+    if(entryTexture_.id)UnloadTexture(entryTexture_);
+    if(entryAddTexture_.id)UnloadTexture(entryAddTexture_);
+}
 bool EnemyRenderer::HasSprite(EnemyKind kind)const{
     return textures_.at(static_cast<unsigned>(kind)).id!=0;
 }
@@ -175,6 +192,22 @@ void EnemyRenderer::DrawUnit(const EnemyUnit& u,const UiFont& font)const {
     if(u.haste>0) {
         DrawCircleLines(int(u.feet.x),int(u.feet.y-d.height/2),d.width*.95F,Fade(Color{214,110,214,255},.5F));
         font.Draw("供能",u.feet.x-20,u.feet.y-d.height-60,20,Color{214,110,214,255});
+    }
+}
+void EnemyRenderer::DrawEntry(const EnemySystem& system)const {
+    if(!system.HasEntry() || !entryTexture_.id) return;
+    const float pulse=system.EntryPulse()/.65F;
+    // Offline front projection of the client's tile_start meshes and atlas.
+    // A single 2D sprite replaces all hand-drawn cube faces and edges.
+    const Rectangle source{8,8,496,496};
+    const Rectangle destination{EnemySystem::kEntryX-66,GameConfig::kFloorY-132,132,132};
+    const float opacity=(system.Pending()?.48F:.28F)+pulse*.16F;
+    DrawTexturePro(entryTexture_,source,destination,{},0,Fade(WHITE,opacity));
+    if(entryAddTexture_.id) {
+        BeginBlendMode(BLEND_ADDITIVE);
+        DrawTexturePro(entryAddTexture_,source,destination,{},0,
+                       Fade(WHITE,(system.Pending()?.11F:.055F)+pulse*.12F));
+        EndBlendMode();
     }
 }
 void EnemyRenderer::Draw(const EnemySystem& system,const UiFont& font)const {

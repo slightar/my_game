@@ -1,0 +1,322 @@
+{
+  "dark": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "dark",
+    "size": [
+      21,
+      318
+    ]
+  },
+  "sprite_track_point_frame": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "sprite_track_point_frame",
+    "size": [
+      39,
+      39
+    ]
+  },
+  "bkg_normal": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "bkg_normal",
+    "size": [
+      166,
+      82
+    ]
+  },
+  "bg": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "bg",
+    "size": [
+      1024,
+      576
+    ]
+  },
+  "details_bg": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "details_bg",
+    "size": [
+      371,
+      478
+    ]
+  },
+  "icon_boss_normal": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "icon_boss_normal",
+    "size": [
+      80,
+      85
+    ]
+  },
+  "line": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "line",
+    "size": [
+      17,
+      30
+    ]
+  },
+  "scrollbar_bg": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "scrollbar_bg",
+    "size": [
+      7,
+      25
+    ]
+  },
+  "bkg_normal_branch": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "bkg_normal_branch",
+    "size": [
+      166,
+      82
+    ]
+  },
+  "icon_stage_rank_3": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "icon_stage_rank_3",
+    "size": [
+      40,
+      45
+    ]
+  },
+  "icon_stage_rank_0": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "icon_stage_rank_0",
+    "size": [
+      40,
+      45
+    ]
+  },
+  "icon_boss_hilight": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "icon_boss_hilight",
+    "size": [
+      80,
+      85
+    ]
+  },
+  "image_gradient": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "image_gradient",
+    "size": [
+      121,
+      121
+    ]
+  },
+  "scrollbar": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "scrollbar",
+    "size": [
+      7,
+      25
+    ]
+  },
+  "bkg_hilight": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "bkg_hilight",
+    "size": [
+      166,
+      82
+    ]
+  },
+  "sprite_track_point_center": {
+    "bundle": "ui/[uc]stage.ab",
+    "sprite": "sprite_track_point_center",
+    "size": [
+      23,
+      23
+    ]
+  },
+  "img_battle": {
+    "bundle": "ui/[uc]campaign.ab",
+    "sprite": "img_battle",
+    "size": [
+      16,
+      16
+    ]
+  },
+  "img_info_bg": {
+    "bundle": "ui/[uc]campaign.ab",
+    "sprite": "img_info_bg",
+    "size": [
+      511,
+      89
+    ]
+  },
+  "img_bkg_shadow_1": {
+    "bundle": "ui/[uc]campaign.ab",
+    "sprite": "img_bkg_shadow_1",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  "img_zone_shadow": {
+    "bundle": "ui/[uc]campaign.ab",
+    "sprite": "img_zone_shadow",
+    "size": [
+      218,
+      76
+    ]
+  },
+  "btn_shadow": {
+    "bundle": "arts/ui/[uc]common.ab",
+    "sprite": "btn_shadow",
+    "size": [
+      61,
+      61
+    ]
+  },
+  "btn_close": {
+    "bundle": "arts/ui/[uc]common.ab",
+    "sprite": "btn_close",
+    "size": [
+      57,
+      59
+    ]
+  },
+  "confirm_icon": {
+    "bundle": "arts/ui/[uc]common.ab",
+    "sprite": "confirm_icon",
+    "size": [
+      75,
+      75
+    ]
+  },
+  "btn_back": {
+    "bundle": "arts/ui/[uc]common.ab",
+    "sprite": "btn_back",
+    "size": [
+      168,
+      73
+    ]
+  },
+  "image_stage_preview_back": {
+    "bundle": "arts/ui/[uc]common.ab",
+    "sprite": "image_stage_preview_back",
+    "size": [
+      35,
+      35
+    ]
+  },
+  "sprite_background": {
+    "bundle": "arts/ui/[uc]common.ab",
+    "sprite": "sprite_background",
+    "size": [
+      1024,
+      1024
+    ]
+  },
+  "main_4": {
+    "bundle": "arts/ui/stage/[uc]homeentry.ab",
+    "sprite": "main_4",
+    "size": [
+      280,
+      166
+    ]
+  },
+  "main_0": {
+    "bundle": "arts/ui/stage/[uc]homeentry.ab",
+    "sprite": "main_0",
+    "size": [
+      280,
+      166
+    ]
+  },
+  "main_2": {
+    "bundle": "arts/ui/stage/[uc]homeentry.ab",
+    "sprite": "main_2",
+    "size": [
+      280,
+      166
+    ]
+  },
+  "main_1": {
+    "bundle": "arts/ui/stage/[uc]homeentry.ab",
+    "sprite": "main_1",
+    "size": [
+      280,
+      166
+    ]
+  },
+  "main_3": {
+    "bundle": "arts/ui/stage/[uc]homeentry.ab",
+    "sprite": "main_3",
+    "size": [
+      280,
+      166
+    ]
+  },
+  "main_6": {
+    "bundle": "arts/ui/stage/[uc]homeentry.ab",
+    "sprite": "main_6",
+    "size": [
+      280,
+      166
+    ]
+  },
+  "main_5": {
+    "bundle": "arts/ui/stage/[uc]homeentry.ab",
+    "sprite": "main_5",
+    "size": [
+      280,
+      166
+    ]
+  },
+  "scene_main_1": {
+    "bundle": "spritepack/ui_main_mission_bg_0.ab",
+    "sprite": "main_1",
+    "size": [
+      497,
+      396
+    ]
+  },
+  "scene_main_4": {
+    "bundle": "spritepack/ui_main_mission_bg_0.ab",
+    "sprite": "main_4",
+    "size": [
+      504,
+      397
+    ]
+  },
+  "scene_main_6": {
+    "bundle": "spritepack/ui_main_mission_bg_0.ab",
+    "sprite": "main_6",
+    "size": [
+      497,
+      396
+    ]
+  },
+  "scene_main_3": {
+    "bundle": "spritepack/ui_main_mission_bg_0.ab",
+    "sprite": "main_3",
+    "size": [
+      497,
+      395
+    ]
+  },
+  "scene_main_5": {
+    "bundle": "spritepack/ui_main_mission_bg_0.ab",
+    "sprite": "main_5",
+    "size": [
+      497,
+      396
+    ]
+  },
+  "scene_main_0": {
+    "bundle": "spritepack/ui_main_mission_bg_0.ab",
+    "sprite": "main_0",
+    "size": [
+      494,
+      394
+    ]
+  },
+  "scene_main_2": {
+    "bundle": "spritepack/ui_main_mission_bg_0.ab",
+    "sprite": "main_2",
+    "size": [
+      490,
+      395
+    ]
+  }
+}

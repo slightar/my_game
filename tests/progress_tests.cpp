@@ -16,6 +16,37 @@ int main() {
     const auto root = std::filesystem::temp_directory_path() /
         ("my_game_progress_test_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     {
+        const auto city=root/"city";
+        ProgressSystem p(city);
+        assert(p.RegionAvailable("clinic") && !p.RegionAvailable("gray"));
+        assert(!p.RegionVisible("clock") && !p.SelectRegion("clock"));
+        assert(p.VisitRegion("clinic"));
+        assert(p.RegionAvailable("gray"));
+        assert(p.SelectRegion("gray") && !p.RegionVisited("gray"));
+        assert(p.VisitRegion("gray"));
+        assert(!p.RegionVisible("clock") && !p.RegionVisible("ward"));
+        p.UnlockAllNodes(); // Legacy/debug unlocks must never reveal city secrets.
+        assert(!p.RegionVisible("clock"));
+        assert(p.VisitRegion("clock") && p.RegionVisible("clock"));
+        assert(p.RegionAvailable("clock") && !p.VisitRegion("bogus"));
+        ProgressSystem loaded(city);
+        assert(loaded.RegionVisited("clock") && loaded.SelectedRegion()=="clock");
+        assert(!loaded.RegionVisible("ward"));
+        assert(!loaded.WardShortcutOpen());
+        assert(!loaded.VisitRegion("ward","clinic"));
+        assert(!loaded.RegionVisited("ward"));
+        assert(loaded.VisitRegion("ward","station"));
+        assert(!loaded.WardShortcutOpen());
+        assert(loaded.VisitRegion("clinic","ward"));
+        assert(loaded.WardShortcutOpen());
+        ProgressSystem shortcutReloaded(city);
+        assert(shortcutReloaded.WardShortcutOpen());
+        assert(shortcutReloaded.VisitRegion("ward","clinic"));
+        assert(loaded.ResetProgress());
+        assert(!loaded.WardShortcutOpen());
+        assert(!loaded.RegionVisible("clock") && loaded.SelectedRegion()=="clinic");
+    }
+    {
         std::set<std::string> ids;
         for (const auto& node : StoryData::Nodes()) {
             assert(ids.insert(node.id).second);
@@ -133,5 +164,8 @@ int main() {
     std::filesystem::remove(root / "save" / "game_progress.json.tmp");
     std::filesystem::remove(root / "save" / "game_progress.json");
     std::filesystem::remove(root / "save");
+    std::filesystem::remove(root / "city" / "save" / "game_progress.json");
+    std::filesystem::remove(root / "city" / "save");
+    std::filesystem::remove(root / "city");
     std::filesystem::remove(root);
 }

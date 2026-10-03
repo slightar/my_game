@@ -1,0 +1,92 @@
+{
+  "home_battle": {
+    "bundle": "[uc]tm_rhodes_day",
+    "sprite": "btn_battle",
+    "export": "btn_battle_-1626093148032448799.png"
+  },
+  "home_operator": {
+    "bundle": "[uc]tm_rhodes_day",
+    "sprite": "btn_char_repo",
+    "export": "btn_char_repo_-2176105871617470160.png"
+  },
+  "rhodes": {
+    "bundle": "[uc]tm_rhodes_day",
+    "sprite": "icon_rhodes",
+    "export": "icon_rhodes_4871697995134139068.png"
+  },
+  "back": {
+    "bundle": "[uc]common",
+    "sprite": "btn_back",
+    "export": "btn_back_-1739110826568217159.png"
+  },
+  "dots": {
+    "bundle": "[uc]common",
+    "sprite": "dot_bkg",
+    "export": "dot_bkg_-6933684269516032611.png"
+  },
+  "tag": {
+    "bundle": "[uc]common",
+    "sprite": "image_char_tag_bkg",
+    "export": "image_char_tag_bkg_-5377299113293761481.png"
+  },
+  "vignette": {
+    "bundle": "[uc]common",
+    "sprite": "img_white_ftg",
+    "export": "img_white_ftg_6170145263741237830.png"
+  },
+  "sniper": {
+    "bundle": "[uc]charcommon",
+    "sprite": "icon_profession_sniper",
+    "export": "icon_profession_sniper_-4440783112710604380.png"
+  },
+  "guard": {
+    "bundle": "[uc]charcommon",
+    "sprite": "icon_profession_warrior",
+    "export": "icon_profession_warrior_-3112467197861489796.png"
+  },
+  "stars": {
+    "bundle": "[uc]charcommon",
+    "sprite": "rarity_5",
+    "export": "rarity_5_-3980894189571094627.png"
+  },
+  "skill_shadow": {
+    "bundle": "[uc]charcommon",
+    "sprite": "image_skill_shadow",
+    "export": "image_skill_shadow_-7362183421790546034.png"
+  },
+  "ring": {
+    "bundle": "[uc]battlecommon",
+    "sprite": "sprite_ring",
+    "export": "sprite_ring_2903534039348293574.png"
+  },
+  "direction": {
+    "bundle": "[uc]battlecommon",
+    "sprite": "direction",
+    "export": "direction_-2090536534950664371.png"
+  },
+  "skill_frame": {
+    "bundle": "[uc]battlecommon",
+    "sprite": "sprite_character_menu_frame",
+    "export": "sprite_character_menu_frame_2933677624883916280.png"
+  },
+  "hp": {
+    "bundle": "[uc]battlecommon",
+    "sprite": "slider_hp_fill",
+    "export": "slider_hp_fill_-8596349191917583271.png"
+  },
+  "sp": {
+    "bundle": "[uc]battlecommon",
+    "sprite": "slider_sp_fill",
+    "export": "slider_sp_fill_-4331473657928162462.png"
+  },
+  "pause": {
+    "bundle": "[uc]battlecommon",
+    "sprite": "btn_pause",
+    "export": "btn_pause_-5691120417397348688.png"
+  },
+  "panel": {
+    "bundle": "[uc]battlecommon",
+    "sprite": "sprite_info_popup_back",
+    "export": "sprite_info_popup_back_-4567641758416842889.png"
+  }
+}

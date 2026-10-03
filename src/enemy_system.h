@@ -48,6 +48,9 @@ struct EnemyTarget { Vector2 position; float radius; };
 class EnemySystem {
 public:
     static constexpr float kBlastRadius = 140;
+    static constexpr float kEntryX = 2260.0F;
+    static constexpr float kFirstSpawnDelay = 1.2F;
+    static constexpr float kSpawnInterval = 2.4F;
     // A cloaked unit drops its cloak once the operator is within this distance. Exposed
     // so tests and the renderer agree on the number instead of duplicating it.
     static constexpr float kCloakRevealRange = 220.0F;
@@ -68,6 +71,10 @@ public:
     bool Damage(unsigned id, float damage, DamageType type, Vector2 source, float stun = 0);
     bool Cleared() const;
     int Remaining() const;
+    int Pending() const { return static_cast<int>(spawnQueue_.size() - nextSpawn_); }
+    bool HasEntry() const { return !spawnQueue_.empty(); }
+    float EntryPulse() const { return entryPulse_; }
+    float NextSpawnIn() const { return Pending() ? spawnTimer_ : 0.0F; }
     const std::vector<EnemyUnit>& Units() const { return units_; }
     const std::vector<EnemyBolt>& Bolts() const { return bolts_; }
 private:
@@ -75,4 +82,7 @@ private:
     std::vector<EnemyUnit> units_;
     std::vector<EnemyBolt> bolts_;
     unsigned nextId_ = 1;
+    std::vector<EnemyKind> spawnQueue_;
+    std::size_t nextSpawn_ = 0;
+    float spawnTimer_ = 0, entryPulse_ = 0;
 };

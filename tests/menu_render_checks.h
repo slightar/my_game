@@ -46,7 +46,8 @@ void CheckMenuInteraction(const std::filesystem::path& output, Capture capture) 
     require(menu.Settings().MasterVolume() >= 48 && menu.Settings().MasterVolume() <= 50, "Volume slider click failed");
     capture("settings-pointer.png", menu);
     click(menu, 70, 44); // Back -> home.
-    click(menu, 840, 211); // Home -> map.
+    click(menu, 840, 211); // Player stage selection has separate integration coverage.
+    menu.OpenLegacyStageSelect();
     event(MousePosition,180,370);event(MouseDown,MOUSE_BUTTON_LEFT);
     for(int i=0;i<90;++i)menu.Update();
     require(!ProgressSystem(directory).IsCompleted("prologue_awaken"),"Held map node completed an action");
@@ -99,7 +100,7 @@ void CheckMenuInteraction(const std::filesystem::path& output, Capture capture) 
     click(hidden, 1065, 575);
     require(ProgressSystem(directory).Slots()[1] == "protocol_cryo", "Equip confirmation failed");
     capture("equipment-owned.png", hidden);
-    hidden.OpenStageSelect(); prepare(hidden); click(hidden, 960, 570);
+    hidden.OpenLegacyStageSelect(); prepare(hidden); click(hidden, 960, 570);
     require(hidden.IsProtocolSuppressed(), "Hidden battle did not suppress protocols");
     capture("hidden-boss.png", hidden);
     click(hidden, 70, 44);
@@ -114,11 +115,11 @@ void CheckMenuInteraction(const std::filesystem::path& output, Capture capture) 
     { std::ifstream in(savePath); in >> saved; }
     saved["selectedNode"] = "ending_normal";
     { std::ofstream out(savePath); out << saved.dump(2); }
-    MainMenu normal(directory); normal.OpenStageSelect();
+    MainMenu normal(directory); normal.OpenLegacyStageSelect();
     prepare(normal); click(normal, 960, 570);
     require(ProgressSystem(directory).EndingComplete(EndingType::Normal), "Normal ending pointer flow failed");
     capture("ending-normal.png", normal);
-    MainMenu overview(directory);overview.OpenStageSelect();
+    MainMenu overview(directory);overview.OpenLegacyStageSelect();
     click(overview,250,128); // Chapter 1, already unlocked by this fixture.
     click(overview,440,370); // Gray snow main node.
     capture("map-mainline-and-branches.png",overview);

@@ -20,7 +20,7 @@ std::string Rewards(const MapNode& node) {
 }
 }
 
-void MainMenu::OpenStageSelect() {
+void MainMenu::OpenLegacyStageSelect() {
     page_=Page::Map; mapPreview_.clear();mapDrag_={};mapStartReady_=false;
     if(const auto* p=ActionMap::Find(progress_.SelectedNode()))mapScroll_=std::max(0.0F,p->x-220);
 }

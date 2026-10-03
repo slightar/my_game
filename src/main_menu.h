@@ -13,7 +13,7 @@
 class UiFont;
 class CharacterArt;
 
-enum class MenuAction { None, StartBattle, StartEnemyTrial, Quit };
+enum class MenuAction { None, StartBattle, StartEnemyTrial, StartWorldPreview, Quit };
 
 class MainMenu {
 public:
@@ -23,6 +23,13 @@ public:
     void Draw(const UiFont& font, const CharacterArt& art) const;
     void OpenHome();
     void OpenStageSelect();
+    void OpenLegacyStageSelect();
+    bool RegionVisited(const std::string& id) const { return progress_.RegionVisited(id); }
+    bool RecordRegionVisit(const std::string& id,const std::string& from = "") { const bool ok=progress_.VisitRegion(id,from); SyncError(); return ok; }
+    bool WardShortcutOpen() const { return progress_.WardShortcutOpen(); }
+    void OpenWorldMap(const std::string& region = "");
+    bool IsWorldDesignPreview() const { return page_ == Page::WorldMap; }
+    const std::string& SelectedWorldRegion() const { return worldRegion_; }
     void OpenArchive() { page_ = Page::Archive; }
     void OpenEquipment() { page_ = Page::Equipment; }
     void OpenSettings() { page_ = Page::Settings; }
@@ -39,7 +46,7 @@ private:
     enum class Page {
         Splash,
         Home, CharacterSelect,
-        Map, Archive, Equipment, Settings, KeyBindings, ConfirmReset,
+        Map, CityStage, WorldMap, Archive, Equipment, Settings, KeyBindings, ConfirmReset,
         NodeDetail, FirstReset, HiddenBoss, Ending
     };
 
@@ -48,7 +55,11 @@ private:
     void DrawHome(const UiFont& font, const CharacterArt& art) const;
     void DrawCharacterSelect(const UiFont& font, const CharacterArt& art) const;
     void DrawMap(const UiFont& font) const;
+    void DrawCityStage(const UiFont& font) const;
+    MenuAction UpdateCityStage();
     void UpdateMap(float deltaTime);
+    void DrawWorldMap(const UiFont& font) const;
+    MenuAction UpdateWorldMap();
     void DrawArchive(const UiFont& font) const;
     void DrawEquipment(const UiFont& font) const;
     void DrawSettings(const UiFont& font) const;
@@ -76,6 +87,9 @@ private:
     float mapScroll_ = 0;
     ActionMap::DragGesture mapDrag_;
     bool mapStartReady_ = false;
+    std::string worldRegion_ = "clinic";
+    float worldScroll_ = 0;
+    ActionMap::DragGesture worldDrag_;
     bool capturingKey_ = false;
     Vector2 explorer_{640.0F, 390.0F};
     Vector2 walkTarget_{640.0F, 390.0F};

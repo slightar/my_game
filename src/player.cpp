@@ -68,6 +68,7 @@ void Player::Reset(OperatorKind operatorKind) {
     character_.reset();
     animator_ = {};
     operatorKind_ = operatorKind;
+    supportGroundY_=GameConfig::kFloorY;
     position_ = {240.0F, GameConfig::kFloorY - kHitboxHeight / 2.0F};
     velocity_ = {};
     movementLeft_ = GameConfig::kRoom.x + 28.0F + kHitboxWidth / 2.0F;
@@ -113,6 +114,7 @@ void Player::Reset(const Character& character) {
 }
 
 void Player::PlaceAt(Vector2 position, int facing) {
+    supportGroundY_=GameConfig::kFloorY;
     position_ = position;
     position_.x = std::clamp(position_.x, movementLeft_, movementRight_);
     velocity_ = {};
@@ -124,7 +126,7 @@ void Player::PlaceAt(Vector2 position, int facing) {
 }
 
 void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
-                    std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings, bool assistEnemyAim) {
+                    std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings, bool assistEnemyAim, bool traversalOnly, const std::vector<Rectangle>* platforms, const Rectangle* ramp) {
     hurtInvincibilityTimer_ = std::max(0.0F, hurtInvincibilityTimer_ - deltaTime);
     corrosionTimer_ = std::max(0.0F, corrosionTimer_ - deltaTime);
     animationTime_ += deltaTime;
@@ -148,12 +150,12 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
     } else if (operatorKind_ == OperatorKind::Exusiai) {
         overloadCooldown_ = std::max(0.0F, overloadCooldown_ - deltaTime);
     }
-    if (operatorKind_ == OperatorKind::Exusiai && settings.Pressed(GameAction::SkillTwo) &&
+    if (!traversalOnly && operatorKind_ == OperatorKind::Exusiai && settings.Pressed(GameAction::SkillTwo) &&
         barrageTimer_ <= 0.0F &&
         barrageCooldown_ <= 0.0F) {
         barrageTimer_ = kBarrageDuration;
     }
-    if (operatorKind_ == OperatorKind::Exusiai && settings.Pressed(GameAction::SkillOne) &&
+    if (!traversalOnly && operatorKind_ == OperatorKind::Exusiai && settings.Pressed(GameAction::SkillOne) &&
         overloadTimer_ <= 0.0F &&
         overloadCooldown_ <= 0.0F) {
         overloadTimer_ = kOverloadDuration;
@@ -182,7 +184,7 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
                    : operatorKind_ == OperatorKind::Exusiai ||
                          texasUsingSwordWave;
     const bool lockFacingWhileAttacking =
-        rangedBasicAttack && settings.Down(GameAction::Attack);
+        !traversalOnly && rangedBasicAttack && settings.Down(GameAction::Attack);
     if (moveDirection != 0.0F && !lockFacingWhileAttacking) {
         facingDirection_ = moveDirection > 0.0F ? 1 : -1;
     }
@@ -232,6 +234,8 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         jumpHoldTimer_ = 0.0F;
     }
 
+    const float previousBottom=position_.y+kHitboxHeight/2;
+    const float previousX=position_.x;
     velocity_.y += kGravity * gravityMultiplier * deltaTime;
     position_.x += velocity_.x * deltaTime;
     position_.y += velocity_.y * deltaTime;
@@ -250,6 +254,32 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         jumpCount_ = 0;
     }
 
+    bool onPlatform=false;
+    if(platforms && velocity_.y>=0)for(const auto& surface:*platforms){
+        if(position_.x+kHitboxWidth/2>surface.x && position_.x-kHitboxWidth/2<surface.x+surface.width &&
+           previousBottom<=surface.y+0.5F && position_.y+kHitboxHeight/2>=surface.y){
+            position_.y=surface.y-kHitboxHeight/2;velocity_.y=0;jumpCount_=0;onPlatform=true;
+        }
+    }
+    supportGroundY_=GameConfig::kFloorY;
+    if(ramp&&position_.x>=ramp->x-kHitboxWidth/2&&position_.x<=ramp->x+ramp->width+kHitboxWidth/2) {
+        const auto surface=[&](float x){return ramp->y+ramp->height*std::clamp((x-ramp->x)/ramp->width,0.0F,1.0F);};
+        const float ground=surface(position_.x);
+        if(!onPlatform&&velocity_.y>=0&&(std::abs(previousBottom-surface(previousX))<3 ||
+            (previousBottom<=ground+1&&position_.y+kHitboxHeight/2>=ground))) {
+            position_.y=ground-kHitboxHeight/2;velocity_.y=0;jumpCount_=0;onPlatform=true;
+        }
+        if(position_.y+kHitboxHeight/2<=ground+1)supportGroundY_=ground;
+    }
+    if(platforms)for(const auto& surface:*platforms)
+        if(position_.x+kHitboxWidth/2>surface.x && position_.x-kHitboxWidth/2<surface.x+surface.width &&
+           position_.y+kHitboxHeight/2<=surface.y+.5F)supportGroundY_=std::min(supportGroundY_,surface.y);
+    if (traversalOnly) {
+        firing_=false;attackAnimationTime_=0;
+        if(character_)animator_.Update(deltaTime,{velocity_,
+            onPlatform||position_.y+kHitboxHeight/2>=GameConfig::kFloorY-.5F,dodgeTimer_>0,false,false,false});
+        return;
+    }
     shotCooldown_ = std::max(0.0F, shotCooldown_ - deltaTime);
     if (character_) {
         firing_ = settings.Down(GameAction::Attack) && dodgeTimer_ <= 0;
@@ -471,7 +501,7 @@ void Player::SetHorizontalBounds(float left, float right) {
 
 void Player::Draw(const CharacterArt& art) const {
     if (!IsDead()) {
-        const Vector2 ringCenter{position_.x, GameConfig::kFloorY + 2.0F};
+        const Vector2 ringCenter{position_.x, supportGroundY_ + 2.0F};
         art.DrawFacingRing(ringCenter, facingDirection_);
     }
 
@@ -482,7 +512,7 @@ void Player::Draw(const CharacterArt& art) const {
         return;
     }
     const bool airborne = position_.y + kHitboxHeight / 2.0F <
-                          GameConfig::kFloorY - 0.5F;
+                          supportGroundY_ - 0.5F;
     ChibiAnimation animation = ChibiAnimation::Idle;
     if (dodgeTimer_ > 0.0F) {
         animation = ChibiAnimation::Dodge;
@@ -514,7 +544,7 @@ void Player::Draw(const CharacterArt& art) const {
                 1.0F);
             const float streakX = position_.x - 58.0F +
                                   static_cast<float>(streak) * 29.0F;
-            const float streakY = GameConfig::kFloorY - phase * 105.0F;
+            const float streakY = supportGroundY_ - phase * 105.0F;
             const float alpha = std::sin(phase * PI) *
                                 (texasRainMode_ ? 0.34F : 0.14F);
             DrawLineEx({streakX - 5.0F, streakY - 13.0F},
@@ -530,13 +560,14 @@ void Player::Draw(const CharacterArt& art) const {
                                 std::clamp(transitionProgress, 0.0F, 1.0F));
     }
 
+
     if (airborne) {
-        const float heightAboveFloor = GameConfig::kFloorY -
+        const float heightAboveFloor = supportGroundY_ -
                                        (position_.y + kHitboxHeight / 2.0F);
         const float shadowScale = std::clamp(1.0F - heightAboveFloor / 430.0F,
                                              0.38F, 1.0F);
         DrawEllipse(static_cast<int>(position_.x),
-                    static_cast<int>(GameConfig::kFloorY + 3.0F),
+                    static_cast<int>(supportGroundY_ + 3.0F),
                     27.0F * shadowScale, 7.0F * shadowScale,
                     Fade(BLACK, 0.24F));
     }

@@ -11,6 +11,9 @@ using EquipmentEntry = EquipmentItem;
 
 struct GameProgress {
     int version = 2;
+    std::set<std::string> visitedRegions;
+    bool wardShortcutOpen = false;
+    std::string selectedRegion = "clinic";
     std::set<std::string> unlockedNodes{"prologue_awaken"};
     std::set<std::string> completedNodes;
     std::string currentNode = "prologue_awaken";
@@ -41,6 +44,13 @@ public:
     const MapNode* CurrentNode() const { return FindNode(progress_.currentNode); }
     const std::string& SelectedNode() const { return progress_.currentNode; }
     bool SelectNode(const std::string& id);
+    bool RegionVisited(const std::string& id) const { return progress_.visitedRegions.contains(id); }
+    bool RegionVisible(const std::string& id) const;
+    bool RegionAvailable(const std::string& id) const;
+    bool VisitRegion(const std::string& id, const std::string& from = "");
+    bool WardShortcutOpen() const { return progress_.wardShortcutOpen; }
+    bool SelectRegion(const std::string& id);
+    const std::string& SelectedRegion() const { return progress_.selectedRegion; }
     const std::array<std::string, 3>& Slots() const { return progress_.slots; }
     NodeState State(const std::string& id) const;
     bool IsUnlocked(const std::string& id) const { return progress_.unlockedNodes.contains(id); }

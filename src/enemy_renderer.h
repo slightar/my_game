@@ -11,8 +11,12 @@ public:
     EnemyRenderer& operator=(const EnemyRenderer&)=delete;
     void Draw(const EnemySystem& system, const UiFont& font) const;
     void DrawUnit(const EnemyUnit& unit, const UiFont& font) const;
+    void DrawEntry(const EnemySystem& system) const;
+    bool HasEntrySprite() const { return entryTexture_.id != 0 && entryAddTexture_.id != 0; }
     bool HasSprite(EnemyKind kind) const;
 private:
+    Texture2D entryTexture_{};
+    Texture2D entryAddTexture_{};
     std::array<Texture2D,kKindCount> textures_{};
     std::array<Vector2,kKindCount> anchors_{};
     std::array<std::array<float,4>,kKindCount> durations_{};

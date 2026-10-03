@@ -1,4 +1,5 @@
 #include "main_menu.h"
+#include "world_layout.h"
 #include "character_art.h"
 #include "ui_font.h"
 #include "terminal_ui.h"
@@ -33,6 +34,8 @@ void MainMenu::Draw(const UiFont& font, const CharacterArt& art) const {
     case Page::Home: DrawHome(font, art); break;
     case Page::CharacterSelect: DrawCharacterSelect(font, art); break;
     case Page::Map: DrawMap(font); break;
+    case Page::CityStage: DrawCityStage(font); break;
+    case Page::WorldMap: DrawWorldMap(font); break;
     case Page::Archive: DrawArchive(font); break;
     case Page::Equipment: DrawEquipment(font); break;
     case Page::Settings: DrawSettings(font); break;
@@ -57,8 +60,7 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
         art.DrawPortrait(leader == 1 ? OperatorKind::Texas : OperatorKind::Exusiai,
                          {10, 85, 737, 760});
     DrawRectangleGradientH(546, 90, 182, 560, BLANK, Fade(Ink, .26F));
-    const auto* current = progress_.CurrentNode();
-    const auto* chapter = current ? StoryData::FindChapter(current->chapterId) : nullptr;
+    const auto* current = WorldLayout::Find(progress_.SelectedRegion());
     const std::string leaderName = CharacterNameForSelection(leader);
     Button(font, OperatorButton, ("编队 / " + leaderName).c_str(),
            pointer_.Hit(OperatorButton), Ink, Paper);
@@ -66,9 +68,9 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
     Surface({43, 457, 607, 174}, Fade(Ink, .87F));
     DrawRectangle(43, 457, 5, 174, Orange);
     font.Draw("CURRENT OPERATION", 65, 472, 12, Muted);
-    Fit(font, chapter ? chapter->title : "序章", {65, 493, 560, 30}, 26, Paper);
+    Fit(font, "切尔诺伯格 / 区域探索", {65, 493, 560, 30}, 26, Paper);
     Fit(font, current ? current->name : "切尔诺伯格", {65, 535, 554, 29}, 25, Paper);
-    Fit(font, current ? current->objective : "继续当前行动", {65, 577, 552, 30}, 18, Muted);
+    Fit(font, current ? current->subtitle : "继续当前行动", {65, 577, 552, 30}, 18, Muted);
 
     Surface({720, 105, 492, 37}, Fade(Ink, .82F));
     font.Draw(TextFormat("PRTS  %02d", progress_.Compliance()), 735, 116, 17, Paper);
@@ -98,7 +100,8 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
         PressedVeil(r);
     }
     int exits = 0;
-    if (current) for (const auto& e : current->exits) if (progress_.ExitAvailable(e)) ++exits;
+    if (current) for (const auto& e : WorldLayout::Ports(current->id))
+        if(progress_.RegionVisible(e.target->id))++exits;
     font.Draw(TextFormat("开放出口  %02d", exits), 724, 608, 16, Paper);
     std::string slots = "装备  ";
     for (const auto& id : progress_.Slots()) {

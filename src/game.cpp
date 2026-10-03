@@ -104,6 +104,7 @@ void Game::SwitchOperator(int slot) {
 }
 
 void Game::Update(float deltaTime) {
+    if(worldPreview_) {UpdateWorldPreview(deltaTime);return;}
     if (!inBattle_) {
         if (IsKeyPressed(KEY_F5)) ReloadCharacters();
         if (IsFileDropped()) {
@@ -126,7 +127,11 @@ void Game::Update(float deltaTime) {
         const MenuAction action = mainMenu_.Update(deltaTime);
         SetMasterVolume(mainMenu_.Settings().MasterVolume() / 100.0F);
         audio_.SetEffectsVolume(mainMenu_.Settings().SoundVolume() / 100.0F);
-        if (action == MenuAction::StartBattle || action == MenuAction::StartEnemyTrial) {
+        if (action == MenuAction::StartWorldPreview) {
+            worldDesignPreview_=mainMenu_.IsWorldDesignPreview();
+            enemyTrial_=false;Reset();inBattle_=false;
+            EnterWorldRegion(mainMenu_.SelectedWorldRegion());
+        } else if (action == MenuAction::StartBattle || action == MenuAction::StartEnemyTrial) {
             enemyTrial_ = action == MenuAction::StartEnemyTrial;
             Reset();
             inBattle_ = true;
@@ -483,6 +488,7 @@ void Game::DrawEncounterBanner() const {
 }
 
 void Game::Draw(float displayScale, Vector2 displayOffset) const {
+    if(worldPreview_) {DrawWorldPreview(displayScale,displayOffset);return;}
     const Camera2D uiCamera{displayOffset, {}, 0.0F, displayScale};
     if (!inBattle_) {
         BeginMode2D(uiCamera);
@@ -506,6 +512,7 @@ void Game::Draw(float displayScale, Vector2 displayOffset) const {
         0.0F, displayScale};
     BeginMode2D(worldCamera);
     DrawMap();
+    if (enemyTrial_) enemyRenderer_.DrawEntry(enemies_);
 
     for (const Bullet& bullet : bullets_) {
         if (bullet.activationDelay > 0.0F) {
@@ -625,7 +632,9 @@ void Game::Draw(float displayScale, Vector2 displayOffset) const {
         uiFont_.Draw(TextFormat("小怪试炼 / 剩余 %d / %d", enemies_.Remaining(),
                                 static_cast<int>(EnemyDefinitions().size())),
                      361, 62, 23, RAYWHITE);
-        uiFont_.Draw("看前摇 · 躲红圈 · 绕后破盾 · 1/2 切换角色", 361, 96, 17, TacticalUi::kPaper);
+        uiFont_.Draw(TextFormat("场上 %d · 待入场 %d · 红门增援 · 1/2 切换角色",
+                     enemies_.Remaining()-enemies_.Pending(), enemies_.Pending()),
+                     361, 96, 17, TacticalUi::kPaper);
     }
     DrawEncounterBanner();
 

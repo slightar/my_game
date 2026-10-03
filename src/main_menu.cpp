@@ -175,9 +175,13 @@ MenuAction MainMenu::Update(float deltaTime) {
         }
         break;
     }
+    case Page::CityStage:
+        return UpdateCityStage();
     case Page::Map:
         UpdateMap(deltaTime);
         break;
+    case Page::WorldMap:
+        return UpdateWorldMap();
     case Page::Archive: {
         if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { page_ = Page::Home; break; }
         if (pointer_.Clicked(TerminalUi::Category(0))) { archiveCategory_ = 0; archiveSelection_ = 0; }

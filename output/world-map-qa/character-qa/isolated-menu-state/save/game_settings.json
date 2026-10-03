@@ -1,0 +1,18 @@
+{
+  "bindings": {
+    "attack": 74,
+    "dodge": 83,
+    "jump": 87,
+    "moveLeft": 65,
+    "moveRight": 68,
+    "operatorOne": 49,
+    "operatorTwo": 50,
+    "pause": 256,
+    "reload": 82,
+    "skillOne": 81,
+    "skillTwo": 69
+  },
+  "masterVolume": 49,
+  "soundVolume": 100,
+  "version": 1
+}

@@ -1,0 +1,31 @@
+{
+  "archiveIds": [],
+  "completedNodes": [],
+  "equipmentIds": [],
+  "hiddenComplete": false,
+  "memoryIntegrity": 3,
+  "normalComplete": false,
+  "prtsCompliance": 0,
+  "selectedNode": "prologue_awaken",
+  "selectedRegion": "clinic",
+  "slots": [
+    "",
+    "",
+    ""
+  ],
+  "truthDiscovery": 0,
+  "unlockedNodes": [
+    "prologue_awaken"
+  ],
+  "version": 2,
+  "visitedRegions": [
+    "bridge",
+    "clinic",
+    "clock",
+    "entry",
+    "gray",
+    "station",
+    "ward"
+  ],
+  "wardShortcutOpen": true
+}

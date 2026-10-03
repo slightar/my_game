@@ -1,4 +1,5 @@
 #include "progress_system.h"
+#include "world_layout.h"
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -10,6 +11,32 @@ using Json = nlohmann::json;
 
 ProgressSystem::ProgressSystem(std::filesystem::path applicationDirectory)
     : savePath_(std::move(applicationDirectory) / "save" / "game_progress.json") { Load(); }
+
+bool ProgressSystem::RegionVisible(const std::string& id) const {
+    return WorldLayout::Find(id) && (!WorldLayout::Hidden(id) || RegionVisited(id));
+}
+bool ProgressSystem::RegionAvailable(const std::string& id) const {
+    if(!RegionVisible(id))return false;
+    if(id=="clinic" || RegionVisited(id))return true;
+    for(const auto& r:WorldLayout::Routes)
+        if(r.kind==WorldLayout::RouteKind::Main && r.to==id && RegionVisited(r.from))return true;
+    return false;
+}
+bool ProgressSystem::SelectRegion(const std::string& id) {
+    if(!RegionAvailable(id))return false;
+    const auto before=progress_;progress_.selectedRegion=id;
+    if(Save())return true;progress_=before;return false;
+}
+bool ProgressSystem::VisitRegion(const std::string& id,const std::string& from) {
+    if(!WorldLayout::Find(id))return false;
+    if(from=="clinic"&&id=="ward"&&!progress_.wardShortcutOpen)return false;
+    const bool openShortcut=from=="ward"&&id=="clinic"&&
+        progress_.selectedRegion=="ward"&&RegionVisited("ward");
+    if(RegionVisited(id)&&progress_.selectedRegion==id&&!openShortcut)return true;
+    const auto before=progress_;progress_.visitedRegions.insert(id);progress_.selectedRegion=id;
+    if(openShortcut)progress_.wardShortcutOpen=true;
+    if(Save())return true;progress_=before;return false;
+}
 
 std::vector<ArchiveEntry> ProgressSystem::Archives(ArchiveCategory category) const {
     std::vector<ArchiveEntry> result;
@@ -188,6 +215,9 @@ bool ProgressSystem::Validate(const GameProgress& candidate) const {
     for (const auto& id : candidate.archiveIds) if (!StoryData::FindArchive(id)) return false;
     for (const auto& id : candidate.equipmentIds) if (!FindEquipment(id)) return false;
     for (const auto& id : candidate.slots) if (!id.empty() && !candidate.equipmentIds.contains(id)) return false;
+    for(const auto& id:candidate.visitedRegions)if(!WorldLayout::Find(id))return false;
+    if(!WorldLayout::Find(candidate.selectedRegion))return false;
+    if(candidate.selectedRegion!="clinic" && WorldLayout::Hidden(candidate.selectedRegion) && !candidate.visitedRegions.contains(candidate.selectedRegion))return false;
     return true;
 }
 bool ProgressSystem::Save() {
@@ -197,7 +227,8 @@ bool ProgressSystem::Save() {
             const auto backup = savePath_.parent_path() / "game_progress.v1.bak";
             if (!std::filesystem::exists(backup)) std::filesystem::copy_file(savePath_, backup);
         }
-        Json data = {{"version", progress_.version}, {"unlockedNodes", progress_.unlockedNodes},
+        Json data = {{"visitedRegions", progress_.visitedRegions}, {"selectedRegion", progress_.selectedRegion}, {"version", progress_.version}, {"unlockedNodes", progress_.unlockedNodes},
+            {"wardShortcutOpen", progress_.wardShortcutOpen},
             {"completedNodes", progress_.completedNodes}, {"selectedNode", progress_.currentNode},
             {"archiveIds", progress_.archiveIds}, {"equipmentIds", progress_.equipmentIds},
             {"slots", progress_.slots}, {"prtsCompliance", progress_.prtsCompliance},
@@ -257,6 +288,9 @@ bool ProgressSystem::Load() {
         if (version != 2) throw std::runtime_error("不支持的存档版本");
         GameProgress loaded;
         loaded.version = version;
+        loaded.visitedRegions = data.value("visitedRegions", std::set<std::string>{});
+        loaded.wardShortcutOpen = data.value("wardShortcutOpen", false);
+        loaded.selectedRegion = data.value("selectedRegion", std::string("clinic"));
         loaded.unlockedNodes = data.at("unlockedNodes").get<std::set<std::string>>();
         loaded.completedNodes = data.at("completedNodes").get<std::set<std::string>>();
         loaded.currentNode = data.at("selectedNode").get<std::string>();

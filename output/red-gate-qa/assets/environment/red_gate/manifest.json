@@ -1,0 +1,23 @@
+{
+  "prefab_bundle": "battle/prefabs/effects/tile.ab",
+  "prefab": "tile_start",
+  "prefab_path_id": 3417487498484636784,
+  "model_bundle": "arts/effects/[pack]map.ab",
+  "bundle_sha256": "1c27b979df21fbf5e77d1a6a07855a3ebffe6afa302c6376a83f955e36ace41e",
+  "mesh_path_ids": [
+    -1748945470632165655,
+    -6633492496227041559,
+    -2180423446155641033
+  ],
+  "texture_path_id": 1671617118310560865,
+  "projection": "orthographic front; no perspective or side face",
+  "file": "entry_front.png",
+  "size": [
+    512,
+    512
+  ],
+  "additive_file": "entry_add.png",
+  "runtime_size": 132,
+  "runtime_alpha": 0.48,
+  "note": "Original mesh/UV/atlas; 2D alpha blending replaces Unity additive passes and particle effects."
+}

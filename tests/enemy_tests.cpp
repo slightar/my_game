@@ -28,6 +28,33 @@ int main(){try {
         Check(s(EnemyKind::Slug)<s(EnemyKind::Soldier),"源石虫 cell should be smaller than 士兵's");
     }
     EnemySystem s;
+    s.ResetTrial();
+    const int roster=static_cast<int>(EnemyDefinitions().size());
+    Check(s.Units().empty()&&s.Pending()==roster&&s.Remaining()==roster,
+          "Trial must start with queued enemies and an empty map");
+    Check(!s.Cleared(),"An empty map with pending enemies must not clear");
+    Tick(s,EnemySystem::kFirstSpawnDelay-.1F,{1100,600});
+    Check(s.Units().empty(),"Enemy appeared before the entry delay");
+    Tick(s,.12F,{1100,600});
+    Check(s.Units().size()==1&&s.Pending()==roster-1,"First entry did not release one enemy");
+    Check(std::abs(s.Units().front().feet.x-EnemySystem::kEntryX)<5,
+          "Enemy did not emerge at the red gate");
+    s.Damage(s.Units().front().id,1000,DamageType::Arts,{1100,600});
+    Check(!s.Cleared()&&s.Remaining()==roster-1,"Cleared before reinforcements arrived");
+    Tick(s,EnemySystem::kSpawnInterval*roster,{1100,600});
+    Check(s.Pending()==0&&s.Units().size()==static_cast<unsigned>(roster),
+          "Entry skipped or duplicated queued enemies");
+    std::set<EnemyKind> spawnedKinds;
+    for(const auto& u:s.Units())spawnedKinds.insert(u.kind);
+    Check(spawnedKinds.size()==static_cast<unsigned>(roster),"Entry lost an enemy kind");
+    for(const auto& u:s.Units())s.Damage(u.id,10000,DamageType::Arts,{1100,600});
+    Tick(s,8,{1100,600});
+    Check(s.Cleared(),"Completed entry and combat failed to clear");
+    s.ResetTrial();
+    Check(s.Units().empty()&&s.Pending()==roster,"Retry did not reset the spawn queue");
+    s.Clear();
+    Tick(s,5,{1100,600});
+    Check(s.Units().empty()&&s.Pending()==0&&!s.HasEntry(),"Clear retained trial reinforcements");
     auto shield=s.Spawn(EnemyKind::Shield,1500);
     // The spawn grace keeps a guard from being back-stabbed before it has faced anything.
     // 60 ticks = 1s of .01 substeps, well past kSpawnGrace (.4s).

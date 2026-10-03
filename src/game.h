@@ -9,6 +9,8 @@
 #include "main_menu.h"
 #include "player.h"
 #include "ui_font.h"
+#include "world_scenery.h"
+#include "scene_traversal.h"
 #include "character_repository.h"
 
 #include <vector>
@@ -22,8 +24,14 @@ public:
     void Draw(float displayScale, Vector2 displayOffset) const;
     [[nodiscard]] bool ShouldQuit() const;
     [[nodiscard]] int RemainingTrialEnemies() const { return enemyTrial_ ? enemies_.Remaining() : 0; }
+    [[nodiscard]] int PendingTrialEnemies() const { return enemyTrial_ ? enemies_.Pending() : 0; }
+    [[nodiscard]] const std::string& WorldRegion() const { return worldRegion_; }
+    [[nodiscard]] bool InWorldPreview() const { return worldPreview_; }
+    [[nodiscard]] Vector2 WorldPlayerPosition() const { return player_->Position(); }
 
 private:
+    // The retained world prototype is entered only by its integration test.
+    friend struct WorldPreviewTestAccess;
     void Reset();
     void SwitchOperator(int slot);
     void DrawOperatorSlots() const;
@@ -34,6 +42,9 @@ private:
     void DrawEncounterBanner() const;
     void DrawPauseMenu() const;
     bool EncounterCleared() const;
+    void EnterWorldRegion(const std::string& id, const std::string& from = "");
+    void UpdateWorldPreview(float deltaTime);
+    void DrawWorldPreview(float displayScale, Vector2 displayOffset) const;
 
     AudioSystem audio_;
     UiFont uiFont_;
@@ -49,6 +60,19 @@ private:
     bool enemyTrial_ = false;
     std::vector<Bullet> bullets_;
     bool inBattle_ = false;
+    WorldScenery worldScenery_;
+    float worldTime_ = 0;
+    float worldNarrationTime_ = 0;
+    SceneTraversal worldTraversal_;
+    float worldTransition_ = -1;
+    float worldInvestigate_ = 0;
+    int worldInvestigatePort_ = -1;
+    int worldDeviation_ = 0;
+    std::string worldDestination_;
+    bool worldTransitionLoaded_ = false;
+    bool worldPreview_ = false;
+    bool worldDesignPreview_ = false;
+    std::string worldRegion_ = "clinic";
     bool paused_ = false;
     bool quitRequested_ = false;
     bool bossActive_ = false;

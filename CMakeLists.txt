@@ -22,7 +22,7 @@ target_link_libraries(character_tool PRIVATE character_core)
 
 add_executable(my_game
         src/main.cpp
-        src/game.cpp
+        src/game.cpp src/world_preview.cpp src/world_scenery.cpp
         src/character_art.cpp
         src/player.cpp
         src/boss.cpp
@@ -32,7 +32,7 @@ add_executable(my_game
         src/audio_system.cpp
         src/game_settings.cpp
         src/main_menu.cpp
-        src/menu_views.cpp src/action_map.cpp
+        src/menu_views.cpp src/world_map.cpp src/action_map.cpp src/city_stage.cpp
         src/terminal_ui.cpp
         src/story_data.cpp
         src/progress_system.cpp
@@ -42,6 +42,14 @@ target_link_libraries(my_game PRIVATE character_core)
 
 include(CTest)
 if (BUILD_TESTING)
+    add_executable(world_layout_tests tests/world_layout_tests.cpp)
+    target_include_directories(world_layout_tests PRIVATE src)
+    add_test(NAME world_layout_tests COMMAND world_layout_tests)
+    add_executable(world_map_smoke tests/world_map_smoke.cpp
+        src/game.cpp src/world_preview.cpp src/world_scenery.cpp src/boss.cpp src/enemy_data.cpp src/enemy_system.cpp src/enemy_renderer.cpp
+        src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp
+        src/menu_views.cpp src/world_map.cpp src/action_map.cpp src/city_stage.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
+    target_link_libraries(world_map_smoke PRIVATE character_core)
     add_executable(character_tests tests/character_tests.cpp)
     target_link_libraries(character_tests PRIVATE character_core)
     add_test(NAME character_tests COMMAND character_tests)
@@ -61,12 +69,12 @@ if (BUILD_TESTING)
     target_link_libraries(enemy_tests PRIVATE raylib)
     add_test(NAME enemy_tests COMMAND enemy_tests)
     add_executable(character_render_smoke tests/character_render_smoke.cpp
-        src/enemy_data.cpp src/enemy_system.cpp src/enemy_renderer.cpp src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp src/menu_views.cpp src/action_map.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
+        src/enemy_data.cpp src/enemy_system.cpp src/enemy_renderer.cpp src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp src/menu_views.cpp src/world_map.cpp src/action_map.cpp src/city_stage.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
     target_link_libraries(character_render_smoke PRIVATE character_core)
     add_executable(game_enemy_smoke tests/game_enemy_smoke.cpp
-        src/game.cpp src/boss.cpp src/enemy_data.cpp src/enemy_system.cpp src/enemy_renderer.cpp
+        src/game.cpp src/world_preview.cpp src/world_scenery.cpp src/boss.cpp src/enemy_data.cpp src/enemy_system.cpp src/enemy_renderer.cpp
         src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp
-        src/menu_views.cpp src/action_map.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
+        src/menu_views.cpp src/world_map.cpp src/action_map.cpp src/city_stage.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
     target_link_libraries(game_enemy_smoke PRIVATE character_core)
 endif()
 
@@ -80,7 +88,7 @@ if (WIN32)
     if (MINGW)
         set(GAME_EXECUTABLES my_game character_tool)
         if (BUILD_TESTING)
-            list(APPEND GAME_EXECUTABLES character_tests character_render_smoke progress_tests settings_tests enemy_tests game_enemy_smoke ui_interaction_tests)
+            list(APPEND GAME_EXECUTABLES world_layout_tests world_map_smoke character_tests character_render_smoke progress_tests settings_tests enemy_tests game_enemy_smoke ui_interaction_tests)
         endif()
         get_filename_component(MINGW_RUNTIME_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
         foreach(GAME_EXECUTABLE IN LISTS GAME_EXECUTABLES)

@@ -8,7 +8,7 @@ class UiAssets {
 public:
     UiAssets() {
         for (const char* name : {"home_battle", "home_operator", "rhodes", "back",
-             "dots", "tag", "vignette", "sniper", "guard", "stars", "skill_shadow",
+             "dots", "tag", "vignette", "sniper", "guard", "stars", "skill_shadow", "prts_avatar",
              "ring", "direction", "panel", "hp", "sp", "pause",
              "map_bg", "map_bkg_normal", "map_bkg_normal_branch", "map_bkg_hilight",
              "map_details_bg", "map_icon_stage_rank_3", "map_sprite_track_point_frame"}) {

@@ -19,7 +19,8 @@ public:
     void PlaceAt(Vector2 position, int facing);
     void Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
                 std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings,
-                bool assistEnemyAim = false);
+                bool assistEnemyAim = false, bool traversalOnly = false, const std::vector<Rectangle>* platforms = nullptr,
+                const Rectangle* ramp = nullptr);
     void UpdateDefeatAnimation(float deltaTime);
     void SetHorizontalBounds(float left, float right);
     void Draw(const CharacterArt& art) const;
@@ -53,6 +54,7 @@ private:
                            float enemyRadius, std::vector<Bullet>& bullets,
                            const GameSettings& settings);
 
+    float supportGroundY_ = GameConfig::kFloorY;
     Vector2 position_{};
     Vector2 velocity_{};
     float movementLeft_ = 0.0F;

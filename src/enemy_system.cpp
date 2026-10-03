@@ -62,7 +62,10 @@ Vector2 EnemyUnit::Center() const { return {feet.x,feet.y-EnemyData(kind).height
 bool EnemyUnit::Targetable() const { return health>0 && state!=EnemyState::Dead && state!=EnemyState::Blast; }
 bool EnemyUnit::Guarding() const { return kind==EnemyKind::Shield && stun<=0 && state!=EnemyState::Recover && state!=EnemyState::Dead; }
 bool EnemyUnit::InterceptsProjectiles() const { return !cloaked; }
-void EnemySystem::Clear() { units_.clear();bolts_.clear();nextId_=1; }
+void EnemySystem::Clear() {
+    units_.clear();bolts_.clear();nextId_=1;
+    spawnQueue_.clear();nextSpawn_=0;spawnTimer_=0;entryPulse_=0;
+}
 unsigned EnemySystem::Spawn(EnemyKind kind, float x) {
     EnemyUnit u;u.id=nextId_++;u.kind=kind;
     u.feet={std::clamp(x,leftBound,rightBound), kind==EnemyKind::Drone ? GameConfig::kFloorY-260.0F : GameConfig::kFloorY};
@@ -71,15 +74,13 @@ unsigned EnemySystem::Spawn(EnemyKind kind, float x) {
 }
 void EnemySystem::ResetTrial() {
     Clear();
-    // TODO: Replace this authored demonstration formation with chapter encounter data.
-    // Ordered left to right by threat: chaff first, then the ranged lines, with the two
-    // detonating slugs and the guard deep enough that a careless push gets punished.
-    Spawn(EnemyKind::Slug,1180);Spawn(EnemyKind::Hound,1300);
-    Spawn(EnemyKind::AcidSlug,1440);Spawn(EnemyKind::Soldier,1560);
-    Spawn(EnemyKind::Caster,1700);Spawn(EnemyKind::SlugHigh,1810);
-    Spawn(EnemyKind::StealthCrossbow,1940);Spawn(EnemyKind::Crossbow,2050);
-    Spawn(EnemyKind::IrrSlug,2180);Spawn(EnemyKind::Shield,2290);
-    Spawn(EnemyKind::Drone,2420);
+    // Authored action-game timing, inspired by PRTS SPAWN actions. No units exist
+    // until Game starts updating the encounter after crossing the arena trigger.
+    spawnQueue_={EnemyKind::Slug,EnemyKind::Hound,EnemyKind::AcidSlug,
+        EnemyKind::Soldier,EnemyKind::Caster,EnemyKind::SlugHigh,
+        EnemyKind::StealthCrossbow,EnemyKind::Crossbow,EnemyKind::IrrSlug,
+        EnemyKind::Shield,EnemyKind::Drone};
+    spawnTimer_=kFirstSpawnDelay;
 }
 void EnemySystem::Update(float dt, Vector2 player) {
     // Bound catch-up time and substep attacks/projectiles on slow frames.
@@ -89,6 +90,18 @@ void EnemySystem::Update(float dt, Vector2 player) {
     while (remaining>0.000001F) { const float step=std::min(remaining,1.0F/120);Tick(step,player);remaining-=step; }
 }
 void EnemySystem::Tick(float dt, Vector2 player) {
+    entryPulse_=std::max(0.0F,entryPulse_-dt);
+    if(Pending()) {
+        spawnTimer_-=dt;
+        while(Pending() && spawnTimer_<=0.0F) {
+            Spawn(spawnQueue_[nextSpawn_++],kEntryX);
+            auto& unit=units_.back();
+            unit.facing=player.x>=unit.feet.x?1:-1;
+            unit.cloaked=IsCloakedKind(unit.kind);
+            spawnTimer_+=kSpawnInterval;
+            entryPulse_=.65F;
+        }
+    }
     for(auto& b:bolts_) { b.position.x+=b.velocity.x*dt;b.position.y+=b.velocity.y*dt;b.lifetime-=dt; }
     std::erase_if(bolts_,[](const auto& b){return b.lifetime<=0 || b.position.x<leftBound-100 || b.position.x>rightBound+100 || b.position.y>GameConfig::kFloorY+10;});
     for (auto& u:units_) {
@@ -245,7 +258,7 @@ EnemyTarget EnemySystem::Target(Vector2 player,int facing) const {
     return best?EnemyTarget{best->Center(),EnemyData(best->kind).width/2}:EnemyTarget{{player.x+facing*500,player.y},0};
 }
 int EnemySystem::Remaining() const {
-    return static_cast<int>(std::count_if(units_.begin(),units_.end(),[](const auto& u){return u.state!=EnemyState::Dead;}));
+    return Pending()+static_cast<int>(std::count_if(units_.begin(),units_.end(),[](const auto& u){return u.state!=EnemyState::Dead;}));
 }
 bool EnemySystem::Cleared() const {
     return !units_.empty() && Remaining()==0 && std::none_of(bolts_.begin(),bolts_.end(),[](const auto& b){return b.lifetime>0;});

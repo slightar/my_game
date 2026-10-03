@@ -1,5 +1,6 @@
 #include "ui_font.h"
 #include "progress_glyphs.h"
+#include "world_layout.h"
 
 #include <filesystem>
 #include <string>
@@ -26,7 +27,8 @@ constexpr const char* kUiGlyphs =
     "系统建议既定路线强直接造成伤害提升获得额外生命照亮汇聚探索发现效率低语"
     "当前继续退出分类选择返回主页面左右上下切换按键确定指令归档"
     // Character lineup page.
-    "编队预览仅影响输出擅长持续与幕压制范围查看详情位置";
+    "编队预览仅影响输出擅长持续与幕压制范围查看详情位置"
+    "红门敌方入口增援场上待入场结束";
 
 constexpr int kFontAtlasSize = 128;
 
@@ -65,7 +67,7 @@ void UiFont::SetAdditionalText(const std::string& text) {
     }
 
     int glyphCount = 0;
-    const std::string glyphs = std::string(kUiGlyphs) + kProgressGlyphs + text;
+    const std::string glyphs = std::string(kUiGlyphs) + kProgressGlyphs + WorldLayout::Glyphs() + text;
     int* codepoints = LoadCodepoints(glyphs.c_str(), &glyphCount);
     std::vector<int> unique(codepoints, codepoints + glyphCount);
     std::sort(unique.begin(), unique.end());
