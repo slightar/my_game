@@ -8,12 +8,9 @@
 #include <fstream>
 
 namespace {
-// Ranged units aim along a line; melee units sweep an arc. Kept local to the renderer
-// because the simulation has its own copy of the same predicate.
+// Rendering and simulation use the same data-driven attack trait.
 bool IsRangedTelegraph(EnemyKind kind) {
-    return kind==EnemyKind::Crossbow || kind==EnemyKind::Drone
-        || kind==EnemyKind::Caster || kind==EnemyKind::StealthCrossbow
-        || kind==EnemyKind::AcidSlug;
+    return EnemyData(kind).attack!=EnemyAttack::Melee;
 }
 Color BodyColor(EnemyKind kind) {
     switch(kind) {
@@ -32,6 +29,7 @@ Color BodyColor(EnemyKind kind) {
 }
 // The detonation ring matches the damage type: 辐能源石虫's is Arts.
 Color BlastColor(EnemyKind kind) {
+    if(EnemyData(kind).coldBlast) return SKYBLUE;
     return kind==EnemyKind::IrrSlug ? Color{186,132,224,255} : RED;
 }
 }
@@ -115,8 +113,14 @@ void EnemyRenderer::DrawUnit(const EnemyUnit& u,const UiFont& font)const {
             const Color line=u.kind==EnemyKind::Caster?Color{178,140,235,255}
                 :u.kind==EnemyKind::AcidSlug?Color{132,204,88,255}:Fade(RED,.6F);
             const float originX=u.feet.x+u.facing*24.0F;
-            DrawLineEx({originX,u.feet.y-62},u.aim,2,line);
-            DrawCircleLines(int(u.aim.x),int(u.aim.y),12,line);
+            if(d.attack==EnemyAttack::Lob) {
+                const float radius=u.kind==EnemyKind::GuerrillaMortar?80:55;
+                DrawEllipse(int(u.aim.x),int(GameConfig::kFloorY-4),radius,12,Fade(RED,.15F));
+                DrawEllipseLines(int(u.aim.x),int(GameConfig::kFloorY-4),radius,12,RED);
+            } else {
+                DrawLineEx({originX,u.feet.y-62},u.aim,2,line);
+                DrawCircleLines(int(u.aim.x),int(u.aim.y),12,line);
+            }
             // A cloaked archer shows its aim line even though the body is hidden, so the
             // shot is always something the player can read and dodge.
             if(u.cloaked) DrawCircleV({originX,u.feet.y-62},7,line);
@@ -200,7 +204,7 @@ void EnemyRenderer::DrawEntry(const EnemySystem& system)const {
     // Offline front projection of the client's tile_start meshes and atlas.
     // A single 2D sprite replaces all hand-drawn cube faces and edges.
     const Rectangle source{8,8,496,496};
-    const Rectangle destination{EnemySystem::kEntryX-66,GameConfig::kFloorY-132,132,132};
+    const Rectangle destination{system.EntryX()-66,GameConfig::kFloorY-132,132,132};
     const float opacity=(system.Pending()?.48F:.28F)+pulse*.16F;
     DrawTexturePro(entryTexture_,source,destination,{},0,Fade(WHITE,opacity));
     if(entryAddTexture_.id) {
@@ -213,15 +217,22 @@ void EnemyRenderer::DrawEntry(const EnemySystem& system)const {
 void EnemyRenderer::Draw(const EnemySystem& system,const UiFont& font)const {
     for(const auto& u:system.Units())DrawUnit(u,font);
     for(const auto& b:system.Bolts()) if(b.lifetime>0) {
+        if(b.blastRadius>0 && b.gravity>0) {
+            DrawEllipse(int(b.landing.x),int(b.landing.y),b.blastRadius,12,Fade(RED,.12F));
+            DrawEllipseLines(int(b.landing.x),int(b.landing.y),b.blastRadius,12,Fade(RED,.8F));
+        }
         const float length=std::max(1.0F,std::sqrt(b.velocity.x*b.velocity.x+b.velocity.y*b.velocity.y));
         const Vector2 tail{b.position.x-b.velocity.x/length*24,b.position.y-b.velocity.y/length*24};
         // Caster shots are Arts (violet mote, pierces the guard's physical reduction) and
         // acid slugs spit a corrosive glob (green, shortens the operator's i-frames).
-        const Color head=b.corrosive?Color{132,204,88,255}
+        const Color head=b.cold?SKYBLUE:b.corrosive?Color{132,204,88,255}
             :b.arts?Color{178,140,235,255}:TacticalUi::kOrange;
         const Color trail=b.corrosive?Color{74,116,52,255}
             :b.arts?Color{120,96,178,255}:TacticalUi::kInk;
         DrawLineEx(tail,b.position,4,trail);
-        DrawCircleV(b.position,b.corrosive?7.0F:4.0F,head);
+        if(b.blastRadius>0 && b.gravity==0) {
+            DrawCircleV(b.position,b.blastRadius,Fade(ORANGE,.24F));
+            DrawCircleLines(int(b.position.x),int(b.position.y),b.blastRadius,ORANGE);
+        } else DrawCircleV(b.position,b.corrosive||b.blastRadius>0?7.0F:4.0F,head);
     }
 }

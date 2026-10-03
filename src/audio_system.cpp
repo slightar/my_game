@@ -1,126 +1,84 @@
 #include "audio_system.h"
-
+#include "file_path.h"
 #include <algorithm>
-#include <cmath>
-#include <cstdint>
-#include <vector>
 
 namespace {
-
-constexpr unsigned int kSampleRate = 44100;
-constexpr float kPi = 3.14159265358979323846F;
-
-std::int16_t ToPcm16(float sample) {
-    return static_cast<std::int16_t>(std::clamp(sample, -1.0F, 1.0F) * 32767.0F);
+struct CueDefinition { const char* file; float gain; double interval; int voices; };
+// Gameplay emits events without knowing resource paths or managing buffers.
+constexpr std::array<CueDefinition, static_cast<int>(AudioCue::Count)> kCues{{
+    {"gunshot", .22F, .04, 4}, {"empty", .25F, .18, 1},
+    {"reload", .40F, .25, 1}, {"player_hit", .38F, .25, 1},
+    {"enemy_hit", .13F, .07, 3}, {"slash", .27F, .10, 2},
+    {"skill", .30F, .30, 1}, {"sword_rain", .32F, .30, 1},
+    {"ui_confirm", .35F, .10, 1}, {"ui_select", .25F, .08, 1},
+    {"ui_back", .30F, .10, 1}, {"operator_switch", .38F, .18, 1},
+    {"scene_enter", .30F, .35, 1}, {"investigate", .38F, 1.0, 1},
+    {"encounter", .32F, .60, 1}, {"clear", .40F, .60, 1},
+    {"pause", .32F, .10, 1}, {"narration", .20F, 1.4, 1},
+    {"denied", .28F, .60, 1}, {"hidden_enter", .35F, 1.0, 1}
+}};
+bool Valid(AudioCue cue) { return cue >= AudioCue::Gunshot && cue < AudioCue::Count; }
 }
 
-template <typename Generator>
-Sound CreateSound(float duration, Generator&& generator) {
-    const unsigned int frameCount =
-        static_cast<unsigned int>(duration * static_cast<float>(kSampleRate));
-    std::vector<std::int16_t> samples(frameCount);
-    for (unsigned int frame = 0; frame < frameCount; ++frame) {
-        const float time = static_cast<float>(frame) / static_cast<float>(kSampleRate);
-        samples[frame] = ToPcm16(generator(time, frame));
-    }
-    Wave wave{frameCount, kSampleRate, 16, 1, samples.data()};
-    return LoadSoundFromWave(wave);
-}
-
-Sound CreateGunshot() {
-    std::uint32_t noiseState = 0xA53C9E21U;
-    return CreateSound(0.085F, [&noiseState](float time, unsigned int) {
-        noiseState = noiseState * 1664525U + 1013904223U;
-        const float noise = static_cast<float>((noiseState >> 8U) & 0x00FFFFFFU) /
-                                static_cast<float>(0x00FFFFFFU) *
-                                2.0F -
-                            1.0F;
-        const float body = std::sin(2.0F * kPi * 155.0F * time);
-        return noise * std::exp(-55.0F * time) * 0.72F +
-               body * std::exp(-30.0F * time) * 0.25F +
-               (time < 0.004F ? 0.25F : 0.0F);
-    });
-}
-
-Sound CreateClick() {
-    return CreateSound(0.055F, [](float time, unsigned int) {
-        return std::sin(2.0F * kPi * 1750.0F * time) *
-               std::exp(-85.0F * time) * 0.5F;
-    });
-}
-
-Sound CreateReload() {
-    return CreateSound(0.34F, [](float time, unsigned int) {
-        const float first = std::sin(2.0F * kPi * 680.0F * time) *
-                            std::exp(-70.0F * time) * 0.42F;
-        if (time < 0.19F) {
-            return first;
+AudioSystem::AudioSystem(const std::filesystem::path& assetDirectory) {
+    if (!IsAudioDeviceReady()) return;
+    const auto root = assetDirectory.empty()
+        ? Utf8Path(GetApplicationDirectory()) / "assets/audio/client" : assetDirectory;
+    for (int i = 0; i < static_cast<int>(kCues.size()); ++i) {
+        const auto path = root / (std::string(kCues[i].file) + ".wav");
+        const auto utf8 = path.u8string();
+        const auto* file = reinterpret_cast<const char*>(utf8.c_str());
+        if (!FileExists(file)) {
+            TraceLog(LOG_WARNING, "AUDIO: Missing original client cue: %s", file);
+            continue;
         }
-        const float secondTime = time - 0.19F;
-        const float second = std::sin(2.0F * kPi * 1050.0F * secondTime) *
-                             std::exp(-80.0F * secondTime) * 0.55F;
-        return first + second;
-    });
-}
-
-Sound CreateHit(float frequency, float duration) {
-    std::uint32_t noiseState = 0x7F4A7C15U;
-    return CreateSound(duration, [frequency, &noiseState](float time, unsigned int) {
-        noiseState = noiseState * 1103515245U + 12345U;
-        const float noise = static_cast<float>((noiseState >> 16U) & 0x7FFFU) /
-                                16383.5F -
-                            1.0F;
-        const float tone = std::sin(2.0F * kPi * frequency * time);
-        return (tone * 0.6F + noise * 0.25F) * std::exp(-22.0F * time);
-    });
-}
-
-}  // namespace
-
-AudioSystem::AudioSystem()
-    : gunshot_(CreateGunshot()),
-      emptyClick_(CreateClick()),
-      reload_(CreateReload()),
-      playerHit_(CreateHit(105.0F, 0.18F)),
-      bossHit_(CreateHit(240.0F, 0.09F)) {
-    SetEffectsVolume(1.0F);
-}
-
-void AudioSystem::SetEffectsVolume(float volume) {
-    const float level = std::clamp(volume, 0.0F, 1.0F);
-    SetSoundVolume(gunshot_, 0.28F * level);
-    SetSoundVolume(emptyClick_, 0.35F * level);
-    SetSoundVolume(reload_, 0.55F * level);
-    SetSoundVolume(playerHit_, 0.55F * level);
-    SetSoundVolume(bossHit_, 0.18F * level);
+        auto& clip = clips_[i];
+        clip.voices[0] = LoadSound(file);
+        if (!IsSoundValid(clip.voices[0])) continue;
+        clip.voiceCount = 1;
+        // Independent cursors share PCM data. Bounded polyphony retains short
+        // tails during rapid fire without unbounded sound stacking.
+        for (int v = 1; v < kCues[i].voices; ++v) {
+            auto alias = LoadSoundAlias(clip.voices[0]);
+            if (!IsSoundValid(alias)) break;
+            clip.voices[clip.voiceCount++] = alias;
+        }
+    }
+    SetEffectsVolume(1);
 }
 
 AudioSystem::~AudioSystem() {
-    StopSound(gunshot_);
-    UnloadSound(gunshot_);
-    UnloadSound(emptyClick_);
-    UnloadSound(reload_);
-    UnloadSound(playerHit_);
-    UnloadSound(bossHit_);
+    for (auto& clip : clips_)
+        for (int v = clip.voiceCount - 1; v >= 0; --v) {
+            StopSound(clip.voices[v]);
+            if (v) UnloadSoundAlias(clip.voices[v]);
+            else UnloadSound(clip.voices[v]);
+        }
 }
 
-void AudioSystem::PlayGunshot(int ammoRemaining) {
-    SetSoundPitch(gunshot_, 0.96F + static_cast<float>(ammoRemaining % 5) * 0.02F);
-    PlaySound(gunshot_);
+bool AudioSystem::Available(AudioCue cue) const {
+    return Valid(cue) && clips_[static_cast<int>(cue)].voiceCount > 0;
 }
 
-void AudioSystem::PlayEmptyClick() const {
-    PlaySound(emptyClick_);
+bool AudioSystem::Play(AudioCue cue) const {
+    if (!Available(cue) || effectsVolume_ <= 0) return false;
+    const int i = static_cast<int>(cue);
+    const auto& clip = clips_[i];
+    const double now = GetTime();
+    if (now - clip.lastPlayed < kCues[i].interval) return false;
+    clip.lastPlayed = now;
+    PlaySound(clip.voices[clip.nextVoice]);
+    clip.nextVoice = (clip.nextVoice + 1) % clip.voiceCount;
+    return true;
 }
 
-void AudioSystem::PlayReload() const {
-    PlaySound(reload_);
+void AudioSystem::SetEffectsVolume(float volume) {
+    effectsVolume_ = std::clamp(volume, 0.0F, 1.0F);
+    for (int i = 0; i < static_cast<int>(kCues.size()); ++i)
+        for (int v = 0; v < clips_[i].voiceCount; ++v) {
+            SetSoundVolume(clips_[i].voices[v], kCues[i].gain * effectsVolume_);
+            if (effectsVolume_ == 0) StopSound(clips_[i].voices[v]);
+        }
 }
 
-void AudioSystem::PlayPlayerHit() const {
-    PlaySound(playerHit_);
-}
-
-void AudioSystem::PlayBossHit() const {
-    PlaySound(bossHit_);
-}
+void AudioSystem::PlayGunshot(int) { Play(AudioCue::Gunshot); }

@@ -26,6 +26,19 @@ int main() {
         check(reverse==route.returnable);
         if(Find(route.to)->layer==5)check(route.kind==RouteKind::System && !route.returnable);
     }
+    std::set<std::string> playable{"clinic"};
+    for(int i=0;i<30;++i)for(const auto& r:PlayRoutes()) {
+        if(playable.contains(r.from))playable.insert(r.to);
+        if(r.returnable&&playable.contains(r.to))playable.insert(r.from);
+    }
+    check(playable.size()==Regions.size()+Approaches.size());
+    for(const auto& a:Approaches) {
+        check(Internal(a.region.id)&&WorldArt::Find(a.region.id)&&!ids.contains(a.region.id));
+        bool entrance=false;
+        for(const auto& r:PlayRoutes())if(std::string_view(r.to)==a.boss){check(std::string_view(r.from)==a.region.id);entrance=true;}
+        check(entrance);
+        for(const auto& port:Ports(a.region.id,true))check(port.target&&port.x>80&&port.x<a.region.width-80);
+    }
     check(Ports("throne").empty());
     const char* mainPath[]{"clinic","gray","entry","bridge","wtower","comm","ice","pipes","industry","burn","core","normal"};
     for(int i=0;i<11;++i){bool found=false;for(const auto& r:Routes)

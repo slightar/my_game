@@ -24,6 +24,7 @@ struct EnemyUnit {
     // Set by 辐能源石虫's death. While it runs, the unit moves faster - the action-game
     // reading of the original's "使场上敌人获得1点能量".
     float haste = 0;
+    int attacks = 0;
     EnemyState state = EnemyState::Approach;
     Vector2 aim{};
     Rectangle Hitbox() const;
@@ -41,7 +42,11 @@ struct EnemyBolt {
     // 酸液源石虫's spit. On hitting the operator it applies corrosion, which shortens
     // their post-hit invincibility - the game's stand-in for a defence-down debuff.
     bool corrosive = false;
+    bool cold = false, shatter = false;
+    float gravity = 0, blastRadius = 0;
+    Vector2 landing{};
 };
+struct EnemyImpact { bool cold = false, shatter = false; int frozenDamage = 2; };
 struct EnemyTarget { Vector2 position; float radius; };
 
 // Simulation owns no GPU/audio resources, so attack rules can be tested headlessly.
@@ -59,6 +64,8 @@ public:
     static constexpr float kEnergizeSpeedScale = 1.5F;
     void Clear();
     void ResetTrial();
+    void ResetEncounter(std::vector<EnemyKind> wave,float entryX,float left,float right);
+    float EntryX() const {return entryX_;}
     unsigned Spawn(EnemyKind kind, float x);
     void Update(float dt, Vector2 playerPosition);
     bool ResolveBullet(Bullet& bullet, Vector2 previousPosition);
@@ -66,7 +73,7 @@ public:
     // `corrosive` is set when the hit that landed came from an acid bolt, so the caller can
     // apply the corrosion debuff to the operator.
     bool AttackHits(Rectangle body, Rectangle projectileBody, Vector2& source,
-                    bool* corrosive = nullptr);
+                    bool* corrosive = nullptr, EnemyImpact* impact = nullptr);
     EnemyTarget Target(Vector2 player, int facing) const;
     bool Damage(unsigned id, float damage, DamageType type, Vector2 source, float stun = 0);
     bool Cleared() const;
@@ -79,6 +86,7 @@ public:
     const std::vector<EnemyBolt>& Bolts() const { return bolts_; }
 private:
     void Tick(float dt, Vector2 player);
+    float entryX_=kEntryX,leftBound_=GameConfig::kBossGateX+55,rightBound_=GameConfig::kRoom.x+GameConfig::kRoom.width-65;
     std::vector<EnemyUnit> units_;
     std::vector<EnemyBolt> bolts_;
     unsigned nextId_ = 1;

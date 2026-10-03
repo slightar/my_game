@@ -1,6 +1,7 @@
 #include "ui_font.h"
 #include "progress_glyphs.h"
 #include "world_layout.h"
+#include "prts_narrator.h"
 
 #include <filesystem>
 #include <string>
@@ -67,7 +68,7 @@ void UiFont::SetAdditionalText(const std::string& text) {
     }
 
     int glyphCount = 0;
-    const std::string glyphs = std::string(kUiGlyphs) + kProgressGlyphs + WorldLayout::Glyphs() + text;
+    const std::string glyphs = std::string(kUiGlyphs) + kProgressGlyphs + WorldLayout::Glyphs() + PrtsNarrator::GlyphText() + text;
     int* codepoints = LoadCodepoints(glyphs.c_str(), &glyphCount);
     std::vector<int> unique(codepoints, codepoints + glyphCount);
     std::sort(unique.begin(), unique.end());

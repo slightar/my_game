@@ -20,16 +20,27 @@ enum class EnemyKind {
     StealthCrossbow,  // 隐形弩手     enemy_1019_jshoot
     Shield,           // 重装防御者   enemy_1006_shield
     Drone,            // 妖怪         enemy_1005_yokai
+    SlugAlpha, MobileShield, HoundPro,
+    DualSwordsman, Molotov, Scavenger,
+    SnowSoldier, SnowSniper, IceSlug, Icebreaker, SnowCasterLeader,
+    GuerrillaHound, GuerrillaFighter, GuerrillaSniper, GuerrillaMortar,
+    GuerrillaRaider, GuerrillaSarkaz,
+    UrsusBeast, UrsusCaster, UrsusAssault,
     Count
 };
+enum class EnemyAttack { Melee, PhysicalBolt, ArtsBolt, AcidBolt, ColdBolt, Lob };
+inline constexpr unsigned kEnemyKindCount = static_cast<unsigned>(EnemyKind::Count);
 struct EnemyDefinition {
     EnemyKind kind;
     const char* id;
     const char* name;
     const char* tactic;
     float health, speed, width, height, reach, windup, recovery, spriteSize;
+    EnemyAttack attack = EnemyAttack::Melee;
+    float armor = 0;
+    bool shield = false, coldBlast = false, shatter = false;
 };
-const std::array<EnemyDefinition, 11>& EnemyDefinitions();
+const std::array<EnemyDefinition, kEnemyKindCount>& EnemyDefinitions();
 const EnemyDefinition& EnemyData(EnemyKind kind);
 // Builds the font inventory from the same data that the battle renderer displays.
 // Keeping this data driven prevents newly added enemy names from turning into '?'.

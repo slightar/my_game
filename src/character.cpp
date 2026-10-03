@@ -265,6 +265,7 @@ void CharacterRuntime::Apply(const SkillEffect& e, Vector2 pos, int facing, Vect
 void CharacterRuntime::Update(float dt, Vector2 pos, int facing, Vector2 target, bool attacking,
                               std::array<bool, 2> activated, int& health, std::vector<Bullet>& bullets) {
     performedAction_ = false;
+    performedAttack_ = false;
     if (!std::isfinite(dt) || dt < 0 || health <= 0) return;
     // Bound catch-up work on stalls. Normal frames retain their full delta.
     dt = std::min(dt, 0.25F);
@@ -293,6 +294,7 @@ void CharacterRuntime::Update(float dt, Vector2 pos, int facing, Vector2 target,
     attackCooldown_ = std::max(0.0F, attackCooldown_ - dt);
     if (attacking && attackCooldown_ <= 0) {
         performedAction_ = true;
+        performedAttack_ = true;
         Apply(character_.attack, pos, facing, target, std::min(damage, 100.0F), health, bullets);
         attackCooldown_ = std::max(0.03F, character_.stats.attackInterval / std::min(speed, 10.0F));
     }

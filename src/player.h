@@ -11,6 +11,9 @@ class AudioSystem;
 class CharacterArt;
 class UiFont;
 class GameSettings;
+struct PlayerActions {
+    int ranged=0,melee=0,skills=0,dodges=0,jumps=0,reloads=0;
+};
 
 class Player {
 public:
@@ -27,7 +30,10 @@ public:
     void DrawHud(const UiFont& font, const CharacterArt& art,
                  const char* operatorName, const GameSettings* settings = nullptr) const;
 
-    bool TakeDamage(Vector2 damageSource, bool corrosive = false);
+    bool TakeDamage(Vector2 damageSource, bool corrosive = false, int amount = 1);
+    void ApplyCold();
+    [[nodiscard]] bool IsCold() const { return coldTimer_>0; }
+    [[nodiscard]] bool IsFrozen() const { return freezeTimer_>0; }
     [[nodiscard]] Vector2 Position() const;
     [[nodiscard]] Rectangle Hitbox() const;
     [[nodiscard]] Rectangle ProjectileHitbox() const;
@@ -39,8 +45,11 @@ public:
     [[nodiscard]] bool IsCorroded() const;
     [[nodiscard]] bool DefeatAnimationFinished() const;
     [[nodiscard]] OperatorKind Kind() const;
+    [[nodiscard]] int Health() const { return health_; }
+    [[nodiscard]] const PlayerActions& Actions() const { return actions_; }
 
 private:
+    PlayerActions actions_{};
     std::optional<CharacterRuntime> character_;
     CharacterAnimator animator_;
     static constexpr float kHitboxWidth = 38.0F;
@@ -52,7 +61,7 @@ private:
 
     void UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
                            float enemyRadius, std::vector<Bullet>& bullets,
-                           const GameSettings& settings);
+                           const GameSettings& settings, AudioSystem& audio);
 
     float supportGroundY_ = GameConfig::kFloorY;
     Vector2 position_{};
@@ -71,6 +80,7 @@ private:
     float hurtInvincibilityTimer_ = 0.0F;
     // Counts down from kCorrosionDuration after an acid bolt connects.
     float corrosionTimer_ = 0.0F;
+    float coldTimer_ = 0.0F, freezeTimer_ = 0.0F;
 
     int dodgeCharges_ = kMaxDodgeCharges;
     int dodgeDirection_ = 1;
@@ -87,7 +97,7 @@ private:
     float swordWaveRechargeTimer_ = 0.0F;
     bool texasRainMode_ = false;
     float texasRainBurstTimer_ = 0.0F;
-    float texasAttackEffectTimer_ = 0.0F;
+    float texasAttackAnimationTimer_ = 0.0F;
     // 剑雨's post-cast window (drives the HUD timer), its cooldown, and the timer that
     // paces the falling swords.
     float swordRainTimer_ = 0.0F;

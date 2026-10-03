@@ -27,7 +27,9 @@ void CheckEnemyRendering(const UiFont& font,Capture capture){
             font.Draw(u.facing>0?"RIGHT ->":"<- LEFT",u.feet.x-40,u.feet.y+12,16,TerminalUi::Ink);
         }
     });
-    capture("enemy-roster.png",[&]{
+    for(int page=0;page<(kinds+11)/12;++page) {
+    const std::string filename=page==0?"enemy-roster.png":"enemy-roster-"+std::to_string(page+1)+".png";
+    capture(filename.c_str(),[&]{
         ClearBackground({188,198,203,255});
         DrawRectangle(0,0,1280,86,TerminalUi::Ink);
         font.Draw("敌方单位 / 战斗设计",42,24,34,TerminalUi::Paper);
@@ -37,10 +39,10 @@ void CheckEnemyRendering(const UiFont& font,Capture capture){
         // which is d.height tall, not spriteSize, because the baked cell is padded - so
         // 288px is comfortable even for the 110px soldier.
         constexpr float cardW=190.0F,halfW=95.0F,cardH=288.0F,pitch=213.0F;
-        for(int i=0;i<kinds;++i){
+        for(int i=page*12;i<std::min(kinds,(page+1)*12);++i){
             const auto& d=EnemyDefinitions()[static_cast<unsigned>(i)];
             const float x=106.0F+(i%6)*pitch;
-            const float cardTop=i<6?100.0F:396.0F;
+            const float cardTop=(i%12)<6?100.0F:396.0F;
             const float feetY=cardTop+160.0F;
             DrawRectangle(int(x-halfW),int(cardTop),int(cardW),int(cardH),Color{221,227,226,255});
             EnemyUnit unit;unit.id=i+1;unit.kind=d.kind;unit.health=d.health;
@@ -50,6 +52,7 @@ void CheckEnemyRendering(const UiFont& font,Capture capture){
             TerminalUi::Wrap(font,d.tactic,{x-88,feetY+58,176,cardH-224.0F},14,TerminalUi::Ink);
         }
     });
+    }
     // The two "leaves a parting gift when it dies" slugs, plus the archer's aim line: the
     // three telegraphs a player has to read before the punish window opens.
     capture("enemy-telegraphs.png",[&]{

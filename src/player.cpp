@@ -5,6 +5,7 @@
 #include "ui_theme.h"
 #include "ui_font.h"
 #include "game_settings.h"
+#include "texas_animation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -43,7 +44,7 @@ constexpr float kBarrageCooldownDuration = 12.0F;
 constexpr float kOverloadDuration = 4.0F;
 constexpr float kOverloadCooldownDuration = 16.0F;
 
-constexpr float kTexasAttackInterval = 0.32F;
+constexpr float kTexasAttackInterval = TexasBattleAnimation::AttackDuration;
 constexpr float kTexasRainAttackInterval = 0.52F;
 constexpr float kTexasMeleeRange = 112.0F;
 constexpr float kTexasRainMeleeRange = 142.0F;
@@ -65,6 +66,7 @@ constexpr float kTexasNormalSlashDuration = 0.17F;
 }  // namespace
 
 void Player::Reset(OperatorKind operatorKind) {
+    actions_={};
     character_.reset();
     animator_ = {};
     operatorKind_ = operatorKind;
@@ -84,6 +86,7 @@ void Player::Reset(OperatorKind operatorKind) {
     health_ = kMaxHealth;
     hurtInvincibilityTimer_ = 0.0F;
     corrosionTimer_ = 0.0F;
+    coldTimer_ = freezeTimer_ = 0.0F;
     dodgeCharges_ = kMaxDodgeCharges;
     dodgeDirection_ = 1;
     dodgeTimer_ = 0.0F;
@@ -96,7 +99,7 @@ void Player::Reset(OperatorKind operatorKind) {
     swordWaveRechargeTimer_ = 0.0F;
     texasRainMode_ = false;
     texasRainBurstTimer_ = 0.0F;
-    texasAttackEffectTimer_ = 0.0F;
+    texasAttackAnimationTimer_ = 0.0F;
     swordRainTimer_ = 0.0F;
     swordRainCooldown_ = 0.0F;
     swordRainSpawnTimer_ = 0.0F;
@@ -127,8 +130,11 @@ void Player::PlaceAt(Vector2 position, int facing) {
 
 void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
                     std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings, bool assistEnemyAim, bool traversalOnly, const std::vector<Rectangle>* platforms, const Rectangle* ramp) {
+    actions_={};
     hurtInvincibilityTimer_ = std::max(0.0F, hurtInvincibilityTimer_ - deltaTime);
     corrosionTimer_ = std::max(0.0F, corrosionTimer_ - deltaTime);
+    coldTimer_ = std::max(0.0F, coldTimer_ - deltaTime);
+    freezeTimer_ = std::max(0.0F, freezeTimer_ - deltaTime);
     animationTime_ += deltaTime;
     if (IsDead()) {
         return;
@@ -150,15 +156,19 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
     } else if (operatorKind_ == OperatorKind::Exusiai) {
         overloadCooldown_ = std::max(0.0F, overloadCooldown_ - deltaTime);
     }
-    if (!traversalOnly && operatorKind_ == OperatorKind::Exusiai && settings.Pressed(GameAction::SkillTwo) &&
+    if (!traversalOnly && !IsFrozen() && operatorKind_ == OperatorKind::Exusiai && settings.Pressed(GameAction::SkillTwo) &&
         barrageTimer_ <= 0.0F &&
         barrageCooldown_ <= 0.0F) {
         barrageTimer_ = kBarrageDuration;
+        audio.Play(AudioCue::Skill);
+        ++actions_.skills;
     }
-    if (!traversalOnly && operatorKind_ == OperatorKind::Exusiai && settings.Pressed(GameAction::SkillOne) &&
+    if (!traversalOnly && !IsFrozen() && operatorKind_ == OperatorKind::Exusiai && settings.Pressed(GameAction::SkillOne) &&
         overloadTimer_ <= 0.0F &&
         overloadCooldown_ <= 0.0F) {
         overloadTimer_ = kOverloadDuration;
+        audio.Play(AudioCue::Skill);
+        ++actions_.skills;
     }
 
     float moveDirection = 0.0F;
@@ -168,6 +178,7 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
     if (settings.Down(GameAction::MoveRight)) {
         moveDirection += 1.0F;
     }
+    if(IsFrozen())moveDirection=0;
 
     bool texasUsingSwordWave = false;
     if (!character_ && operatorKind_ == OperatorKind::Texas &&
@@ -198,13 +209,14 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         }
     }
 
-    const bool dodgePressed = settings.Pressed(GameAction::Dodge);
+    const bool dodgePressed = !IsFrozen() && settings.Pressed(GameAction::Dodge);
     if (dodgePressed && dodgeCharges_ > 0 && dodgeTimer_ <= 0.0F) {
         dodgeDirection_ = moveDirection != 0.0F
                               ? (moveDirection > 0.0F ? 1 : -1)
                               : facingDirection_;
         facingDirection_ = dodgeDirection_;
         dodgeTimer_ = kDodgeDuration;
+        ++actions_.dodges;
         --dodgeCharges_;
         if (dodgeRechargeTimer_ <= 0.0F) {
             dodgeRechargeTimer_ = kDodgeRechargeDuration;
@@ -215,14 +227,15 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         velocity_.x = static_cast<float>(dodgeDirection_) * kDodgeSpeed;
         dodgeTimer_ = std::max(0.0F, dodgeTimer_ - deltaTime);
     } else {
-        velocity_.x = moveDirection * (character_ ? character_->Definition().stats.moveSpeed : kMoveSpeed);
+        velocity_.x = moveDirection * (character_ ? character_->Definition().stats.moveSpeed : kMoveSpeed) * (IsCold()?.7F:1.0F);
     }
 
-    const bool jumpPressed = settings.Pressed(GameAction::Jump);
-    const bool jumpHeld = settings.Down(GameAction::Jump);
+    const bool jumpPressed = !IsFrozen() && settings.Pressed(GameAction::Jump);
+    const bool jumpHeld = !IsFrozen() && settings.Down(GameAction::Jump);
     if (jumpPressed && jumpCount_ < (character_ ? character_->Definition().stats.jumps : kMaxJumps) && dodgeTimer_ <= 0.0F) {
         velocity_.y = -(character_ ? character_->Definition().stats.jumpSpeed : kJumpSpeed);
         ++jumpCount_;
+        ++actions_.jumps;
         jumpHoldTimer_ = kJumpHoldDuration;
     }
 
@@ -274,31 +287,42 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
     if(platforms)for(const auto& surface:*platforms)
         if(position_.x+kHitboxWidth/2>surface.x && position_.x-kHitboxWidth/2<surface.x+surface.width &&
            position_.y+kHitboxHeight/2<=surface.y+.5F)supportGroundY_=std::min(supportGroundY_,surface.y);
-    if (traversalOnly) {
+    if (traversalOnly || IsFrozen()) {
         firing_=false;attackAnimationTime_=0;
+        texasAttackAnimationTimer_=0;
         if(character_)animator_.Update(deltaTime,{velocity_,
             onPlatform||position_.y+kHitboxHeight/2>=GameConfig::kFloorY-.5F,dodgeTimer_>0,false,false,false});
         return;
     }
-    shotCooldown_ = std::max(0.0F, shotCooldown_ - deltaTime);
+    shotCooldown_ = std::max(0.0F, shotCooldown_ - deltaTime*(IsCold()?.65F:1.0F));
     if (character_) {
+        const auto previousSkills = character_->Skills();
         firing_ = settings.Down(GameAction::Attack) && dodgeTimer_ <= 0;
-        character_->Update(deltaTime, position_, facingDirection_, enemyPosition,
+        character_->Update(deltaTime*(IsCold()?.65F:1.0F), position_, facingDirection_, enemyPosition,
                            firing_, {settings.Pressed(GameAction::SkillTwo) && dodgeTimer_ <= 0,
                                      settings.Pressed(GameAction::SkillOne) && dodgeTimer_ <= 0}, health_, bullets);
+        int activatedSkills = 0;
+        for (int i = 0; i < 2; ++i)
+            activatedSkills += character_->Skills()[i].cooldown > previousSkills[i].cooldown;
+        if (activatedSkills) { audio.Play(AudioCue::Skill); actions_.skills+=activatedSkills; }
+        if (character_->PerformedAttack()) {
+            if(character_->Definition().attack.type==EffectType::Melee)++actions_.melee;else ++actions_.ranged;
+            audio.Play(character_->Definition().attack.type == EffectType::Melee ? AudioCue::Slash : AudioCue::Gunshot);
+        }
         animator_.Update(deltaTime, {velocity_, position_.y + kHitboxHeight / 2 >= GameConfig::kFloorY - 0.5F,
             dodgeTimer_ > 0, character_->PerformedAction(), false, character_->Definition().attack.type == EffectType::Melee});
         attackAnimationTime_ = firing_ ? attackAnimationTime_ + deltaTime : 0;
         return;
     }
     if (operatorKind_ == OperatorKind::Texas) {
-        UpdateTexasCombat(deltaTime, enemyPosition, enemyRadius, bullets, settings);
+        UpdateTexasCombat(deltaTime, enemyPosition, enemyRadius, bullets, settings, audio);
         return;
     }
     if (settings.Pressed(GameAction::Reload) && ammo_ < kMagazineCapacity && !reloading_) {
         reloading_ = true;
         reloadTimer_ = kReloadDuration;
         audio.PlayReload();
+        ++actions_.reloads;
     }
 
     if (reloading_) {
@@ -358,6 +382,7 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         --ammo_;
         shotCooldown_ = kFireInterval;
         audio.PlayGunshot(ammo_);
+        ++actions_.ranged;
     } else if (settings.Pressed(GameAction::Attack) && reloading_) {
         audio.PlayEmptyClick();
     }
@@ -366,6 +391,7 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         reloading_ = true;
         reloadTimer_ = kReloadDuration;
         audio.PlayReload();
+        ++actions_.reloads;
     }
 
     firing_ = settings.Down(GameAction::Attack) && !reloading_ && ammo_ > 0 &&
@@ -380,9 +406,9 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
 void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
                                float enemyRadius,
                                std::vector<Bullet>& bullets,
-                               const GameSettings& settings) {
-    texasAttackEffectTimer_ =
-        std::max(0.0F, texasAttackEffectTimer_ - deltaTime);
+                               const GameSettings& settings, AudioSystem& audio) {
+    texasAttackAnimationTimer_ =
+        std::max(0.0F, texasAttackAnimationTimer_ - deltaTime);
     texasRainBurstTimer_ =
         std::max(0.0F, texasRainBurstTimer_ - deltaTime);
 
@@ -400,6 +426,8 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
 
     if (settings.Pressed(GameAction::SkillTwo) && texasRainBurstTimer_ <= 0.0F) {
         texasRainMode_ = !texasRainMode_;
+        audio.Play(AudioCue::Skill);
+        ++actions_.skills;
         texasRainBurstTimer_ = texasRainMode_ ? kTexasRainEnterDuration
                                               : kTexasRainExitDuration;
     }
@@ -433,6 +461,8 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
     if (settings.Pressed(GameAction::SkillOne) && swordRainTimer_ <= 0.0F &&
         swordRainCooldown_ <= 0.0F) {
         swordRainTimer_ = kSwordRainDuration;
+        audio.Play(AudioCue::SwordRain);
+        ++actions_.skills;
         swordRainSpawnTimer_ = 0.0F;
     }
 
@@ -446,7 +476,13 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
             std::abs(deltaX) <= range + enemyRadius &&
             std::abs(enemyPosition.y - position_.y) <= 100.0F;
 
-        if (texasRainMode_ || enemyInMeleeRange) {
+        bool attacked = false;
+        // With no sword-wave charge, an empty swing still plays and can hit
+        // anything in melee range; exploration never disables normal attacks.
+        if (texasRainMode_ || enemyInMeleeRange || swordWaveCharges_<=0) {
+            attacked = true;
+            audio.Play(AudioCue::Slash);
+            ++actions_.melee;
             const int strikeCount = texasRainMode_ ? 2 : 1;
             for (int strike = 0; strike < strikeCount; ++strike) {
                 bullets.push_back({
@@ -464,6 +500,9 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
                     strike, facingDirection_});
             }
         } else if (swordWaveCharges_ > 0) {
+            attacked = true;
+            audio.Play(AudioCue::Slash);
+            ++actions_.ranged;
             bullets.push_back({
                 {position_.x + direction * 48.0F, position_.y - 7.0F},
                 {direction * kSwordWaveSpeed, 0.0F},
@@ -474,13 +513,16 @@ void Player::UpdateTexasCombat(float deltaTime, Vector2 enemyPosition,
                 swordWaveRechargeTimer_ = kSwordWaveRechargeDuration;
             }
         }
-        shotCooldown_ = texasRainMode_ ? kTexasRainAttackInterval
-                                       : kTexasAttackInterval;
-        texasAttackEffectTimer_ = texasRainMode_ ? kTexasRainSlashDuration
-                                                 : kTexasNormalSlashDuration;
+        if (attacked) {
+            shotCooldown_ = texasRainMode_ ? kTexasRainAttackInterval
+                                          : kTexasAttackInterval;
+            texasAttackAnimationTimer_ = texasRainMode_ ? kTexasRainSlashDuration
+                                                       : TexasBattleAnimation::AttackDuration;
+            attackAnimationTime_ = 0.0F;
+        }
     }
 
-    firing_ = texasAttackEffectTimer_ > 0.0F;
+    firing_ = texasAttackAnimationTimer_ > 0.0F;
     if (firing_) {
         attackAnimationTime_ += deltaTime;
     } else {
@@ -500,6 +542,10 @@ void Player::SetHorizontalBounds(float left, float right) {
 }
 
 void Player::Draw(const CharacterArt& art) const {
+    if(IsCold()&&!IsDead()) {
+        const Vector2 center{position_.x,position_.y-6};
+        DrawCircleLines(int(center.x),int(center.y),IsFrozen()?53:45,Fade(SKYBLUE,IsFrozen()?.8F:.35F));
+    }
     if (!IsDead()) {
         const Vector2 ringCenter{position_.x, supportGroundY_ + 2.0F};
         art.DrawFacingRing(ringCenter, facingDirection_);
@@ -621,12 +667,9 @@ void Player::Draw(const CharacterArt& art) const {
             IsDead() ? Fade(WHITE, 0.28F)
                      : (blinkOff ? Fade(WHITE, 0.3F) : WHITE));
     } else if (operatorKind_ == OperatorKind::Texas &&
-        art.HasChibi(OperatorKind::Texas)) {
-        const ChibiAnimation texasAnimation =
-            firing_ ? ChibiAnimation::Wave : animation;
-        art.DrawChibi(OperatorKind::Texas, feetPosition, facingDirection_,
-                      112.0F, texasAnimation,
-                      firing_ ? attackAnimationTime_ : animationTime_,
+               (art.HasTexasBattle() || art.HasChibi(OperatorKind::Texas))) {
+        art.DrawTexas(feetPosition, facingDirection_, animation, firing_, IsDead(),
+                      animationTime_, attackAnimationTime_, defeatAnimationTime_,
                       IsDead() ? Fade(WHITE, 0.28F)
                                : (blinkOff ? Fade(WHITE, 0.3F) : WHITE));
     } else if (operatorKind_ != OperatorKind::Texas && (art.HasBattleChibi() || art.HasChibi())) {
@@ -704,6 +747,14 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
                   badge.x + 14.0F, badge.y + 27.0F, 13.0F, TacticalUi::kPaper);
         TacticalUi::DrawProgressLine({badge.x + 14.0F, badge.y + 54.0F}, 230.0F,
                                      corrosionTimer_ / kCorrosionDuration, acid, 6.0F);
+    }
+
+    if(IsCold()) {
+        const Rectangle badge{1008,136,258,50};
+        TacticalUi::DrawCutPanel(badge,TacticalUi::kPanel,Fade(SKYBLUE,.8F),12,1);
+        font.Draw(IsFrozen()?"冻结 // FROZEN":"寒冷 // COLD",badge.x+14,badge.y+7,14,SKYBLUE);
+        font.Draw(TextFormat("%.1fs",IsFrozen()?freezeTimer_:coldTimer_),badge.x+184,badge.y+8,14,TacticalUi::kPaper);
+        TacticalUi::DrawProgressLine({badge.x+14,badge.y+35},230,(IsFrozen()?freezeTimer_/2:coldTimer_/4),SKYBLUE,5);
     }
 
     const Rectangle helpPanel{32.0F, 669.0F, 570.0F, 27.0F};
@@ -889,14 +940,20 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
     }
 }
 
-bool Player::TakeDamage(Vector2 damageSource, bool corrosive) {
+void Player::ApplyCold() {
+    if(IsDead())return;
+    if(IsCold()) {freezeTimer_=2.0F;dodgeTimer_=0;}
+    coldTimer_=4.0F;
+}
+
+bool Player::TakeDamage(Vector2 damageSource, bool corrosive, int amount) {
     if (IsDead() || IsInvincible()) {
         return false;
     }
     if (corrosive) {
         corrosionTimer_ = kCorrosionDuration;
     }
-    --health_;
+    health_=std::max(0,health_-std::max(1,amount));
     if (character_) animator_.TriggerHurt();
     if (IsDead()) {
         defeatAnimationTime_ = 0.0F;

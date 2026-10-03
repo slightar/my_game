@@ -45,6 +45,7 @@ public:
     [[nodiscard]] bool HasChibi() const;
     [[nodiscard]] bool HasChibi(OperatorKind operatorKind) const;
     [[nodiscard]] bool HasBattleChibi() const;
+    [[nodiscard]] bool HasTexasBattle() const;
     [[nodiscard]] bool HasTexasSkill2Battle() const;
     [[nodiscard]] bool HasTexasSkill2Effects() const;
     [[nodiscard]] bool HasTexasSword() const;
@@ -71,6 +72,9 @@ public:
                                float height, bool attacking, bool ending,
                                float animationTime,
                                Color tint = WHITE) const;
+    void DrawTexas(Vector2 feetPosition, int facingDirection, ChibiAnimation movement,
+                   bool attacking, bool defeated, float movementTime, float attackTime,
+                   float defeatTime, Color tint = WHITE) const;
     void DrawTexasSkill2Aura(Vector2 center, int facingDirection,
                              float animationTime, bool rainMode,
                              bool transitioning,
@@ -106,6 +110,7 @@ private:
     Texture2D skillIcons_[2]{};
     Texture2D texasPortrait_{};
     Texture2D texasChibi_{};
+    Texture2D texasBattle_{};
     Texture2D texasSkill2Battle_{};
     Texture2D texasSkill2Aura_{};
     Texture2D texasSkill2Slashes_[2]{};

@@ -315,5 +315,945 @@
       122
     ],
     "file": "drone.png"
+  },
+  "slug_alpha": {
+    "model": "enemy_1007_slime_2",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      2,
+      2,
+      0.7666666507720947,
+      0.5
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.6073149641541746,
+    "origin": [
+      91.44553624515379,
+      178.54433461865733
+    ],
+    "anchor": [
+      96,
+      180
+    ],
+    "source": {
+      "model": "enemy_1007_slime_2",
+      "name": "源石虫·α",
+      "bundle": "refs/arts/enm_art_base_0.ab",
+      "objects": {
+        ".skel": "3105265365908637645",
+        ".atlas": "1947291190626288480",
+        "texture": "7606574135255244022",
+        "alpha": "1732702114301170519"
+      },
+      "skel_sha256": "c32483e6bd3bdb0ed36eccadf4e6d99f8d78dac424d797bc4202a88e67dcee92"
+    },
+    "visible_height": 55.8,
+    "sprite_size": 94.8
+  },
+  "mobile_shield": {
+    "model": "enemy_1029_shdsbr",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Run_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      0.800000011920929,
+      1,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.2957816286485174,
+    "origin": [
+      87.53048875901436,
+      150.94306560086724
+    ],
+    "anchor": [
+      101.44802284240723,
+      152.35244750976562
+    ],
+    "source": {
+      "model": "enemy_1029_shdsbr",
+      "name": "机动盾兵",
+      "bundle": "refs/arts/enm_art_base_0.ab",
+      "objects": {
+        ".skel": "-3880273124133169256",
+        ".atlas": "-1855547680520101163",
+        "texture": "-4341774034223688540",
+        "alpha": "-6715230726024665777"
+      },
+      "skel_sha256": "42d2c5f5fd15a2761f983130ed93130a658930840c62dd327349992b670852f6"
+    },
+    "visible_height": 109.5,
+    "sprite_size": 194.6
+  },
+  "hound_pro": {
+    "model": "enemy_1000_gopro_2",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      0.800000011920929,
+      1,
+      0.6666666865348816
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.5260189287701613,
+    "origin": [
+      86.3960731195051,
+      178.02999270323048
+    ],
+    "anchor": [
+      96,
+      180
+    ],
+    "source": {
+      "model": "enemy_1000_gopro_2",
+      "name": "猎狗pro",
+      "bundle": "refs/arts/enm_art_base_0.ab",
+      "objects": {
+        ".skel": "6194905178878017352",
+        ".atlas": "-6482095807439538338",
+        "texture": "8961364154102021821",
+        "alpha": "9103594127290084674"
+      },
+      "skel_sha256": "398b2882f2e2f3e614a13dd885a480d9d391a361ceb1a8f745cc082f9884a031"
+    },
+    "visible_height": 76.9,
+    "sprite_size": 109.4
+  },
+  "dual_swordsman": {
+    "model": "enemy_1014_rogue",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      0.800000011920929,
+      1.100000023841858,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.33103991892591184,
+    "origin": [
+      94.55170288033328,
+      168.75968795913315
+    ],
+    "anchor": [
+      93.2441177368164,
+      169.3389892578125
+    ],
+    "source": {
+      "model": "enemy_1014_rogue",
+      "name": "双持剑士",
+      "bundle": "refs/arts/enm_art_base_0.ab",
+      "objects": {
+        ".skel": "-1205020793905038142",
+        ".atlas": "-19679257767604055",
+        "texture": "6962783297953619397",
+        "alpha": "4479204056691187505"
+      },
+      "skel_sha256": "e4c18a6cb22715482dd2057ab52a47319728cec5035ae414b6dce344457bff55"
+    },
+    "visible_height": 111.4,
+    "sprite_size": 173.9
+  },
+  "molotov": {
+    "model": "enemy_1028_mocock_2",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      1,
+      1.5,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.4024142487142393,
+    "origin": [
+      102.16432914960242,
+      161.6089562456617
+    ],
+    "anchor": [
+      104.5889892578125,
+      162.30596923828125
+    ],
+    "source": {
+      "model": "enemy_1028_mocock_2",
+      "name": "燃烧瓶投掷者",
+      "bundle": "refs/arts/enm_art_base_0.ab",
+      "objects": {
+        ".skel": "-3946623249160096890",
+        ".atlas": "-3478977988559650470",
+        "texture": "-2426917857347420653",
+        "alpha": "-4384256126189577306"
+      },
+      "skel_sha256": "aebac529d65096179708a8f3c0ab88f7170855c59ec8f98b86f6265684e70872"
+    },
+    "visible_height": 109.5,
+    "sprite_size": 143.0
+  },
+  "scavenger": {
+    "model": "enemy_1030_wteeth",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      1.0666667222976685,
+      1,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.26041967873500227,
+    "origin": [
+      87.98136790559019,
+      141.17651858036376
+    ],
+    "anchor": [
+      107.30862236022949,
+      145.17529296875
+    ],
+    "source": {
+      "model": "enemy_1030_wteeth",
+      "name": "拾荒者",
+      "bundle": "refs/arts/enm_art_base_0.ab",
+      "objects": {
+        ".skel": "-4240114321689134986",
+        ".atlas": "4782682202940400556",
+        "texture": "7529835065757919620",
+        "alpha": "5050633561567566551"
+      },
+      "skel_sha256": "a6c7aa83ef60140cdd49cb89e738de8f66b404358b76c9b32ab84e31ab316964"
+    },
+    "visible_height": 108.2,
+    "sprite_size": 221.0
+  },
+  "snow_soldier": {
+    "model": "enemy_1064_snsbr",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Run_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      0.800000011920929,
+      1,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.2963125070620561,
+    "origin": [
+      87.50312944284053,
+      151.03711855954444
+    ],
+    "anchor": [
+      99.47331047058105,
+      152.4490203857422
+    ],
+    "source": {
+      "model": "enemy_1064_snsbr",
+      "name": "雪怪小队",
+      "bundle": "refs/arts/enm_art_4.ab",
+      "objects": {
+        ".skel": "-3333232706849887876",
+        ".atlas": "2526090586354264592",
+        "texture": "-4712448723798826904",
+        "alpha": "9077424409673858181"
+      },
+      "skel_sha256": "ff97d074ccd95b5d22deddcca63142ba8b90c4c8e01daffe4db4f4e4213aa828"
+    },
+    "visible_height": 110.3,
+    "sprite_size": 194.2
+  },
+  "snow_sniper": {
+    "model": "enemy_1066_snbow",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      1.0666667222976685,
+      1,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.29104910926207883,
+    "origin": [
+      89.923599305527,
+      160.01470184828668
+    ],
+    "anchor": [
+      89.05934810638428,
+      160.87872314453125
+    ],
+    "source": {
+      "model": "enemy_1066_snbow",
+      "name": "雪怪狙击手",
+      "bundle": "refs/arts/enm_art_4.ab",
+      "objects": {
+        ".skel": "-1348818897030226334",
+        ".atlas": "-666954925082666863",
+        "texture": "213236968921262342",
+        "alpha": "3224201625799390784"
+      },
+      "skel_sha256": "a055f8e6c19a8908a3158b9561bb8b8f3e2a287c42c19fb151e5f519094a678a"
+    },
+    "visible_height": 111.2,
+    "sprite_size": 197.7
+  },
+  "ice_slug": {
+    "model": "enemy_1067_snslime",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      1,
+      2.5,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.3357740555281402,
+    "origin": [
+      69.46121248699579,
+      160.6120007132862
+    ],
+    "anchor": [
+      67.68241500854492,
+      172.35736083984375
+    ],
+    "source": {
+      "model": "enemy_1067_snslime",
+      "name": "冰爆源石虫",
+      "bundle": "refs/arts/enm_art_4.ab",
+      "objects": {
+        ".skel": "-1377002533434685068",
+        ".atlas": "7159007693132802512",
+        "texture": "-8101304090039976018",
+        "alpha": "-9009383945623352653"
+      },
+      "skel_sha256": "16dbb8319527b79a017d9710128eef9953e6deef37dd638ba1b03acabdc9f11f"
+    },
+    "visible_height": 69.6,
+    "sprite_size": 171.4
+  },
+  "icebreaker": {
+    "model": "enemy_1069_icebrk",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      2,
+      1.2000000476837158,
+      3,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.3742310522471951,
+    "origin": [
+      64.16251136401452,
+      178.468822480359
+    ],
+    "anchor": [
+      96,
+      180
+    ],
+    "source": {
+      "model": "enemy_1069_icebrk",
+      "name": "雪怪小队凿冰人",
+      "bundle": "refs/arts/enm_art_4.ab",
+      "objects": {
+        ".skel": "5631950300939469141",
+        ".atlas": "-3490275503341886728",
+        "texture": "7185263444017145700",
+        "alpha": "-3732588331498511732"
+      },
+      "skel_sha256": "8394ca3079e2b48ec1463dfa1d75f49fe042e2b926f7129df7d5de6c822785c6"
+    },
+    "visible_height": 105.7,
+    "sprite_size": 153.8
+  },
+  "snow_caster_leader": {
+    "model": "enemy_1068_snmage_2",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      1.3333333730697632,
+      1.1666666269302368,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.4057641946274706,
+    "origin": [
+      97.37388724957025,
+      164.44271590843636
+    ],
+    "anchor": [
+      82.81855773925781,
+      166.34515380859375
+    ],
+    "source": {
+      "model": "enemy_1068_snmage_2",
+      "name": "雪怪术师组长",
+      "bundle": "refs/arts/enm_art_4.ab",
+      "objects": {
+        ".skel": "2366836369536792381",
+        ".atlas": "6040757831001323060",
+        "texture": "9024565743841921745",
+        "alpha": "-6869451152430534934"
+      },
+      "skel_sha256": "7afc9cbda0e7c304d007af1ee8b9726501436c902850192379432d7d6dde86de"
+    },
+    "visible_height": 111.6,
+    "sprite_size": 141.8
+  },
+  "guerrilla_hound": {
+    "model": "enemy_1077_sotihd",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Run_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      0.5333333611488342,
+      1,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.3749905785921674,
+    "origin": [
+      65.99241117930771,
+      168.55412582357573
+    ],
+    "anchor": [
+      76.35148620605469,
+      170.93980407714844
+    ],
+    "source": {
+      "model": "enemy_1077_sotihd",
+      "name": "游击队猎犬",
+      "bundle": "refs/arts/enm_art_5.ab",
+      "objects": {
+        ".skel": "6334956719099157110",
+        ".atlas": "-6960659140920738979",
+        "texture": "-5482582217913115214",
+        "alpha": "-8334868394047084730"
+      },
+      "skel_sha256": "a639518375a8f10f0049af747b7bd57ee2e6487aeba76d79d0d99dab5bfcba72"
+    },
+    "visible_height": 75.9,
+    "sprite_size": 153.5
+  },
+  "guerrilla_fighter": {
+    "model": "enemy_1078_sotisc",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      0.800000011920929,
+      1,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.3631975385205764,
+    "origin": [
+      77.55286416874495,
+      165.93641865831154
+    ],
+    "anchor": [
+      92.67370414733887,
+      167.56747436523438
+    ],
+    "source": {
+      "model": "enemy_1078_sotisc",
+      "name": "游击队战士",
+      "bundle": "refs/arts/enm_art_5.ab",
+      "objects": {
+        ".skel": "-1111499087832563940",
+        ".atlas": "673728135771685581",
+        "texture": "5692063736069141636",
+        "alpha": "1172974620686635832"
+      },
+      "skel_sha256": "ee1da89f8a88851fa846ecb7ea4c15fa0c421fad654e1f26187a8f152e9c2a06"
+    },
+    "visible_height": 109.8,
+    "sprite_size": 158.5
+  },
+  "guerrilla_sniper": {
+    "model": "enemy_1079_sotisp",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      1,
+      1.5,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.3332520216835872,
+    "origin": [
+      72.7774023303839,
+      148.87423778365036
+    ],
+    "anchor": [
+      93.42535400390625,
+      149.85328674316406
+    ],
+    "source": {
+      "model": "enemy_1079_sotisp",
+      "name": "游击队狙击手",
+      "bundle": "refs/arts/enm_art_5.ab",
+      "objects": {
+        ".skel": "3236786319852601478",
+        ".atlas": "-3712857246885644812",
+        "texture": "6798208151952217073",
+        "alpha": "-5447323192632848888"
+      },
+      "skel_sha256": "c6d65b8e05b6b794e125db7d976f13287e6764b316c5bedccd750c024e0ab2fc"
+    },
+    "visible_height": 109.7,
+    "sprite_size": 172.7
+  },
+  "guerrilla_mortar": {
+    "model": "enemy_1082_soticn",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle_1",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      1,
+      1.2000000476837158,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.3141240056172435,
+    "origin": [
+      81.88006219858408,
+      154.36874461648463
+    ],
+    "anchor": [
+      89.40454864501953,
+      156.8638153076172
+    ],
+    "source": {
+      "model": "enemy_1082_soticn",
+      "name": "游击队迫击炮兵",
+      "bundle": "refs/arts/enm_art_5.ab",
+      "objects": {
+        ".skel": "-626396592541848035",
+        ".atlas": "1248427322514800409",
+        "texture": "-5432544762986353120",
+        "alpha": "7974464947059263551"
+      },
+      "skel_sha256": "a8fae00abc56d4ac236ac1fc97c214f57972b9c9072471b05b1075766d0391c7"
+    },
+    "visible_height": 114.5,
+    "sprite_size": 183.2
+  },
+  "guerrilla_raider": {
+    "model": "enemy_1083_sotiab",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.3059152622809189,
+    "origin": [
+      99.69485943775443,
+      158.94383559941917
+    ],
+    "anchor": [
+      102.86117744445801,
+      160.88099670410156
+    ],
+    "source": {
+      "model": "enemy_1083_sotiab",
+      "name": "游击队突袭战士",
+      "bundle": "refs/arts/enm_art_5.ab",
+      "objects": {
+        ".skel": "-7686543701759889210",
+        ".atlas": "3498008161266341513",
+        "texture": "-2190411409345956407",
+        "alpha": "1686867370642449180"
+      },
+      "skel_sha256": "ea4ee08348276e8882cdcad84c87854f41210e83c0f93eced132c10d07508b0f"
+    },
+    "visible_height": 109.7,
+    "sprite_size": 188.1
+  },
+  "guerrilla_sarkaz": {
+    "model": "enemy_1084_sotidm",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1.7333333492279053,
+      1.3333333730697632,
+      1.1666666269302368,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.32397949319506814,
+    "origin": [
+      73.05763610339568,
+      171.13545679411715
+    ],
+    "anchor": [
+      71.03301668167114,
+      171.61524963378906
+    ],
+    "source": {
+      "model": "enemy_1084_sotidm",
+      "name": "游击队萨卡兹战士",
+      "bundle": "refs/arts/enm_art_5.ab",
+      "objects": {
+        ".skel": "-4940782002583346554",
+        ".atlas": "631041309235601289",
+        "texture": "5234639636870461274",
+        "alpha": "9064284151316532989"
+      },
+      "skel_sha256": "14b5c63decbf28e31bd60de0ae195fd360d32a9dae8fc6b54d39b9d0d3a47830"
+    },
+    "visible_height": 113.8,
+    "sprite_size": 177.6
+  },
+  "ursus_beast": {
+    "model": "enemy_1108_uterer",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      2.6666667461395264,
+      0.6000000238418579,
+      1,
+      1
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.49823004194245707,
+    "origin": [
+      80.29676005485604,
+      177.05604044773602
+    ],
+    "anchor": [
+      96,
+      180
+    ],
+    "source": {
+      "model": "enemy_1108_uterer",
+      "name": "乌萨斯裂兽",
+      "bundle": "refs/arts/enm_art_6.ab",
+      "objects": {
+        ".skel": "8291861070452204891",
+        ".atlas": "2265473325432312851",
+        "texture": "7953563701709410371",
+        "alpha": "-778352663786655239"
+      },
+      "skel_sha256": "87d03d935beda418d2dffedead8b159281512f0ed46cc0ea226b1f7db3a6978e"
+    },
+    "visible_height": 83.6,
+    "sprite_size": 115.5
+  },
+  "ursus_caster": {
+    "model": "enemy_1110_uamord",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idle",
+      "Move_Loop",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      2,
+      1,
+      1.2000000476837158,
+      0.8333333134651184
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.39404017579044254,
+    "origin": [
+      55.59859077314591,
+      160.0041295684541
+    ],
+    "anchor": [
+      61.479618072509766,
+      161.20205688476562
+    ],
+    "source": {
+      "model": "enemy_1110_uamord",
+      "name": "乌萨斯着铠术师",
+      "bundle": "refs/arts/enm_art_6.ab",
+      "objects": {
+        ".skel": "-8234332636061271953",
+        ".atlas": "-7299668021601476874",
+        "texture": "-6341228898055488925",
+        "alpha": "-6283320881122802266"
+      },
+      "skel_sha256": "1f55ffec409ec6794d819755815d9d2cea4bcf1cc00bd0e8fce20a6bd0eb173f"
+    },
+    "visible_height": 105.0,
+    "sprite_size": 146.1
+  },
+  "ursus_assault": {
+    "model": "enemy_1111_ucommd",
+    "columns": 10,
+    "rows": 4,
+    "cell": 192,
+    "animations": [
+      "Idile",
+      "Move",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      1.3333333730697632,
+      0.8333333134651184,
+      1.1666666269302368,
+      0.8999999761581421
+    ],
+    "facing": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "scale": 0.2859190927625882,
+    "origin": [
+      73.86041200431214,
+      162.77122926441913
+    ],
+    "anchor": [
+      112.32699775695801,
+      163.01632690429688
+    ],
+    "source": {
+      "model": "enemy_1111_ucommd",
+      "name": "乌萨斯突击者",
+      "bundle": "refs/arts/enm_art_6.ab",
+      "objects": {
+        ".skel": "-8293877914279709714",
+        ".atlas": "-3850045337273687032",
+        "texture": "-7840577147262390013",
+        "alpha": "-7370525397513237393"
+      },
+      "skel_sha256": "5be189d1c922ea6d2ebf9a2d9b207e5b33cf6af05e58b6851fa675427be04f31"
+    },
+    "visible_height": 117.4,
+    "sprite_size": 201.3
   }
 }

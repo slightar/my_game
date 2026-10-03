@@ -1,6 +1,7 @@
 #include "character_art.h"
 #include "file_path.h"
 #include "character_image.h"
+#include "texas_animation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -285,6 +286,11 @@ CharacterArt::CharacterArt() {
         texasChibi_ = LoadTexture(texasChibiPath.c_str());
         SetTextureFilter(texasChibi_, TEXTURE_FILTER_BILINEAR);
     }
+    const std::string texasBattlePath = AssetPath("assets/operators/texas_battle.png");
+    if (FileExists(texasBattlePath.c_str())) {
+        texasBattle_ = LoadTexture(texasBattlePath.c_str());
+        SetTextureFilter(texasBattle_, TEXTURE_FILTER_BILINEAR);
+    }
     const std::string texasSkill2BattlePath =
         AssetPath("assets/operators/texas_skill2_battle.png");
     if (FileExists(texasSkill2BattlePath.c_str())) {
@@ -382,6 +388,9 @@ CharacterArt::~CharacterArt() {
     if (IsTextureValid(texasSkill2Battle_)) {
         UnloadTexture(texasSkill2Battle_);
     }
+    if (IsTextureValid(texasBattle_)) {
+        UnloadTexture(texasBattle_);
+    }
     if (IsTextureValid(texasChibi_)) {
         UnloadTexture(texasChibi_);
     }
@@ -430,6 +439,12 @@ bool CharacterArt::HasBattleChibi() const {
 
 bool CharacterArt::HasTexasSkill2Battle() const {
     return IsTextureValid(texasSkill2Battle_);
+}
+
+bool CharacterArt::HasTexasBattle() const {
+    return IsTextureValid(texasBattle_) &&
+           texasBattle_.width == TexasBattleAnimation::Columns * TexasBattleAnimation::Cell &&
+           texasBattle_.height == TexasBattleAnimation::Rows * TexasBattleAnimation::Cell;
 }
 
 bool CharacterArt::HasTexasSkill2Effects() const {
@@ -629,6 +644,35 @@ void CharacterArt::DrawBattleChibi(Vector2 feetPosition, int facingDirection,
     const Rectangle destination{feetPosition.x, feetPosition.y, width, height};
     DrawTexturePro(battleChibi_, source, destination,
                    {width / 2.0F, height}, 0.0F, tint);
+}
+
+void CharacterArt::DrawTexas(Vector2 feetPosition, int facingDirection,
+                             ChibiAnimation movement, bool attacking, bool defeated,
+                             float movementTime, float attackTime, float defeatTime,
+                             Color tint) const {
+    if (!defeated && !attacking && movement != ChibiAnimation::Idle &&
+        HasChibi(OperatorKind::Texas)) {
+        DrawChibi(OperatorKind::Texas, feetPosition, facingDirection, 112.0F,
+                  movement, movementTime, tint);
+        return;
+    }
+    if (!HasTexasBattle()) {
+        // Missing combat art must never turn an attack into a building interaction.
+        DrawChibi(OperatorKind::Texas, feetPosition, facingDirection, 112.0F,
+                  movement, movementTime, tint);
+        return;
+    }
+    using namespace TexasBattleAnimation;
+    const int row = defeated ? 2 : attacking ? 1 : 0;
+    const float time = std::max(0.0F, defeated ? defeatTime : attacking ? attackTime : movementTime);
+    const float duration = defeated ? DefeatDuration : attacking ? AttackDuration : IdleDuration;
+    const int frame = row == 0 ? static_cast<int>(std::fmod(time, duration) / duration * Columns)
+                              : std::min(static_cast<int>(time / duration * (Columns - 1)), Columns - 1);
+    const float scale = VisibleHeight / IdleHeight;
+    const bool flipped = facingDirection < 0;
+    DrawTexturePro(texasBattle_, {frame * Cell, row * Cell, flipped ? -Cell : Cell, Cell},
+                   {feetPosition.x, feetPosition.y - GroundInset, Cell * scale, Cell * scale},
+                   {(flipped ? Cell - AnchorX : AnchorX) * scale, AnchorY * scale}, 0.0F, tint);
 }
 
 void CharacterArt::DrawTexasSkill2Battle(Vector2 feetPosition,

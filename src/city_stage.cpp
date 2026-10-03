@@ -52,7 +52,7 @@ MenuAction MainMenu::UpdateCityStage() {
     if(IsKeyPressed(KEY_ENTER)||(!mapPreview_.empty()&&pointer_.Clicked(Start))){
         if(mapPreview_.empty())mapPreview_=progress_.SelectedRegion();
         else if(progress_.SelectRegion(mapPreview_)){worldRegion_=mapPreview_;return MenuAction::StartWorldPreview;}
-        else SyncError();
+        else { SyncError(); feedback_=MenuFeedback::Denied; }
     }
     return MenuAction::None;
 }

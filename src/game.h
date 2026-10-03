@@ -11,6 +11,8 @@
 #include "ui_font.h"
 #include "world_scenery.h"
 #include "scene_traversal.h"
+#include "world_encounter.h"
+#include "prts_narrator.h"
 #include "character_repository.h"
 
 #include <vector>
@@ -37,6 +39,7 @@ private:
     void DrawOperatorSlots() const;
     void ReloadCharacters();
     void UpdateBullets(float deltaTime);
+    void DrawBullets() const;
     void UpdateCamera(float deltaTime);
     void DrawMap() const;
     void DrawEncounterBanner() const;
@@ -45,6 +48,9 @@ private:
     void EnterWorldRegion(const std::string& id, const std::string& from = "");
     void UpdateWorldPreview(float deltaTime);
     void DrawWorldPreview(float displayScale, Vector2 displayOffset) const;
+    void ReportPrtsActions();
+    void UpdatePrts(float deltaTime,float deltaX,bool hasForward,bool threat,bool combatArea);
+    void DrawPrts(bool upper,bool combat) const;
 
     AudioSystem audio_;
     UiFont uiFont_;
@@ -62,12 +68,12 @@ private:
     bool inBattle_ = false;
     WorldScenery worldScenery_;
     float worldTime_ = 0;
-    float worldNarrationTime_ = 0;
+    PrtsNarrator prts_;
     SceneTraversal worldTraversal_;
+    WorldEncounter worldEncounter_;
+    float worldInspect_=0,worldNoteTime_=0;
     float worldTransition_ = -1;
-    float worldInvestigate_ = 0;
-    int worldInvestigatePort_ = -1;
-    int worldDeviation_ = 0;
+    bool worldAttackHeld_ = false;
     std::string worldDestination_;
     bool worldTransitionLoaded_ = false;
     bool worldPreview_ = false;

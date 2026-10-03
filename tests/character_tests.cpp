@@ -64,7 +64,7 @@ void Animation() {
     assets.defeatedRow = 3; Require(animator.Row(assets) == 3, "Explicit row ignored");
     animator.Update(-1, {}); Require(animator.Action() == CharacterAction::Defeated, "Negative dt mutated animator");
     auto c = Example(); CharacterRuntime combat(c); int health = 8; std::vector<Bullet> bullets;
-    combat.Update(0, {}, 1, {}, true, {}, health, bullets); Require(combat.PerformedAction(), "Attack event missing");
+    combat.Update(0, {}, 1, {}, true, {}, health, bullets); Require(combat.PerformedAction() && combat.PerformedAttack(), "Attack event missing");
     combat.Update(0, {}, 1, {}, true, {}, health, bullets); Require(!combat.PerformedAction(), "Holding attack retriggered animation during cooldown");
 }
 void SpriteFrames() {
@@ -92,6 +92,7 @@ void Runtime() {
     const auto c = Example(); CharacterRuntime a(c), b(c);
     int healthA = 2, healthB = 2; std::vector<Bullet> bullets;
     a.Update(0, {200, 500}, 1, {400, 500}, true, {true, false}, healthA, bullets);
+    Require(a.PerformedAttack(), "Simultaneous skill and attack lost the attack report");
     Require(healthA == 4 && bullets.size() == 1 && bullets[0].damage == 3, "Combined healing/buff failed");
     b.Update(0, {200, 500}, -1, {400, 500}, true, {}, healthB, bullets);
     Require(healthB == 2 && bullets.back().damage == 1 && bullets.back().velocity.x < 0, "Shared state or facing bug");

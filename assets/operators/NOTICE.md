@@ -18,7 +18,13 @@
   ArknightsResource 收录的德克萨斯立绘、缄默德克萨斯二技能图标及
   德克萨斯二技能图标。
 - `texas_chibi.png` 来源：Arknights-Codex-Pets 对德克萨斯官方基建
-  Spine 模型的透明逐帧转换，用作本项目的局内角色动画。
+  Spine 模型的透明逐帧转换，用作本项目的移动、跳跃等动作。
+- `texas_battle.png` 从本机客户端 `chararts/char_102_texas.ab` 中的正面战斗
+  Spine 模型离线渲染，24×3 透明帧表包含 `Idle`、完整的
+  `Attack_Start → Attack_Loop → Attack_End` 和 `Die`。
+  `texas_battle.json` 记录原资源对象 ID、哈希、动画时长和统一脚底锚点。
+  普通攻击和剑气均使用战斗挥剑；挥剑播放压缩到现有 0.32 秒攻击间隔，
+  伤害数值与 0.17 秒判定窗口保持原设定。基建 `Wave` 不再用于攻击。
 - `texas_skill2_battle.png` 由 ArknightsResource 收录的缄默德克萨斯官方
   战斗 Spine 模型 `char_1028_texas2` 离线渲染，包含二技能
   `Skill_2_Idle`、`Skill_2_Loop` 与 `Skill_2_End` 动画帧。

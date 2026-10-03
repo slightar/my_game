@@ -63,6 +63,8 @@ void Game::ReloadCharacters() {
 }
 
 void Game::Reset() {
+    prts_.Reset();
+    worldEncounter_.Reset();
     bullets_.clear();
     for (int slot = 0; slot < 2; ++slot) {
         const int selection = mainMenu_.SelectedCharacterIndex(slot);
@@ -101,6 +103,8 @@ void Game::SwitchOperator(int slot) {
             GameConfig::kRoom.x + GameConfig::kRoom.width - 75.0F);
     }
     player_->PlaceAt(position, facing);
+    audio_.Play(AudioCue::OperatorSwitch);
+    if(inBattle_||worldPreview_)prts_.Notify(PrtsNarrator::Event::Switch);
 }
 
 void Game::Update(float deltaTime) {
@@ -127,6 +131,13 @@ void Game::Update(float deltaTime) {
         const MenuAction action = mainMenu_.Update(deltaTime);
         SetMasterVolume(mainMenu_.Settings().MasterVolume() / 100.0F);
         audio_.SetEffectsVolume(mainMenu_.Settings().SoundVolume() / 100.0F);
+        switch (mainMenu_.Feedback()) {
+        case MenuFeedback::Select: audio_.Play(AudioCue::UiSelect); break;
+        case MenuFeedback::Confirm: audio_.Play(AudioCue::UiConfirm); break;
+        case MenuFeedback::Back: audio_.Play(AudioCue::UiBack); break;
+        case MenuFeedback::Denied: audio_.Play(AudioCue::Denied); break;
+        default: break;
+        }
         if (action == MenuAction::StartWorldPreview) {
             worldDesignPreview_=mainMenu_.IsWorldDesignPreview();
             enemyTrial_=false;Reset();inBattle_=false;
@@ -135,6 +146,8 @@ void Game::Update(float deltaTime) {
             enemyTrial_ = action == MenuAction::StartEnemyTrial;
             Reset();
             inBattle_ = true;
+            prts_.Enter({enemyTrial_?"enemy_trial":"boss_demo","行动准备完成。前进后进入交战区域。"});
+            audio_.Play(AudioCue::SceneEnter);
         } else if (action == MenuAction::Quit) {
             quitRequested_ = true;
         }
@@ -144,12 +157,13 @@ void Game::Update(float deltaTime) {
     pointer_ = ReadUiPointer(pointerState_);
     if ((!paused_ && mainMenu_.Settings().Pressed(GameAction::Pause)) || IsKeyPressed(KEY_ESCAPE)) {
         paused_ = !paused_;
+        audio_.Play(AudioCue::Pause);
         pauseSelection_ = 0;
         return;
     }
 
     if (paused_) {
-        if (pointer_.Clicked({470, 310, 340, 65})) { paused_ = false; return; }
+        if (pointer_.Clicked({470, 310, 340, 65})) { paused_ = false; audio_.Play(AudioCue::Pause); return; }
         if (pointer_.Clicked({470, 395, 340, 65})) {
             paused_ = false; inBattle_ = false; mainMenu_.OpenHome(); return;
         }
@@ -160,6 +174,7 @@ void Game::Update(float deltaTime) {
             pauseSelection_ = std::min(1, pauseSelection_ + 1);
         }
         if (IsKeyPressed(KEY_ENTER)) {
+            audio_.Play(AudioCue::UiConfirm);
             if (pauseSelection_ == 0) {
                 paused_ = false;
             } else {
@@ -175,6 +190,7 @@ void Game::Update(float deltaTime) {
         SwitchOperator(1 - activeOperator_);
     }
     if (player_->IsDead() || (bossActive_ && EncounterCleared())) {
+        UpdatePrts(deltaTime,0,false,!EncounterCleared(),true);
         if (player_->IsDead()) {
             player_->UpdateDefeatAnimation(deltaTime);
         }
@@ -198,10 +214,14 @@ void Game::Update(float deltaTime) {
     else if (mainMenu_.Settings().Pressed(GameAction::OperatorTwo)) SwitchOperator(1);
     const auto target = enemyTrial_ ? enemies_.Target(player_->Position(), player_->FacingDirection())
                                     : EnemyTarget{boss_.Position(), boss_.Radius()};
+    const float previousX=player_->Position().x;
     player_->Update(deltaTime, target.position, target.radius, bullets_, audio_, mainMenu_.Settings(), enemyTrial_);
+    ReportPrtsActions();
 
     if (!bossActive_ && player_->Position().x >= GameConfig::kBossTriggerX) {
         bossActive_ = true;
+        audio_.Play(AudioCue::Encounter);
+        prts_.Notify(PrtsNarrator::Event::Wave);
         gateCloseTimer_ = kGateCloseDuration;
         encounterBannerTimer_ = kEncounterBannerDuration;
         bullets_.clear();
@@ -218,7 +238,9 @@ void Game::Update(float deltaTime) {
         if (enemyTrial_) enemies_.Update(deltaTime, player_->Position());
         else boss_.Update(deltaTime, player_->Position(), player_->FacingDirection());
     }
+    const bool previouslyCleared = EncounterCleared();
     UpdateBullets(deltaTime);
+    if (bossActive_ && !previouslyCleared && EncounterCleared()) {audio_.Play(AudioCue::Clear);prts_.Notify(PrtsNarrator::Event::Clear);}
     UpdateCamera(deltaTime);
 
     const bool touchingBoss = bossActive_ && !enemyTrial_ && boss_.CanDealContactDamage() &&
@@ -229,14 +251,21 @@ void Game::Update(float deltaTime) {
                                                   player_->ProjectileHitbox());
     Vector2 enemySource{};
     bool corrosive = false;
-    if (bossActive_ && enemyTrial_ && enemies_.AttackHits(player_->Hitbox(), player_->ProjectileHitbox(), enemySource, &corrosive)) {
-        if (player_->TakeDamage(enemySource, corrosive)) audio_.PlayPlayerHit();
+    EnemyImpact impact;
+    if (bossActive_ && enemyTrial_ && enemies_.AttackHits(player_->Hitbox(), player_->ProjectileHitbox(), enemySource, &corrosive, &impact)) {
+        if (player_->TakeDamage(enemySource, corrosive,impact.shatter&&player_->IsFrozen()?impact.frozenDamage:1)) {
+            if(impact.cold)player_->ApplyCold();
+            audio_.PlayPlayerHit();prts_.Notify(PrtsNarrator::Event::Damage);
+            if(corrosive)prts_.Notify(PrtsNarrator::Event::Corrosion);
+        }
     }
     if (touchingBoss || hitByBossAttack) {
         if (player_->TakeDamage(boss_.Position())) {
             audio_.PlayPlayerHit();
+            prts_.Notify(PrtsNarrator::Event::Damage);
         }
     }
+    UpdatePrts(deltaTime,player_->Position().x-previousX,!bossActive_,bossActive_&&!EncounterCleared(),true);
 }
 
 void Game::UpdateCamera(float deltaTime) {
@@ -322,6 +351,7 @@ void Game::DrawPauseMenu() const {
 }
 
 void Game::UpdateBullets(float deltaTime) {
+    const bool mobs=enemyTrial_||worldPreview_||worldEncounter_.Active();
     for (Bullet& bullet : bullets_) {
         if (bullet.activationDelay > 0.0F) {
             bullet.activationDelay =
@@ -334,14 +364,14 @@ void Game::UpdateBullets(float deltaTime) {
         bullet.lifetime -= deltaTime;
 
         if (bullet.destroysEnemyProjectile &&
-            (enemyTrial_ ? enemies_.DestroyBolt(bullet.position, bullet.radius + 7.0F)
+            (mobs ? enemies_.DestroyBolt(bullet.position, bullet.radius + 7.0F)
                          : boss_.DestroyProjectileAt(bullet.position, bullet.radius + 7.0F))) {
             bullet.lifetime = 0.0F;
             continue;
         }
 
-        if (enemyTrial_) {
-            if (bossActive_ && enemies_.ResolveBullet(bullet, previous)) audio_.PlayBossHit();
+        if (mobs) {
+            if ((bossActive_||worldEncounter_.Active()) && enemies_.ResolveBullet(bullet, previous)) audio_.PlayBossHit();
             continue;
         }
         if (!bullet.hasHit && bossActive_ && !boss_.IsDefeated() &&
@@ -361,8 +391,8 @@ void Game::UpdateBullets(float deltaTime) {
         }
     }
 
-    std::erase_if(bullets_, [](const Bullet& bullet) {
-        const Rectangle room = GameConfig::kRoom;
+    std::erase_if(bullets_, [this](const Bullet& bullet) {
+        const Rectangle room = worldPreview_?Rectangle{0,-500,WorldLayout::Find(worldRegion_)->width,1500}:GameConfig::kRoom;
         const bool outside = bullet.position.x < room.x ||
                              bullet.position.x > room.x + room.width ||
                              bullet.position.y < room.y ||
@@ -514,6 +544,74 @@ void Game::Draw(float displayScale, Vector2 displayOffset) const {
     DrawMap();
     if (enemyTrial_) enemyRenderer_.DrawEntry(enemies_);
 
+    DrawBullets();
+
+    if (enemyTrial_) enemyRenderer_.Draw(enemies_, uiFont_);
+    else boss_.Draw(uiFont_);
+    player_->Draw(characterArt_);
+    EndMode2D();
+
+    BeginMode2D(uiCamera);
+    const std::string activeName = mainMenu_.CharacterNameForSelection(
+        mainMenu_.SelectedCharacterIndex(activeOperator_));
+    player_->DrawHud(uiFont_, characterArt_, activeName.c_str(), &mainMenu_.Settings());
+    DrawOperatorSlots();
+    if (bossActive_ && !enemyTrial_) boss_.DrawHud(uiFont_);
+    if (enemyTrial_) {
+        DrawRectangle(340, 49, 650, 74, Fade(TacticalUi::kInk, .90F));
+        // Derived from the roster: this read "剩余 %d / 6" long after the table had grown,
+        // so the denominator silently lied about how many enemies were left.
+        uiFont_.Draw(TextFormat("小怪试炼 / 剩余 %d / %d", enemies_.Remaining(),
+                                static_cast<int>(EnemyDefinitions().size())),
+                     361, 62, 23, RAYWHITE);
+        uiFont_.Draw(TextFormat("场上 %d · 待入场 %d · 红门增援 · 1/2 切换角色",
+                     enemies_.Remaining()-enemies_.Pending(), enemies_.Pending()),
+                     361, 96, 17, TacticalUi::kPaper);
+    }
+    DrawEncounterBanner();
+
+    const bool showResult = (bossActive_ && EncounterCleared()) ||
+                            (player_->IsDead() &&
+                             player_->DefeatAnimationFinished());
+    if (showResult) {
+        DrawRectangle(0, 0, GameConfig::kScreenWidth, GameConfig::kScreenHeight,
+                      Fade(BLACK, 0.72F));
+        const Rectangle resultPanel{320.0F, 244.0F, 640.0F, 184.0F};
+        TacticalUi::DrawCutPanel(resultPanel, TacticalUi::kPanel,
+                                 player_->IsDead() ? TacticalUi::kRed
+                                                  : TacticalUi::kCyan,
+                                 30.0F, 2.0F);
+        DrawRectangle(static_cast<int>(resultPanel.x + 30.0F),
+                      static_cast<int>(resultPanel.y),
+                      static_cast<int>(resultPanel.width - 30.0F), 6,
+                      player_->IsDead() ? TacticalUi::kRed
+                                       : TacticalUi::kOrange);
+        const char* title = player_->IsDead() ? "任务失败" : enemyTrial_ ? "小怪试炼完成" : "弑君者已击败";
+        const float titleWidth = uiFont_.Measure(title, 46.0F);
+        uiFont_.Draw(title,
+                     static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
+                         titleWidth / 2.0F,
+                     280.0F, 46.0F,
+                     player_->IsDead() ? TacticalUi::kRed
+                                      : TacticalUi::kPaper);
+        const char* restart = "Enter 重新开始   Backspace 返回主页";
+        const float restartWidth = uiFont_.Measure(restart, 24.0F);
+        uiFont_.Draw(restart,
+                     static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
+                         restartWidth / 2.0F,
+                     367.0F, 21.0F, TacticalUi::kMuted);
+    }
+
+    DrawPrts(false,true);
+    if (paused_) {
+        // The pause buttons share the menu's press feedback; the action still lands on release.
+        TerminalUi::SetPointerState(pointer_);
+        DrawPauseMenu();
+    }
+    EndMode2D();
+}
+
+void Game::DrawBullets() const {
     for (const Bullet& bullet : bullets_) {
         if (bullet.activationDelay > 0.0F) {
             continue;
@@ -614,66 +712,4 @@ void Game::Draw(float displayScale, Vector2 displayOffset) const {
         DrawCircleV(bullet.position, bullet.radius * 0.42F, RAYWHITE);
     }
 
-    if (enemyTrial_) enemyRenderer_.Draw(enemies_, uiFont_);
-    else boss_.Draw(uiFont_);
-    player_->Draw(characterArt_);
-    EndMode2D();
-
-    BeginMode2D(uiCamera);
-    const std::string activeName = mainMenu_.CharacterNameForSelection(
-        mainMenu_.SelectedCharacterIndex(activeOperator_));
-    player_->DrawHud(uiFont_, characterArt_, activeName.c_str(), &mainMenu_.Settings());
-    DrawOperatorSlots();
-    if (bossActive_ && !enemyTrial_) boss_.DrawHud(uiFont_);
-    if (enemyTrial_) {
-        DrawRectangle(340, 49, 650, 74, Fade(TacticalUi::kInk, .90F));
-        // Derived from the roster: this read "剩余 %d / 6" long after the table had grown,
-        // so the denominator silently lied about how many enemies were left.
-        uiFont_.Draw(TextFormat("小怪试炼 / 剩余 %d / %d", enemies_.Remaining(),
-                                static_cast<int>(EnemyDefinitions().size())),
-                     361, 62, 23, RAYWHITE);
-        uiFont_.Draw(TextFormat("场上 %d · 待入场 %d · 红门增援 · 1/2 切换角色",
-                     enemies_.Remaining()-enemies_.Pending(), enemies_.Pending()),
-                     361, 96, 17, TacticalUi::kPaper);
-    }
-    DrawEncounterBanner();
-
-    const bool showResult = (bossActive_ && EncounterCleared()) ||
-                            (player_->IsDead() &&
-                             player_->DefeatAnimationFinished());
-    if (showResult) {
-        DrawRectangle(0, 0, GameConfig::kScreenWidth, GameConfig::kScreenHeight,
-                      Fade(BLACK, 0.72F));
-        const Rectangle resultPanel{320.0F, 244.0F, 640.0F, 184.0F};
-        TacticalUi::DrawCutPanel(resultPanel, TacticalUi::kPanel,
-                                 player_->IsDead() ? TacticalUi::kRed
-                                                  : TacticalUi::kCyan,
-                                 30.0F, 2.0F);
-        DrawRectangle(static_cast<int>(resultPanel.x + 30.0F),
-                      static_cast<int>(resultPanel.y),
-                      static_cast<int>(resultPanel.width - 30.0F), 6,
-                      player_->IsDead() ? TacticalUi::kRed
-                                       : TacticalUi::kOrange);
-        const char* title = player_->IsDead() ? "任务失败" : enemyTrial_ ? "小怪试炼完成" : "弑君者已击败";
-        const float titleWidth = uiFont_.Measure(title, 46.0F);
-        uiFont_.Draw(title,
-                     static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
-                         titleWidth / 2.0F,
-                     280.0F, 46.0F,
-                     player_->IsDead() ? TacticalUi::kRed
-                                      : TacticalUi::kPaper);
-        const char* restart = "Enter 重新开始   Backspace 返回主页";
-        const float restartWidth = uiFont_.Measure(restart, 24.0F);
-        uiFont_.Draw(restart,
-                     static_cast<float>(GameConfig::kScreenWidth) / 2.0F -
-                         restartWidth / 2.0F,
-                     367.0F, 21.0F, TacticalUi::kMuted);
-    }
-
-    if (paused_) {
-        // The pause buttons share the menu's press feedback; the action still lands on release.
-        TerminalUi::SetPointerState(pointer_);
-        DrawPauseMenu();
-    }
-    EndMode2D();
 }

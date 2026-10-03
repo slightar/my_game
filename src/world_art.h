@@ -17,37 +17,46 @@ struct Scene {
     const Stairway* stairway=nullptr;
     const char* imageOverride=nullptr;
     float paintedGround=0;
+    const char* closedImageOverride=nullptr;
 };
 inline constexpr std::array Scenes{
-    Scene{"clinic",.75F,{.265F},"帘后的旧门留着一道缝"},
-    Scene{"gray",.745F,{.28F},"停摆的钟下，楼梯间有风"},
-    Scene{"clock",.71F,{.12F,.89F},"齿轮停了，通道仍在"},
-    Scene{"entry",.70F,{.815F},"天桥上方的门后传来回声",&EntryStair,"entry_broken",.638F},
-    Scene{"station",.635F,{.10F,.36F,.88F},"废弃站台后还有通道"},
-    Scene{"ward",.685F,{.15F,.715F},"隔离区的门没有锁"},
-    Scene{"bridge",.64F,{.25F},"检修亭里有一条旧路"},
-    Scene{"wtower",.725F,{},""},
-    Scene{"comm",.69F,{.32F},"断线的设备后露出缺口"},
-    Scene{"well",.72F,{.16F,.49F,.84F},"井壁的通道传来回声"},
-    Scene{"ice",.70F,{},""},
-    Scene{"pipes",.69F,{.22F,.405F},"热流从侧面的通道涌出"},
-    Scene{"shelter",.71F,{.185F,.87F},"生活痕迹延伸到通道深处"},
-    Scene{"industry",.67F,{},""},
-    Scene{"burn",.69F,{},""},
-    Scene{"core",.71F,{.145F},"焦黑的井口通向下方"},
-    Scene{"normal",.71F,{},""},
-    Scene{"root",.62F,{.225F,.79F},"线缆汇入未标记的通道"},
-    Scene{"prts",.72F,{.695F},"光的边缘留着一道裂隙"},
-    Scene{"throne",.70F,{},""}
+    Scene{"clinic",.75F,{.265F},"帘后的旧门留着一道缝",nullptr,"clinic_scale_v3",0,"clinic_closed_scale_v3"},
+    Scene{"gray",.745F,{.28F},"停摆的钟下，楼梯间有风",nullptr,"gray_scale_v3"},
+    Scene{"clock",.71F,{.12F,.89F},"齿轮停了，通道仍在",nullptr,"clock_scale_v3"},
+    Scene{"entry",.70F,{.815F},"天桥上方的门后传来回声",&EntryStair,"entry_style_v2",.638F},
+    Scene{"station",.635F,{.10F,.36F,.88F},"废弃站台后还有通道",nullptr,"station_scale_v3"},
+    Scene{"ward",.685F,{.15F,.715F},"隔离区的门没有锁",nullptr,"ward_scale_v3"},
+    Scene{"bridge",.64F,{.25F},"检修亭里有一条旧路",nullptr,"bridge_style_v2"},
+    Scene{"wtower",.725F,{},"",nullptr,"wtower_style_v2"},
+    Scene{"comm",.69F,{.32F},"断线的设备后露出缺口",nullptr,"comm_scale_v3"},
+    Scene{"well",.72F,{.16F,.49F,.84F},"井壁的通道传来回声",nullptr,"well_scale_v3"},
+    Scene{"ice",.70F,{},"",nullptr,"ice_scale_v3"},
+    Scene{"pipes",.69F,{.22F,.405F},"热流从侧面的通道涌出",nullptr,"pipes_scale_v3"},
+    Scene{"shelter",.71F,{.185F,.87F},"生活痕迹延伸到通道深处",nullptr,"shelter_scale_v3"},
+    Scene{"industry",.67F,{},"",nullptr,"industry_scale_v3"},
+    Scene{"burn",.69F,{},"",nullptr,"burn_scale_v3"},
+    Scene{"core",.71F,{.145F},"焦黑的井口通向下方",nullptr,"core_scale_v3"},
+    Scene{"normal",.71F,{},"",nullptr,"normal_scale_v3"},
+    Scene{"root",.62F,{.225F,.79F},"线缆汇入未标记的通道",nullptr,"root_scale_v3"},
+    Scene{"prts",.72F,{.695F},"光的边缘留着一道裂隙",nullptr,"prts_scale_v3"},
+    Scene{"throne",.70F,{},"",nullptr,"throne_style_v2"}
+};
+// Internal approach scenes never become stage-selection nodes.
+inline constexpr std::array ApproachScenes{
+    Scene{"approach_bridge",.74F,{.22F},"收费亭里留有一份巡逻记录",nullptr,"approach_bridge_scale_v3",0.615F},
+    Scene{"approach_wtower",.74F,{.22F},"维修台的无线电还留有录音",nullptr,"approach_wtower_scale_v3",0.753F},
+    Scene{"approach_ice",.74F,{.22F},"信箱里夹着一张撤离便条",nullptr,"approach_ice_scale_v3",0.774F},
+    Scene{"approach_industry",.74F,{.22F},"货运桌上压着一份旧清单",nullptr,"approach_industry_scale_v3",0.696F},
+    Scene{"approach_core",.74F,{.22F},"疏散终端仍保留最后一条消息",nullptr,"approach_core_scale_v3",0.703F},
+    Scene{"approach_prts",.74F,{.22F},"静默终端残留一段访问日志",nullptr,"approach_prts_scale_v3",0.720F}
 };
 inline constexpr const Scene* Find(std::string_view id) {
     for(const auto& scene:Scenes)if(id==scene.id)return &scene;
+    for(const auto& scene:ApproachScenes)if(id==scene.id)return &scene;
     return nullptr;
 }
 inline constexpr bool Repainted(std::string_view id) {
-    return id=="ward"||id=="clinic"||id=="shelter"||id=="comm"||id=="station"||
-           id=="gray"||id=="entry"||id=="bridge"||id=="wtower"||id=="ice"||
-           id=="pipes"||id=="core"||id=="normal"||id=="throne";
+    return Find(id)!=nullptr;
 }
 // Separate painted floor alignment from world width: an art correction must
 // not silently shorten an already authored route.

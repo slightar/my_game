@@ -16,10 +16,11 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('--input', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--page', type=Path, default=Path(__file__).with_suffix('.html'))
     args = p.parse_args()
     args.input = args.input.resolve(); args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(Path(__file__).with_suffix('.html'), args.input / 'index.html')
+    shutil.copyfile(args.page, args.input / 'index.html')
     models = json.loads((args.input / 'models.json').read_text())
     done = threading.Event(); errors = []
     class Handler(http.server.SimpleHTTPRequestHandler):

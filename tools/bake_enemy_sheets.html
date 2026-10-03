@@ -28,7 +28,9 @@
       const animations = rig.spineData.animations;
       const names = ['Idle','Move','Attack','Die'].map(n =>
         animations.find(a => a.name.toLowerCase() === n.toLowerCase())?.name ||
-        animations.find(a => a.name.toLowerCase() === (n+'_Loop').toLowerCase())?.name);
+        animations.find(a => a.name.toLowerCase() === (n+'_Loop').toLowerCase())?.name ||
+          (n==='Move'?animations.find(a=>a.name==='Run_Loop')?.name:undefined) ||
+          (n==='Idle'?animations.find(a=>a.name==='Idle_1'||a.name==='Idile')?.name:undefined));
       if (names.some(n => !n)) throw Error(`${key}: missing animation; found ${animations.map(a=>a.name)}`);
       function pose(row,col) {
         rig.skeleton.setToSetupPose(); rig.state.clearTracks();

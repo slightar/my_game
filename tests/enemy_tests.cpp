@@ -1,3 +1,4 @@
+#include "world_encounter.h"
 #include "enemy_system.h"
 #include <cmath>
 #include <stdexcept>
@@ -247,6 +248,53 @@ int main(){try {
     const float runnerX=Unit(s,runner).feet.x, footmanX=Unit(s,footman).feet.x;
     Check(runnerX<footmanX,"Hound did not close distance faster than a soldier");
 
-    s.ResetTrial();Check(s.Remaining()==11&&!s.Cleared(),"Trial formation not complete");
+    // Chapter mechanics must survive ranged/melee collisions, not merely render skins.
+    s.Clear();const auto ice=s.Spawn(EnemyKind::IceSlug,1200);
+    s.Damage(ice,1000,DamageType::Arts,{1100,600});
+    Check(Unit(s,ice).state==EnemyState::Fuse,"Ice slug did not telegraph its death blast");
+    Tick(s,.87F,{1100,600});
+    EnemyImpact impact;bool iceAcid=false;
+    Check(s.AttackHits({1180,560,40,70},{1180,560,40,70},source,&iceAcid,&impact)&&impact.cold&&!iceAcid,"Ice blast did not deliver cold");
+    Check(!s.AttackHits({1180,560,40,70},{1180,560,40,70},source,&iceAcid,&impact),"Ice blast hit repeatedly");
+    s.Clear();s.Spawn(EnemyKind::SnowCasterLeader,1500);
+    Tick(s,7.4F,{1200,580});
+    Check(s.Units().front().attacks>=3,"Snow caster did not complete three casts");
+    bool coldBolt=false;for(const auto& bolt:s.Bolts())coldBolt|=bolt.cold&&bolt.arts;
+    Check(coldBolt,"Third snow caster shot did not carry cold and arts");
+    s.Clear();const auto breaker=s.Spawn(EnemyKind::Icebreaker,1200);
+    s.Update(.01F,{1150,580});Tick(s,1.12F,{1150,580});
+    Check(s.AttackHits({1130,550,40,80},{1130,550,40,80},source,nullptr,&impact)&&impact.shatter&&impact.frozenDamage==3,"Icebreaker missing frozen-target damage");
+    s.Clear();s.Spawn(EnemyKind::GuerrillaMortar,1600);
+    s.Update(.01F,{1100,580});Tick(s,1.32F,{1100,580});
+    Check(!s.Bolts().empty()&&s.Bolts().front().gravity>0&&s.Bolts().front().velocity.y<0,"Mortar did not launch an arcing shell");
+    Tick(s,1.20F,{1100,580});
+    Check(s.AttackHits({1080,550,40,100},{1080,570,40,40},source),"Mortar landing blast missed locked floor position");
+    s.Clear();const auto armored=s.Spawn(EnemyKind::UrsusCaster,1500);
+    s.Damage(armored,10,DamageType::Physical,{1300,580});
+    Check(std::abs(Unit(s,armored).health-19.5F)<.01F,"Ursus caster armor was cosmetic");
+    s.Damage(armored,10,DamageType::Arts,{1300,580});
+    Check(std::abs(Unit(s,armored).health-9.5F)<.01F,"Ursus caster armor incorrectly reduced arts");
+    s.ResetTrial();Check(s.Remaining()==roster&&!s.Cleared(),"Trial formation not complete");
+    WorldEncounter patrol;
+    for(const auto& a:WorldLayout::Approaches) {
+        patrol.Reset();patrol.Enter(a.region.id,s);
+        patrol.Update(a.region.width*.2F,s);
+        Check(s.Units().empty()&&s.Pending()==0&&!patrol.Cleared(s),"Approach spawned before advancement");
+        for(float fraction:{.31F,.64F}) {
+            patrol.Update(a.region.width*fraction,s);
+            Check(s.Pending()>0&&s.Units().empty(),"Approach did not queue a wave at its red gate");
+            Check(s.EntryX()>a.region.width*fraction,"Patrol gate behind player");
+            for(int i=0;i<1400;++i) {
+                s.Update(.01F,{80,605});
+                for(const auto& unit:s.Units())if(unit.Targetable())s.Damage(unit.id,1000,DamageType::Arts,{80,605});
+            }
+        }
+        patrol.Update(a.region.width*.9F,s);Check(patrol.Cleared(s),"Two-wave approach never cleared");
+        patrol.Enter(a.region.id,s);Check(patrol.Cleared(s)&&s.Remaining()==0,"Cleared approach restarted on return");
+        patrol.Reset();patrol.Enter(a.region.id,s);Check(!patrol.Cleared(s),"New action retained cleared patrol");
+        s.ResetEncounter({EnemyKind::Soldier},300,80,a.region.width-80);
+        Tick(s,1.4F,{80,605});
+        Check(s.Units().size()==1&&s.Units().front().feet.x<400,"Configured encounter retained trial arena bounds");
+    }
     std::cout<<"Enemy combat rules passed\n";
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;} }

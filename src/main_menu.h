@@ -14,12 +14,14 @@ class UiFont;
 class CharacterArt;
 
 enum class MenuAction { None, StartBattle, StartEnemyTrial, StartWorldPreview, Quit };
+enum class MenuFeedback { None, Select, Confirm, Back, Denied };
 
 class MainMenu {
 public:
     MainMenu();
     explicit MainMenu(const std::filesystem::path& applicationDirectory);
     MenuAction Update(float deltaTime = 1.0F / 60.0F);
+    MenuFeedback Feedback() const { return feedback_; }
     void Draw(const UiFont& font, const CharacterArt& art) const;
     void OpenHome();
     void OpenStageSelect();
@@ -43,6 +45,8 @@ public:
     bool IsProtocolSuppressed() const { return progress_.IsProtocolSuppressed(); }
 
 private:
+    MenuAction UpdateImpl(float deltaTime);
+    MenuFeedback feedback_ = MenuFeedback::None;
     enum class Page {
         Splash,
         Home, CharacterSelect,

@@ -45,6 +45,23 @@ inline constexpr std::array Regions{
     Region{"prts","PRTS 核心","协议失效",5,1520,WorldArt::Width("prts"),Kind::Boss,"独立系统空间。协议失效与核心战斗暂不实现，后续出口通往魔王王座。"},
     Region{"throne","魔王王座","特蕾西娅",5,1830,WorldArt::Width("throne"),Kind::Memory,"终章系统空间终点。序章只发生异常接入，王座不属于切城物理建筑。"}
 };
+struct Approach { const char* boss; Region region; };
+inline constexpr std::array Approaches{
+    Approach{"bridge",{"approach_bridge","高架检修道","高架桥前段",0,0,WorldArt::Width("approach_bridge"),Kind::Exploration,"巡逻队撤走后，收费亭的灯一直没有熄灭。"}},
+    Approach{"wtower",{"approach_wtower","中继设备廊","通讯塔前段",0,0,WorldArt::Width("approach_wtower"),Kind::Exploration,"录音里只有一句提醒：不要相信空无一人的走廊。"}},
+    Approach{"ice",{"approach_ice","落雪庭院","居住区前段",2,0,WorldArt::Width("approach_ice"),Kind::Exploration,"便条上写着：沿供热管道走，别在广场停留。"}},
+    Approach{"industry",{"approach_industry","货运支线","工业关口前段",3,0,WorldArt::Width("approach_industry"),Kind::Exploration,"清单上的物资早已搬空，守卫却仍在巡逻。"}},
+    Approach{"core",{"approach_core","疏散长廊","城市核心前段",1,0,WorldArt::Width("approach_core"),Kind::Exploration,"最后一条消息没有送达：东侧疏散通道已经封闭。"}},
+    Approach{"prts",{"approach_prts","接入缓冲层","核心接入前段",5,0,WorldArt::Width("approach_prts"),Kind::Exploration,"日志不断重复同一次访问，时间戳停在了过去。"}}
+};
+inline const Approach* ApproachFor(std::string_view boss) {
+    for(const auto& a:Approaches)if(boss==a.boss)return &a;
+    return nullptr;
+}
+inline bool Internal(std::string_view id) {
+    for(const auto& a:Approaches)if(id==a.region.id)return true;
+    return false;
+}
 struct Route {
     const char* from;
     const char* to;
@@ -80,6 +97,7 @@ inline constexpr std::array Routes{
 };
 inline const Region* Find(std::string_view id) {
     for(const auto& r:Regions) if(r.id==id)return &r;
+    for(const auto& a:Approaches)if(id==a.region.id)return &a.region;
     return nullptr;
 }
 inline bool Hidden(std::string_view id) {
@@ -87,12 +105,27 @@ inline bool Hidden(std::string_view id) {
 }
 inline constexpr std::array Prologue{"地下诊疗所","魔王王座","茧笼断线","地下诊疗所重生"};
 struct Port { const Route* route; const Region* target; float x; bool returning; float feetY=644; };
-inline std::vector<Port> Ports(std::string_view id) {
+// Runtime routing subdivides the original graph; the design map remains intact.
+inline const std::vector<Route>& PlayRoutes() {
+    static const auto routes=[] {
+        std::vector<Route> result;
+        for(auto route:Routes) {
+            if(const auto* a=ApproachFor(route.to))route.to=a->region.id;
+            result.push_back(route);
+        }
+        for(const auto& a:Approaches)result.push_back({a.region.id,a.boss,RouteKind::Main,"前往交战区域",std::string_view(a.boss)!="prts"});
+        return result;
+    }();
+    return routes;
+}
+inline std::vector<Port> Ports(std::string_view id,bool play=false) {
     std::vector<Port> result;
     const auto* room=Find(id);if(!room)return result;
-    for(const auto& route:Routes)
+    static const std::vector<Route> design(Routes.begin(),Routes.end());
+    const auto& routes=play?PlayRoutes():design;
+    for(const auto& route:routes)
         if(route.to==id && route.returnable)result.push_back({&route,Find(route.from),0,true});
-    for(const auto& route:Routes)
+    for(const auto& route:routes)
         if(route.from==id)result.push_back({&route,Find(route.to),0,false});
     // Side passages match permanent recesses painted into the panorama.
     int recess=0;
@@ -100,7 +133,7 @@ inline std::vector<Port> Ports(std::string_view id) {
     for(auto& port:result) {
         if(port.route->kind==RouteKind::Main)
             port.x=port.returning?110:room->width-110;
-        else port.x=room->width*art->passages[recess++];
+        else port.x=room->width*(Internal(id)?.12F:art->passages[recess++]);
         if(const auto* stairs=WorldArt::Stairs(id);stairs&&std::string_view(port.target->id)==stairs->destination)port.feetY=WorldArt::UpperFloor(id);
     }
     std::sort(result.begin(),result.end(),[](const Port& a,const Port& b){return a.x<b.x;});
@@ -109,10 +142,13 @@ inline std::vector<Port> Ports(std::string_view id) {
 inline std::string Glyphs() {
     const std::string narration="请沿街道向右前进前往路线已确认无需回头那扇旧门不在规划路线内请继续向右此处无可用导航由你决定去向任务路线已完成门后传来气流长按推开松开取消正在推门原路返回通行向右继续移动区域连接中信号中断发现记录失败请重试";
     std::string result="通行检修平台切城行动已发现支路尚未抵达已探索可进入沿已开放的主线出口抵达此区域沿主路前进靠近通道进行探索关卡选择区域探索内部场景待建设调查通道开始行动当前区域级原路返回场景内容预留战斗未实现靠近出口双向回访箭头标记流程方向普通通道当前自由信息按键切尔诺伯格城区横截面区域规划全部区域开放预览内部待建设进入空白区域返回城区地图相邻出口已抵达终点非物理空间楼层连通方向序章异常接入茧笼断线地表主线探索支路系统接入滚轮横移拖动地图按住移动跳跃附近按切换区域主线出口返回出口上行下行水平通道区域长度米未实现存档保持区域导航定位诊疗所终章空间预览连接线路单向出口编号";
+    for(const auto& a:Approaches)result+=std::string(a.region.name)+a.region.subtitle+a.region.note;
+    for(const auto& scene:WorldArt::ApproachScenes)result+=scene.clue;
+    result+="区域警戒尚未解除请先处理巡逻队清理完成可以继续前进调查记录巡逻队已接近准备迎战全员失去行动能力按回车重试本区域附近长按调查暂无新增线索";
     for(const auto& r:Regions)result+=std::string(r.name)+r.subtitle+r.note;
     for(const auto& l:Layers)result+=l;
     for(const auto& r:Routes)result+=r.passage;
     for(const auto& scene:WorldArt::Scenes)result+=scene.clue;
-    return result+narration+"门从另一侧锁住了天桥楼梯上楼下楼到达上层沿天桥探索";
+    return result+narration+"门从另一侧锁住了天桥楼梯上楼下楼到达上层沿天桥探索战斗中无法进入通道非战斗时靠近支路按攻击键探索";
 }
 }

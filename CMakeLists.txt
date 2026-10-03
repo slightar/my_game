@@ -12,6 +12,8 @@ FetchContent_Declare(
         GIT_TAG 5.5          # 固定版本，保证依赖可复现
 )
 FetchContent_MakeAvailable(raylib)
+add_library(prts_narration src/prts_narrator.cpp)
+target_include_directories(prts_narration PUBLIC src)
 
 add_library(character_core src/character.cpp src/character_repository.cpp src/character_animation.cpp)
 target_include_directories(character_core PUBLIC src third_party)
@@ -38,10 +40,13 @@ add_executable(my_game
         src/progress_system.cpp
         src/ui_font.cpp
         src/platform_input.cpp)
-target_link_libraries(my_game PRIVATE character_core)
+target_link_libraries(my_game PRIVATE character_core prts_narration)
 
 include(CTest)
 if (BUILD_TESTING)
+    add_executable(prts_narrator_tests tests/prts_narrator_tests.cpp)
+    target_link_libraries(prts_narrator_tests PRIVATE prts_narration)
+    add_test(NAME prts_narrator_tests COMMAND prts_narrator_tests)
     add_executable(world_layout_tests tests/world_layout_tests.cpp)
     target_include_directories(world_layout_tests PRIVATE src)
     add_test(NAME world_layout_tests COMMAND world_layout_tests)
@@ -68,6 +73,9 @@ if (BUILD_TESTING)
     target_include_directories(enemy_tests PRIVATE src)
     target_link_libraries(enemy_tests PRIVATE raylib)
     add_test(NAME enemy_tests COMMAND enemy_tests)
+    add_executable(chapter_roster_tests tests/chapter_roster_tests.cpp src/enemy_data.cpp)
+    target_include_directories(chapter_roster_tests PRIVATE src third_party)
+    add_test(NAME chapter_roster_tests COMMAND chapter_roster_tests "${CMAKE_SOURCE_DIR}/assets/enemies/mobs")
     add_executable(character_render_smoke tests/character_render_smoke.cpp
         src/enemy_data.cpp src/enemy_system.cpp src/enemy_renderer.cpp src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp src/menu_views.cpp src/world_map.cpp src/action_map.cpp src/city_stage.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
     target_link_libraries(character_render_smoke PRIVATE character_core)
@@ -76,6 +84,9 @@ if (BUILD_TESTING)
         src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp
         src/menu_views.cpp src/world_map.cpp src/action_map.cpp src/city_stage.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
     target_link_libraries(game_enemy_smoke PRIVATE character_core)
+    foreach(NARRATION_TARGET world_map_smoke character_render_smoke game_enemy_smoke)
+        target_link_libraries(${NARRATION_TARGET} PRIVATE prts_narration)
+    endforeach()
 endif()
 
 add_custom_command(TARGET my_game POST_BUILD
@@ -88,7 +99,7 @@ if (WIN32)
     if (MINGW)
         set(GAME_EXECUTABLES my_game character_tool)
         if (BUILD_TESTING)
-            list(APPEND GAME_EXECUTABLES world_layout_tests world_map_smoke character_tests character_render_smoke progress_tests settings_tests enemy_tests game_enemy_smoke ui_interaction_tests)
+            list(APPEND GAME_EXECUTABLES prts_narrator_tests world_layout_tests world_map_smoke character_tests character_render_smoke progress_tests settings_tests enemy_tests chapter_roster_tests game_enemy_smoke ui_interaction_tests)
         endif()
         get_filename_component(MINGW_RUNTIME_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
         foreach(GAME_EXECUTABLE IN LISTS GAME_EXECUTABLES)

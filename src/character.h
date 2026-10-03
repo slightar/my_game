@@ -98,6 +98,7 @@ public:
     [[nodiscard]] const Character& Definition() const { return character_; }
     [[nodiscard]] const std::array<SkillState, 2>& Skills() const { return skills_; }
     [[nodiscard]] bool PerformedAction() const { return performedAction_; }
+    [[nodiscard]] bool PerformedAttack() const { return performedAttack_; }
     void Update(float dt, Vector2 position, int facing, Vector2 target,
                 bool attacking, std::array<bool, 2> activated,
                 int& health, std::vector<Bullet>& bullets);
@@ -109,4 +110,5 @@ private:
     std::array<SkillState, 2> skills_{};
     float attackCooldown_ = 0;
     bool performedAction_ = false;
+    bool performedAttack_ = false;
 };

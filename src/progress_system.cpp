@@ -13,7 +13,7 @@ ProgressSystem::ProgressSystem(std::filesystem::path applicationDirectory)
     : savePath_(std::move(applicationDirectory) / "save" / "game_progress.json") { Load(); }
 
 bool ProgressSystem::RegionVisible(const std::string& id) const {
-    return WorldLayout::Find(id) && (!WorldLayout::Hidden(id) || RegionVisited(id));
+    return !WorldLayout::Internal(id) && WorldLayout::Find(id) && (!WorldLayout::Hidden(id) || RegionVisited(id));
 }
 bool ProgressSystem::RegionAvailable(const std::string& id) const {
     if(!RegionVisible(id))return false;
@@ -28,7 +28,7 @@ bool ProgressSystem::SelectRegion(const std::string& id) {
     if(Save())return true;progress_=before;return false;
 }
 bool ProgressSystem::VisitRegion(const std::string& id,const std::string& from) {
-    if(!WorldLayout::Find(id))return false;
+    if(!WorldLayout::Find(id)||WorldLayout::Internal(id))return false;
     if(from=="clinic"&&id=="ward"&&!progress_.wardShortcutOpen)return false;
     const bool openShortcut=from=="ward"&&id=="clinic"&&
         progress_.selectedRegion=="ward"&&RegionVisited("ward");

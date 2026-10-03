@@ -4,8 +4,6 @@
 #include <limits>
 
 namespace {
-constexpr float leftBound = GameConfig::kBossGateX + 55;
-constexpr float rightBound = GameConfig::kRoom.x + GameConfig::kRoom.width - 65;
 // A shield cannot be damaged from behind until it has spent this long in Approach, so
 // enemies that spawn already facing away (or clustered) cannot be back-stabbed before
 // they ever get to turn.
@@ -18,20 +16,14 @@ constexpr bool IsCloakedKind(EnemyKind kind) { return kind==EnemyKind::StealthCr
 // Every kind that fires a bolt shares the same channel. The caster's shot is slower and
 // does Arts (the counter to the guard's physical-only block); 酸液源石虫's is slower still
 // and applies corrosion on contact.
-constexpr bool IsRangedKind(EnemyKind kind) {
-    return kind==EnemyKind::Crossbow || kind==EnemyKind::Drone || kind==EnemyKind::Caster
-        || kind==EnemyKind::StealthCrossbow || kind==EnemyKind::AcidSlug;
+bool IsRangedKind(EnemyKind kind) {
+    return EnemyData(kind).attack!=EnemyAttack::Melee;
 }
 // Ground archers and casters keep their distance; the drone holds station overhead and
 // always fires from where it is. Widening this to every ranged kind would silently stop
 // the drone from ever committing to a shot.
-constexpr bool KeepsDistance(EnemyKind kind) {
-    return kind==EnemyKind::Crossbow || kind==EnemyKind::Caster
-        || kind==EnemyKind::StealthCrossbow || kind==EnemyKind::AcidSlug;
-}
-// Both originium slug lines detonate when killed rather than attacking with a blast.
-constexpr bool DetonatesOnDeath(EnemyKind kind) {
-    return kind==EnemyKind::SlugHigh || kind==EnemyKind::IrrSlug;
+bool KeepsDistance(EnemyKind kind) {
+    return IsRangedKind(kind) && kind!=EnemyKind::Drone;
 }
 bool SegmentHit(Vector2 a, Vector2 b, Rectangle r, float radius, float& time) {
     float lo = 0, hi = 1;
@@ -60,15 +52,16 @@ Rectangle AttackArea(const EnemyUnit& u) {
 Rectangle EnemyUnit::Hitbox() const { const auto& d=EnemyData(kind);return {feet.x-d.width/2,feet.y-d.height,d.width,d.height}; }
 Vector2 EnemyUnit::Center() const { return {feet.x,feet.y-EnemyData(kind).height/2}; }
 bool EnemyUnit::Targetable() const { return health>0 && state!=EnemyState::Dead && state!=EnemyState::Blast; }
-bool EnemyUnit::Guarding() const { return kind==EnemyKind::Shield && stun<=0 && state!=EnemyState::Recover && state!=EnemyState::Dead; }
+bool EnemyUnit::Guarding() const { return EnemyData(kind).shield && stun<=0 && state!=EnemyState::Recover && state!=EnemyState::Dead; }
 bool EnemyUnit::InterceptsProjectiles() const { return !cloaked; }
 void EnemySystem::Clear() {
     units_.clear();bolts_.clear();nextId_=1;
+    entryX_=kEntryX;leftBound_=GameConfig::kBossGateX+55;rightBound_=GameConfig::kRoom.x+GameConfig::kRoom.width-65;
     spawnQueue_.clear();nextSpawn_=0;spawnTimer_=0;entryPulse_=0;
 }
 unsigned EnemySystem::Spawn(EnemyKind kind, float x) {
     EnemyUnit u;u.id=nextId_++;u.kind=kind;
-    u.feet={std::clamp(x,leftBound,rightBound), kind==EnemyKind::Drone ? GameConfig::kFloorY-260.0F : GameConfig::kFloorY};
+    u.feet={std::clamp(x,leftBound_,rightBound_), kind==EnemyKind::Drone ? GameConfig::kFloorY-260.0F : GameConfig::kFloorY};
     u.health=EnemyData(kind).health;
     units_.push_back(u);return u.id;
 }
@@ -80,7 +73,14 @@ void EnemySystem::ResetTrial() {
         EnemyKind::Soldier,EnemyKind::Caster,EnemyKind::SlugHigh,
         EnemyKind::StealthCrossbow,EnemyKind::Crossbow,EnemyKind::IrrSlug,
         EnemyKind::Shield,EnemyKind::Drone};
+    for(unsigned i=static_cast<unsigned>(EnemyKind::SlugAlpha);i<kEnemyKindCount;++i)
+        spawnQueue_.push_back(static_cast<EnemyKind>(i));
     spawnTimer_=kFirstSpawnDelay;
+}
+void EnemySystem::ResetEncounter(std::vector<EnemyKind> wave,float entryX,float left,float right) {
+    Clear();leftBound_=left;rightBound_=std::max(left,right);
+    entryX_=std::clamp(entryX,leftBound_,rightBound_);
+    spawnQueue_=std::move(wave);spawnTimer_=kFirstSpawnDelay;
 }
 void EnemySystem::Update(float dt, Vector2 player) {
     // Bound catch-up time and substep attacks/projectiles on slow frames.
@@ -94,7 +94,7 @@ void EnemySystem::Tick(float dt, Vector2 player) {
     if(Pending()) {
         spawnTimer_-=dt;
         while(Pending() && spawnTimer_<=0.0F) {
-            Spawn(spawnQueue_[nextSpawn_++],kEntryX);
+            Spawn(spawnQueue_[nextSpawn_++],entryX_);
             auto& unit=units_.back();
             unit.facing=player.x>=unit.feet.x?1:-1;
             unit.cloaked=IsCloakedKind(unit.kind);
@@ -102,8 +102,15 @@ void EnemySystem::Tick(float dt, Vector2 player) {
             entryPulse_=.65F;
         }
     }
-    for(auto& b:bolts_) { b.position.x+=b.velocity.x*dt;b.position.y+=b.velocity.y*dt;b.lifetime-=dt; }
-    std::erase_if(bolts_,[](const auto& b){return b.lifetime<=0 || b.position.x<leftBound-100 || b.position.x>rightBound+100 || b.position.y>GameConfig::kFloorY+10;});
+    for(auto& b:bolts_) {
+        b.velocity.y+=b.gravity*dt;
+        b.position.x+=b.velocity.x*dt;b.position.y+=b.velocity.y*dt;b.lifetime-=dt;
+        if(b.blastRadius>0 && b.position.y>=GameConfig::kFloorY-4) {
+            b.position.y=GameConfig::kFloorY-4;b.velocity={};b.gravity=0;
+            b.lifetime=std::min(b.lifetime,.30F);
+        }
+    }
+    std::erase_if(bolts_,[this](const auto& b){return b.lifetime<=0 || b.position.x<leftBound_-100 || b.position.x>rightBound_+100 || b.position.y>GameConfig::kFloorY+10;});
     for (auto& u:units_) {
         const auto& d=EnemyData(u.kind);
         u.animationTime+=dt;u.flash=std::max(0.0F,u.flash-dt);u.moving=false;
@@ -140,7 +147,7 @@ void EnemySystem::Tick(float dt, Vector2 player) {
                 float direction=static_cast<float>(u.facing);
                 if(KeepsDistance(u.kind) && distance<200) direction=-direction;
                 const float speed=d.speed*(u.haste>0?EnemySystem::kEnergizeSpeedScale:1.0F);
-                const float next=std::clamp(u.feet.x+direction*speed*dt,leftBound,rightBound);
+                const float next=std::clamp(u.feet.x+direction*speed*dt,leftBound_,rightBound_);
                 u.moving=next!=u.feet.x;u.feet.x=next;
                 // Cornered ranged units can still shoot rather than becoming stuck backing up.
                 if(u.moving || !IsRangedKind(u.kind)) continue;
@@ -153,10 +160,22 @@ void EnemySystem::Tick(float dt, Vector2 player) {
                 const Vector2 origin{u.feet.x+u.facing*24.0F,u.feet.y-62};
                 const float ax=u.aim.x-origin.x,ay=u.aim.y-origin.y,len=std::max(1.0F,std::sqrt(ax*ax+ay*ay));
                 // 术师 lobs a slow Arts bolt, 酸液源石虫 a slow corrosive spit (290 vs 410).
-                const bool arts=u.kind==EnemyKind::Caster;
-                const bool corrosive=u.kind==EnemyKind::AcidSlug;
+                const bool arts=d.attack==EnemyAttack::ArtsBolt||d.attack==EnemyAttack::ColdBolt;
+                const bool corrosive=d.attack==EnemyAttack::AcidBolt;
                 const float speed=(arts||corrosive)?290.0F:410.0F;
-                bolts_.push_back({origin,origin,{ax/len*speed,ay/len*speed},3,arts,corrosive});
+                EnemyBolt bolt{origin,origin,{ax/len*speed,ay/len*speed},3,arts,corrosive};
+                ++u.attacks;
+                bolt.cold=d.attack==EnemyAttack::ColdBolt && u.attacks%3==0;
+                bolt.shatter=d.shatter;
+                if(d.attack==EnemyAttack::Lob) {
+                    const float flight=std::clamp(std::abs(ax)/430.0F,.65F,1.35F);
+                    bolt.gravity=680;
+                    const float floorDelta=GameConfig::kFloorY-4-origin.y;
+                    bolt.velocity={ax/flight,(floorDelta-.5F*bolt.gravity*flight*flight)/flight};
+                    bolt.blastRadius=u.kind==EnemyKind::GuerrillaMortar?80:55;
+                    bolt.landing={u.aim.x,GameConfig::kFloorY-4};
+                }
+                bolts_.push_back(bolt);
             }
             SetState(u,EnemyState::Strike,.22F);
         } else if (u.state==EnemyState::Strike && u.timer<=0) {
@@ -174,9 +193,11 @@ bool EnemySystem::Damage(unsigned id, float damage, DamageType type, Vector2 sou
         // no turn animation, no artificial window. The trade is that the 80% physical
         // reduction only applies to its front arc, so a guard that has just committed to
         // a bash is also open from the front while it recovers.
-        const bool exposed = !front && u.kind==EnemyKind::Shield && u.facingTime>=kSpawnGrace;
+        const auto& d=EnemyData(u.kind);
+        const bool exposed = !front && d.shield && u.facingTime>=kSpawnGrace;
         u.blocked=u.Guarding() && !exposed && type==DamageType::Physical && source.y>=u.feet.y-EnemyData(u.kind).height-15;
-        u.health=std::max(0.0F,u.health-damage*(u.blocked?.2F:1.0F));u.flash=.16F;
+        const float reduction=type==DamageType::Physical && (u.blocked||!d.shield)?d.armor:0;
+        u.health=std::max(0.0F,u.health-damage*(1-reduction));u.flash=.16F;
         if(u.health<=0) {
             // Both slug lines detonate on death. 高能源石虫 holds a long physical fuse;
             // 辐能源石虫 leaks raw energy as it goes, handing every other live enemy a
@@ -189,6 +210,7 @@ bool EnemySystem::Damage(unsigned id, float damage, DamageType type, Vector2 sou
                     if(other.id!=u.id && other.state!=EnemyState::Dead && other.health>0)
                         other.haste=EnemySystem::kEnergizeDuration;
             }
+            else if(d.coldBlast) {u.stun=0;SetState(u,EnemyState::Fuse,.85F);}
             else SetState(u,EnemyState::Dead,0);
         } else if(stun>0 && u.state!=EnemyState::Fuse) {
             u.stun=std::max(u.stun,stun);SetState(u,EnemyState::Recover,EnemyData(u.kind).recovery);
@@ -228,19 +250,26 @@ bool EnemySystem::DestroyBolt(Vector2 position,float radius) {
     for(auto& b:bolts_) if(b.lifetime>0 && CheckCollisionCircles(position,radius,b.position,7)) {b.lifetime=0;return true;}
     return false;
 }
-bool EnemySystem::AttackHits(Rectangle body,Rectangle projectileBody,Vector2& source,bool* corrosive) {
+bool EnemySystem::AttackHits(Rectangle body,Rectangle projectileBody,Vector2& source,bool* corrosive,EnemyImpact* impact) {
     if(corrosive) *corrosive=false;
+    if(impact) *impact={};
     for(auto& u:units_) if(!u.hitConsumed && u.stun<=0) {
         const bool blast=u.state==EnemyState::Blast && CheckCollisionCircleRec(u.Center(),kBlastRadius,body);
         // Melee reach is never filtered by stealth - only ranged projectiles are.
         const bool strike=u.state==EnemyState::Strike && !IsRangedKind(u.kind) && CheckCollisionRecs(AttackArea(u),body);
-        if(blast||strike) {u.hitConsumed=true;source=u.Center();return true;}
+        if(blast||strike) {
+            u.hitConsumed=true;source=u.Center();
+            if(impact) {impact->cold=blast&&EnemyData(u.kind).coldBlast;impact->shatter=EnemyData(u.kind).shatter;impact->frozenDamage=u.kind==EnemyKind::Icebreaker?3:2;}
+            return true;
+        }
     }
     for(auto& b:bolts_) {
         float t=0;
-        if(b.lifetime>0 && SegmentHit(b.previous,b.position,projectileBody,5,t)) {
+        const bool landed=b.blastRadius>0 && b.gravity==0;
+        if(b.lifetime>0 && (landed?CheckCollisionCircleRec(b.position,b.blastRadius,body):SegmentHit(b.previous,b.position,projectileBody,5,t))) {
             b.lifetime=0;source=b.previous;
             if(corrosive) *corrosive=b.corrosive;
+            if(impact) {impact->cold=b.cold;impact->shatter=b.shatter;}
             return true;
         }
     }
@@ -261,5 +290,5 @@ int EnemySystem::Remaining() const {
     return Pending()+static_cast<int>(std::count_if(units_.begin(),units_.end(),[](const auto& u){return u.state!=EnemyState::Dead;}));
 }
 bool EnemySystem::Cleared() const {
-    return !units_.empty() && Remaining()==0 && std::none_of(bolts_.begin(),bolts_.end(),[](const auto& b){return b.lifetime>0;});
+    return !units_.empty() && Remaining()==0 && std::none_of(bolts_.begin(),bolts_.end(),[this](const auto& b){return b.lifetime>0;});
 }

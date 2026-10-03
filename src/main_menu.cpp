@@ -91,6 +91,30 @@ const MapExit* MainMenu::NearbyExit() const {
 }
 
 MenuAction MainMenu::Update(float deltaTime) {
+    const auto oldPage = page_;
+    const auto selection = [&] {
+        return std::array<int, 13>{homeSelection_, characterSelection_, characterSlot_,
+            archiveCategory_, archiveSelection_, equipmentSlot_, equipmentSelection_,
+            settingsSelection_, keySelection_, settings_.MasterVolume(), settings_.SoundVolume(),
+            draftCharacterLineup_[0], draftCharacterLineup_[1]};
+    };
+    const auto oldSelection = selection();
+    const auto oldMap = mapPreview_, oldWorld = worldRegion_, oldStatus = status_;
+    feedback_ = MenuFeedback::None;
+    const auto action = UpdateImpl(deltaTime);
+    if (feedback_ != MenuFeedback::None) return action;
+    if (action != MenuAction::None) feedback_ = MenuFeedback::Confirm;
+    else if (page_ != oldPage) {
+        const bool back = IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE) ||
+            pointer_.Clicked(TerminalUi::Back);
+        feedback_ = back ? MenuFeedback::Back : MenuFeedback::Confirm;
+    } else if (status_ != oldStatus) feedback_ = MenuFeedback::Confirm;
+    else if (selection() != oldSelection || oldMap != mapPreview_ || oldWorld != worldRegion_)
+        feedback_ = MenuFeedback::Select;
+    return action;
+}
+
+MenuAction MainMenu::UpdateImpl(float deltaTime) {
     pointer_ = ReadUiPointer(pointerState_);
     if (page_ != Page::Splash && page_ != Page::Home && pointer_.Clicked(TerminalUi::Back)) {
         if (page_ == Page::KeyBindings && capturingKey_) { capturingKey_ = false; return MenuAction::None; }
