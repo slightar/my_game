@@ -1,0 +1,64 @@
+{
+  "tool": "built-in image_gen",
+  "mode": "transparent parallax layer with scene style reference",
+  "assets": [
+    {
+      "id": "interior_back",
+      "ref": "ward",
+      "desc": "A distant overhead service gantry: thin desaturated blue-grey horizontal conduits, sparse brackets and recessed dim warm lamps, only within top 18 percent of a wide canvas. No walls, floor, doors or furniture. Everything below top 18 percent fully transparent. Sparse, visually quiet background detail.",
+      "prompt": "Generate a separate transparent PNG parallax layer for a 2D side-scrolling game, wide panoramic 3:1 canvas. Attached image is STYLE REFERENCE ONLY, do not reproduce its complete scene. Match the reference Arknights base/dorm inspired chibi-compatible painted environment: thin outlines, matte cel shaded blocks, subdued industrial grey, restrained detail. A distant overhead service gantry: thin desaturated blue-grey horizontal conduits, sparse brackets and recessed dim warm lamps, only within top 18 percent of a wide canvas. No walls, floor, doors or furniture. Everything below top 18 percent fully transparent. Sparse, visually quiet background detail. Transparent alpha background, no solid color or checkerboard baked in. No text, characters, UI, ground plane or arbitrary platform. Keep objects confined to specified edge, no objects in middle gameplay area. This is an independent compositing asset, not a new complete background.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-1c3b5f1f-c5d0-4902-83f4-f5be2147c0cf.png",
+      "transparent_background": true
+    },
+    {
+      "id": "interior_front",
+      "ref": "ward",
+      "desc": "Sparse close foreground cutouts at bottom edge only: dark matte metal sill, two small irregular groups of conduit couplings and low equipment-case corners. Top 82 percent fully transparent; no tall objects, no doors, no rail spanning entire canvas. Large transparent gaps occupying 65 percent of width. Low dark silhouettes with fine outline.",
+      "prompt": "Generate a separate transparent PNG parallax layer for a 2D side-scrolling game, wide panoramic 3:1 canvas. Attached image is STYLE REFERENCE ONLY, do not reproduce its complete scene. Match the reference Arknights base/dorm inspired chibi-compatible painted environment: thin outlines, matte cel shaded blocks, subdued industrial grey, restrained detail. Sparse close foreground cutouts at bottom edge only: dark matte metal sill, two small irregular groups of conduit couplings and low equipment-case corners. Top 82 percent fully transparent; no tall objects, no doors, no rail spanning entire canvas. Large transparent gaps occupying 65 percent of width. Low dark silhouettes with fine outline. Transparent alpha background, no solid color or checkerboard baked in. No text, characters, UI, ground plane or arbitrary platform. Keep objects confined to specified edge, no objects in middle gameplay area. This is an independent compositing asset, not a new complete background.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-58844845-9be4-4b6e-83de-9ee7ba101e4e.png",
+      "transparent_background": true
+    },
+    {
+      "id": "street_back",
+      "ref": "gray",
+      "desc": "Sparse distant overhead city infrastructure cutouts at top edge: a slender desaturated steel crossbeam and loose utility wires, tiny distant blue-grey brackets, slight atmospheric low contrast. Only top 15 percent occupied. Everything below is fully transparent. No skyline, no buildings, no floor, no snow sheet, no doors.",
+      "prompt": "Generate a separate transparent PNG parallax layer for a 2D side-scrolling game, wide panoramic 3:1 canvas. Attached image is STYLE REFERENCE ONLY, do not reproduce its complete scene. Match the reference Arknights base/dorm inspired chibi-compatible painted environment: thin outlines, matte cel shaded blocks, subdued industrial grey, restrained detail. Sparse distant overhead city infrastructure cutouts at top edge: a slender desaturated steel crossbeam and loose utility wires, tiny distant blue-grey brackets, slight atmospheric low contrast. Only top 15 percent occupied. Everything below is fully transparent. No skyline, no buildings, no floor, no snow sheet, no doors. Transparent alpha background, no solid color or checkerboard baked in. No text, characters, UI, ground plane or arbitrary platform. Keep objects confined to specified edge, no objects in middle gameplay area. This is an independent compositing asset, not a new complete background.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-116ff466-3228-413a-877c-d510bba63163.png",
+      "transparent_background": true
+    },
+    {
+      "id": "street_front",
+      "ref": "gray",
+      "desc": "Sparse close foreground bottom edge cutouts: low broken dark concrete coping stones, one short low steel barrier base and cable spool corner, scattered snow highlights. Top 83 percent fully transparent. No tall posts, no doors, no spanning rail. 65 percent width gaps fully transparent. Dark matte silhouette, fine hand-painted outline.",
+      "prompt": "Generate a separate transparent PNG parallax layer for a 2D side-scrolling game, wide panoramic 3:1 canvas. Attached image is STYLE REFERENCE ONLY, do not reproduce its complete scene. Match the reference Arknights base/dorm inspired chibi-compatible painted environment: thin outlines, matte cel shaded blocks, subdued industrial grey, restrained detail. Sparse close foreground bottom edge cutouts: low broken dark concrete coping stones, one short low steel barrier base and cable spool corner, scattered snow highlights. Top 83 percent fully transparent. No tall posts, no doors, no spanning rail. 65 percent width gaps fully transparent. Dark matte silhouette, fine hand-painted outline. Transparent alpha background, no solid color or checkerboard baked in. No text, characters, UI, ground plane or arbitrary platform. Keep objects confined to specified edge, no objects in middle gameplay area. This is an independent compositing asset, not a new complete background.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-8f07e13e-f9c5-457b-b5a5-6ac7bed4ff7b.png",
+      "transparent_background": true
+    },
+    {
+      "id": "system_back",
+      "ref": "prts",
+      "desc": "Distant overhead infrastructure cutouts at top edge: slender suspended dark data conduits, small cyan light accents, sparse understated blue-grey gantry ribs. Occupy only top 16 percent. Everything below fully transparent. No walls, no floor, no doorway, no orb.",
+      "prompt": "Generate a separate transparent PNG parallax layer for a 2D side-scrolling game, wide panoramic 3:1 canvas. Attached image is STYLE REFERENCE ONLY, do not reproduce its complete scene. Match the reference Arknights base/dorm inspired chibi-compatible painted environment: thin outlines, matte cel shaded blocks, subdued industrial grey, restrained detail. Distant overhead infrastructure cutouts at top edge: slender suspended dark data conduits, small cyan light accents, sparse understated blue-grey gantry ribs. Occupy only top 16 percent. Everything below fully transparent. No walls, no floor, no doorway, no orb. Transparent alpha background, no solid color or checkerboard baked in. No text, characters, UI, ground plane or arbitrary platform. Keep objects confined to specified edge, no objects in middle gameplay area. This is an independent compositing asset, not a new complete background.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-df62d47a-b71c-4878-b2a1-bed2281e78f5.png",
+      "transparent_background": true
+    },
+    {
+      "id": "system_front",
+      "ref": "prts",
+      "desc": "Sparse close foreground bottom edge cutouts: low dark modular cable-tray corners, a compact connector bank, tiny cyan status accents. Top 84 percent fully transparent. No tall objects or doors. 65 percent of width fully transparent gaps. Low dark matte silhouettes, restrained cyan.",
+      "prompt": "Generate a separate transparent PNG parallax layer for a 2D side-scrolling game, wide panoramic 3:1 canvas. Attached image is STYLE REFERENCE ONLY, do not reproduce its complete scene. Match the reference Arknights base/dorm inspired chibi-compatible painted environment: thin outlines, matte cel shaded blocks, subdued industrial grey, restrained detail. Sparse close foreground bottom edge cutouts: low dark modular cable-tray corners, a compact connector bank, tiny cyan status accents. Top 84 percent fully transparent. No tall objects or doors. 65 percent of width fully transparent gaps. Low dark matte silhouettes, restrained cyan. Transparent alpha background, no solid color or checkerboard baked in. No text, characters, UI, ground plane or arbitrary platform. Keep objects confined to specified edge, no objects in middle gameplay area. This is an independent compositing asset, not a new complete background.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-8f730c33-7e60-42ab-ad95-8b5b1770ff8c.png",
+      "transparent_background": true
+    },
+    {
+      "id": "industrial_front",
+      "ref": "industry",
+      "prompt": "Create a separate transparent PNG parallax foreground cutout layer, wide panoramic 3:1 canvas, using attached image as STYLE REFERENCE ONLY. Arknights base/dorm industrial hand-painted chibi-compatible environment, thin outlines, matte grey blocks, restrained detail. Sparse dark foreground at BOTTOM EDGE ONLY: broken dry concrete coping stones, short low steel barrier bases, coiled black industrial cables, subtle weathering, no snow or ice, no flames. Top 80 percent entirely transparent; middle play area entirely empty; 65 percent of horizontal width transparent gaps. No tall poles, walls, doors, text, characters, UI or complete background. These are low industrial foreground silhouettes close to camera, not walkable platforms. Transparent alpha background, not baked black/checkerboard.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-1cdc8caa-26f0-4259-837c-1aa549bff5dd.png",
+      "transparent_background": true
+    }
+  ],
+  "aliases": {
+    "industrial_back": "street_back"
+  }
+}

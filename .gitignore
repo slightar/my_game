@@ -4,3 +4,8 @@ cmake-build-release/
 cmake-build-package/
 assets/operators/texas_chibi.webp
 output/texas_vfx/_work/*.npy
+
+# Generated QA captures, extracted intermediates and Python bytecode.
+/output/
+__pycache__/
+*.py[cod]

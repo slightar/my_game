@@ -1,0 +1,80 @@
+{
+  "texas_battle": {
+    "bundle": "chararts/char_102_texas.ab",
+    "bundle_sha256": "f36c156273e51d577111778e255fa488c1d95b6526035899c64b516c03ab9c34",
+    "model": "char_102_texas",
+    "view": "front",
+    "objects": {
+      "skel": "5042947992320052993",
+      "atlas": "2104618268033701270",
+      "texture": "582067473495353674",
+      "alpha": "2515694011790741058"
+    },
+    "skel_sha256": "cd7ac17b3b3247ff503237b7f45982e248a6f8679470fa70b6b3918e530b8615",
+    "columns": 24,
+    "rows": 3,
+    "cell": 256,
+    "animations": [
+      "Idle",
+      "Attack",
+      "Die"
+    ],
+    "durations": [
+      2,
+      2,
+      1
+    ],
+    "sequences": [
+      [
+        "Idle"
+      ],
+      [
+        "Attack_Start",
+        "Attack_Loop",
+        "Attack_End"
+      ],
+      [
+        "Die"
+      ]
+    ],
+    "anchor": [
+      128,
+      224
+    ],
+    "idleHeight": 164,
+    "availableAnimations": [
+      {
+        "name": "Attack_End",
+        "duration": 0.5
+      },
+      {
+        "name": "Attack_Loop",
+        "duration": 1
+      },
+      {
+        "name": "Attack_Start",
+        "duration": 0.5
+      },
+      {
+        "name": "Default",
+        "duration": 0
+      },
+      {
+        "name": "Die",
+        "duration": 1
+      },
+      {
+        "name": "Idle",
+        "duration": 2
+      },
+      {
+        "name": "Skill",
+        "duration": 2.1666667461395264
+      },
+      {
+        "name": "Start",
+        "duration": 1
+      }
+    ]
+  }
+}

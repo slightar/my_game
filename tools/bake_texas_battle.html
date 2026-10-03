@@ -1,0 +1,64 @@
+<!doctype html><meta charset="utf-8">
+<script src="pixi.js"></script><script src="spine.js"></script>
+<body>
+<script>
+// Offline rendering of the original front battle rig. No generated character art.
+(async () => {
+  try {
+    const app = new PIXI.Application({width:256,height:256,backgroundAlpha:0,
+      antialias:true,preserveDrawingBuffer:true});
+    app.stop(); document.body.appendChild(app.view);
+    const loader = new PIXI.Loader();
+    await new Promise((resolve,reject) => {
+      loader.onError.add(reject);
+      loader.add('model','texas_battle/char_102_texas.skel').load(resolve);
+    });
+    const rig = new PIXI.spine.Spine(loader.resources.model.spineData);
+    rig.autoUpdate=false; app.stage.addChild(rig);
+    if (!rig.skeleton.data.defaultSkin) {
+      rig.skeleton.setSkinByName(rig.skeleton.data.skins[0].name);
+      rig.skeleton.setSlotsToSetupPose();
+    }
+    const names=['Idle','Attack','Die'];
+    const sequences=[['Idle'],['Attack_Start','Attack_Loop','Attack_End'],['Die']];
+    const animations=sequences.map(sequence=>sequence.map(n=>rig.spineData.animations.find(a=>a.name===n)));
+    if (animations.flat().some(a=>!a)) throw Error('Battle animations: '+rig.spineData.animations.map(a=>a.name));
+    const durations=animations.map(sequence=>sequence.reduce((sum,a)=>sum+a.duration,0));
+    const columns=24,cell=256;
+    function pose(row,col) {
+      rig.skeleton.setToSetupPose();rig.state.clearTracks();
+      let time=durations[row]*col/(row===0?columns:columns-1);
+      for(let index=0;index<animations[row].length;index++) {
+        const animation=animations[row][index];
+        rig.state.setAnimation(0,animation.name,false);
+        rig.update(Math.min(time,animation.duration));
+        if(time<=animation.duration) break;
+        time-=animation.duration;
+      }
+    }
+    pose(0,0);const idle=rig.getBounds();
+    // One common scale and ground origin for every frame: no per-frame resizing.
+    const anchor=[128,224],bodyHeight=164;
+    const center=idle.x+idle.width/2,ground=idle.y+idle.height;
+    let extent=0,top=0,bottom=0;
+    for(let row=0;row<3;row++) for(let col=0;col<columns;col++) {
+      pose(row,col);const b=rig.getBounds();
+      extent=Math.max(extent,Math.abs(b.x-center),Math.abs(b.x+b.width-center));
+      top=Math.max(top,ground-b.y);bottom=Math.max(bottom,b.y+b.height-ground);
+    }
+    const scale=Math.min(bodyHeight/idle.height,120/extent,216/top,24/Math.max(1,bottom));
+    rig.scale.set(scale);rig.position.set(anchor[0]-center*scale,anchor[1]-ground*scale);
+    const sheet=document.createElement('canvas');sheet.width=cell*columns;sheet.height=cell*3;
+    const ctx=sheet.getContext('2d');
+    for(let row=0;row<3;row++) for(let col=0;col<columns;col++) {
+      pose(row,col);app.renderer.render(app.stage);ctx.drawImage(app.view,col*cell,row*cell);
+    }
+    const source=await (await fetch('source.json')).json();
+    const manifest={texas_battle:{...source,columns,rows:3,cell,animations:names,
+      durations,sequences,anchor,idleHeight:idle.height*scale,
+      availableAnimations:rig.spineData.animations.map(a=>({name:a.name,duration:a.duration}))}};
+    await fetch('/bake/texas_battle',{method:'POST',body:sheet.toDataURL('image/png').split(',')[1]});
+    await fetch('/done',{method:'POST',body:JSON.stringify(manifest,null,2)});
+  } catch(e) {await fetch('/error',{method:'POST',body:String(e.stack||e)});}
+})();
+</script>

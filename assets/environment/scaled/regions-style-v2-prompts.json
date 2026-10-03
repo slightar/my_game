@@ -1,0 +1,232 @@
+{
+  "tool": "built-in image_gen",
+  "mode": "style-transfer edit",
+  "scenes": [
+    {
+      "id": "clinic",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/clinic.png",
+        "D:/my_game/assets/environment/scaled/approach_wtower_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the open shortcut door at x26.5%, floor y73%. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-2832f2e8-d14c-4565-90ab-800e50974a2b.png",
+      "projectPath": "assets/environment/scaled/clinic_style_v2.png"
+    },
+    {
+      "id": "gray",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/gray.png",
+        "D:/my_game/assets/environment/scaled/approach_bridge_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-0c7143ca-ceac-4928-8e17-d5fad596dfd1.png",
+      "projectPath": "assets/environment/scaled/gray_style_v2.png"
+    },
+    {
+      "id": "clock",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/regions/clock.png",
+        "D:/my_game/assets/environment/scaled/approach_industry_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Preserve bronze clock face, gears and timber identity, doors x12% and89%, floor y71%. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-9c6ae3e8-d292-4d15-8682-4b48cf0b07d3.png",
+      "projectPath": "assets/environment/scaled/clock_style_v2.png"
+    },
+    {
+      "id": "entry",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/entry_broken.png",
+        "D:/my_game/assets/environment/scaled/approach_bridge_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. CRITICAL collision geometry: preserve broken stairs exactly: stair rises leftward from x82.7%,y52.5% to x70.5%,y26.6%; landing x64.5%-90%,y26.6%; upper doorway x81.5%; bottom broken segment remains missing. Ground contact line y63.8%. Do not add stairs or extend existing stair downward. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-5437b9a5-98f8-47cf-bfc2-28e7cfa943a7.png",
+      "projectPath": "assets/environment/scaled/entry_style_v2.png"
+    },
+    {
+      "id": "station",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/station.png",
+        "D:/my_game/assets/environment/scaled/approach_industry_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-c5f89ea6-f8af-47c9-ac11-a9f151b9c8db.png",
+      "projectPath": "assets/environment/scaled/station_style_v2.png"
+    },
+    {
+      "id": "ward",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/ward.png",
+        "D:/my_game/assets/environment/scaled/approach_wtower_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep small bed and doors at x15% and71.5%, painted floor y74.5%; no larger furniture. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-6d0f9c71-9579-4b7f-b6d9-4e297ff93760.png",
+      "projectPath": "assets/environment/scaled/ward_style_v2.png"
+    },
+    {
+      "id": "bridge",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/bridge.png",
+        "D:/my_game/assets/environment/scaled/approach_bridge_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-36f9821b-5640-4c34-87a1-ede7e660bcd5.png",
+      "projectPath": "assets/environment/scaled/bridge_style_v2.png"
+    },
+    {
+      "id": "wtower",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/wtower.png",
+        "D:/my_game/assets/environment/scaled/approach_wtower_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-ce2db90c-1b7f-44b4-9bc7-8e238032892b.png",
+      "projectPath": "assets/environment/scaled/wtower_style_v2.png"
+    },
+    {
+      "id": "comm",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/comm.png",
+        "D:/my_game/assets/environment/scaled/approach_wtower_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-6f06f047-f2f1-4a42-88c9-ff8cff1b993d.png",
+      "projectPath": "assets/environment/scaled/comm_style_v2.png"
+    },
+    {
+      "id": "well",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/regions/well.png",
+        "D:/my_game/assets/environment/scaled/approach_industry_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-6a5d443a-a393-4a10-b9b5-f5fa83133622.png",
+      "projectPath": "assets/environment/scaled/well_style_v2.png"
+    },
+    {
+      "id": "ice",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/ice.png",
+        "D:/my_game/assets/environment/scaled/approach_ice_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-d363b689-cf89-419c-9106-0aec0c9ce86f.png",
+      "projectPath": "assets/environment/scaled/ice_style_v2.png"
+    },
+    {
+      "id": "pipes",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/pipes.png",
+        "D:/my_game/assets/environment/scaled/approach_industry_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-395f0cb9-2169-46a2-ae1b-48bdf9d95b2e.png",
+      "projectPath": "assets/environment/scaled/pipes_style_v2.png"
+    },
+    {
+      "id": "shelter",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/shelter.png",
+        "D:/my_game/assets/environment/scaled/approach_industry_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-1e3f414b-22d5-4f4c-9a18-da06c8deb8e7.png",
+      "projectPath": "assets/environment/scaled/shelter_style_v2.png"
+    },
+    {
+      "id": "industry",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/regions/industry.png",
+        "D:/my_game/assets/environment/scaled/approach_industry_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-60bada5b-d8a2-4689-aee3-3ab3a0339451.png",
+      "projectPath": "assets/environment/scaled/industry_style_v2.png"
+    },
+    {
+      "id": "burn",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/regions/burn.png",
+        "D:/my_game/assets/environment/scaled/approach_core_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-e50d96fd-8550-42e9-a231-7929ed099a6b.png",
+      "projectPath": "assets/environment/scaled/burn_style_v2.png"
+    },
+    {
+      "id": "core",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/core.png",
+        "D:/my_game/assets/environment/scaled/approach_core_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-193488bf-4039-405b-9740-97db40cab279.png",
+      "projectPath": "assets/environment/scaled/core_style_v2.png"
+    },
+    {
+      "id": "normal",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/normal.png",
+        "D:/my_game/assets/environment/scaled/approach_ice_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Keep the exact original floor, portal and prop positions. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-2b586d7d-3f19-4b8c-9271-3370f156226a.png",
+      "projectPath": "assets/environment/scaled/normal_style_v2.png"
+    },
+    {
+      "id": "root",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/regions/root.png",
+        "D:/my_game/assets/environment/scaled/approach_prts_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Preserve dark cable root chamber, portals x22.5%,79%, floor y62%. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-89b544c1-fafb-486c-a9ec-a57118025bf4.png",
+      "projectPath": "assets/environment/scaled/root_style_v2.png"
+    },
+    {
+      "id": "prts",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/regions/prts.png",
+        "D:/my_game/assets/environment/scaled/approach_prts_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Preserve white/cyan system chamber and right portal x69.5%, floor y72%. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-33799356-70d7-462c-a897-24480ea0deb9.png",
+      "projectPath": "assets/environment/scaled/prts_style_v2.png"
+    },
+    {
+      "id": "throne",
+      "referenced_image_paths": [
+        "D:/my_game/assets/environment/scaled/throne.png",
+        "D:/my_game/assets/environment/scaled/approach_prts_style_v2.png"
+      ],
+      "transparent_background": false,
+      "prompt": "Style-transfer edit: image 1 is the sole target, an existing full game background. Image 2 is STYLE reference only: match its Arknights base/dormitory chibi-compatible illustration language, never copy its room or layout. Repaint target with clean fine dark contour lines, broad matte color planes, restrained 2-3 tone hand shading, crisp modular beveled surfaces, desaturated colors and sparse functional lights. Remove gritty photographic texture, heavy bloom and cinematic haze; preserve region-specific palette and distinctive setting. STRICTLY preserve target's exact 3:1 full panorama aspect, camera, composition, all object sizes, positions, door openings, staircase geometry and walking floor height. Do not zoom, crop, enlarge beds or doors, relocate portals, rebuild the room or introduce new platforms. Existing scene scale is already calibrated to the playable character. Keep detail rich yet graphic and legible, unique furniture and architecture. Preserve all target geometry while replacing only material/line/shading treatment. No people, UI, text labels, route arrows, secret markers, red gates or new objects. Preserve ivory/mauve throne room and flowers, floor y68%. Keep dais as background decoration. Output one finished opaque panoramic background, same dimensions as target, no comparison sheet.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-11a35874-3ee9-4fcc-94d4-f72fe79c6251.png",
+      "projectPath": "assets/environment/scaled/throne_style_v2.png"
+    },
+    {
+      "id": "clinic_closed",
+      "prompt": "Edit image 1 only: close the OPEN doorway centered x26.5% (second human doorway from left, with visible shelves and corridor inside). Replace only that doorway interior with fitted closed matte ivory double metal doors, narrow dark vertical windows, matching the door at x10.5%. Keep its frame and amber lamp, all other pixels/composition/geometry/furniture/floor/lighting/art style unchanged. This is a locked clinic shortcut state of the same game scene. Exact same 3:1 panorama and output dimensions. No new text or UI.",
+      "generatedPath": "C:\\Users\\34844\\.codex\\generated_images\\01a0ea90-9b97-7cb1-954a-247137b6f033\\exec-7e50da0e-930f-4a00-aff5-e06cb7b85b04.png",
+      "projectPath": "assets/environment/scaled/clinic_closed_style_v2.png"
+    }
+  ]
+}

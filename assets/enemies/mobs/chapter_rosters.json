@@ -1,0 +1,188 @@
+{
+  "bridge": {
+    "code": "1-8",
+    "name": "意志",
+    "levelId": "Obt/Main/level_main_01-08",
+    "wiki": "https://prts.wiki/w/1-8",
+    "source": "https://github.com/Kengxxiao/ArknightsGameData/blob/master/zh_CN/gamedata/levels/obt/main/level_main_01-08.json",
+    "originalEnemies": [
+      {
+        "id": "enemy_1007_slime",
+        "name": "源石虫"
+      },
+      {
+        "id": "enemy_1007_slime_2",
+        "name": "源石虫·α"
+      },
+      {
+        "id": "enemy_1002_nsabr",
+        "name": "士兵"
+      },
+      {
+        "id": "enemy_1029_shdsbr",
+        "name": "机动盾兵"
+      },
+      {
+        "id": "enemy_1000_gopro_2",
+        "name": "猎狗pro"
+      },
+      {
+        "id": "enemy_1011_wizard",
+        "name": "术师"
+      },
+      {
+        "id": "enemy_1005_yokai",
+        "name": "妖怪"
+      },
+      {
+        "id": "enemy_1502_crowns",
+        "name": "弑君者"
+      }
+    ],
+    "source_sha256": "ec02431bc94040ab18d2620733b30f1e6cd49263449c452ac6c7dd4b0ed78888"
+  },
+  "wtower": {
+    "code": "1-12",
+    "name": "代价",
+    "levelId": "Obt/Main/level_main_01-12",
+    "wiki": "https://prts.wiki/w/1-12",
+    "source": "https://github.com/Kengxxiao/ArknightsGameData/blob/master/zh_CN/gamedata/levels/obt/main/level_main_01-12.json",
+    "originalEnemies": [
+      {
+        "id": "enemy_1504_cqbw",
+        "name": "W"
+      },
+      {
+        "id": "enemy_1014_rogue",
+        "name": "双持剑士"
+      },
+      {
+        "id": "enemy_1028_mocock_2",
+        "name": "燃烧瓶投掷者"
+      },
+      {
+        "id": "enemy_1030_wteeth",
+        "name": "拾荒者"
+      },
+      {
+        "id": "enemy_1000_gopro_2",
+        "name": "猎狗pro"
+      },
+      {
+        "id": "enemy_1029_shdsbr",
+        "name": "机动盾兵"
+      }
+    ],
+    "source_sha256": "b822fc4de2837178785192a6fb86a27053885319c05f3e33239b0f7c0a036bff"
+  },
+  "ice": {
+    "code": "6-16",
+    "name": "黑兔子,白兔子",
+    "levelId": "Obt/Main/level_main_06-14",
+    "wiki": "https://prts.wiki/w/6-16",
+    "source": "https://github.com/Kengxxiao/ArknightsGameData/blob/master/zh_CN/gamedata/levels/obt/main/level_main_06-14.json",
+    "originalEnemies": [
+      {
+        "id": "enemy_1510_frstar2",
+        "name": "霜星，“冬痕”"
+      },
+      {
+        "id": "enemy_1065_snwolf_2",
+        "name": "霜锐"
+      },
+      {
+        "id": "enemy_1006_shield_2",
+        "name": "重装防御组长"
+      },
+      {
+        "id": "enemy_1064_snsbr",
+        "name": "雪怪小队"
+      },
+      {
+        "id": "enemy_1066_snbow",
+        "name": "雪怪狙击手"
+      },
+      {
+        "id": "enemy_1069_icebrk",
+        "name": "雪怪小队凿冰人"
+      },
+      {
+        "id": "enemy_1068_snmage_2",
+        "name": "雪怪术师组长"
+      },
+      {
+        "id": "enemy_1067_snslime",
+        "name": "冰爆源石虫"
+      }
+    ],
+    "source_sha256": "4e0a1f4360bbb94afa20e258b856305495baae1d6007debf4dc0ebfad6588b64"
+  },
+  "industry": {
+    "code": "7-18",
+    "name": "爱国者之死",
+    "levelId": "Obt/Main/level_main_07-16",
+    "wiki": "https://prts.wiki/w/7-18",
+    "source": "https://github.com/Kengxxiao/ArknightsGameData/blob/master/zh_CN/gamedata/levels/obt/main/level_main_07-16.json",
+    "originalEnemies": [
+      {
+        "id": "enemy_1077_sotihd",
+        "name": "游击队猎犬"
+      },
+      {
+        "id": "enemy_1078_sotisc",
+        "name": "游击队战士"
+      },
+      {
+        "id": "enemy_1079_sotisp",
+        "name": "游击队狙击手"
+      },
+      {
+        "id": "enemy_1082_soticn",
+        "name": "游击队迫击炮兵"
+      },
+      {
+        "id": "enemy_1083_sotiab",
+        "name": "游击队突袭战士"
+      },
+      {
+        "id": "enemy_1083_sotiab_2",
+        "name": "游击队突袭战士组长"
+      },
+      {
+        "id": "enemy_1084_sotidm",
+        "name": "游击队萨卡兹战士"
+      },
+      {
+        "id": "enemy_1506_patrt",
+        "name": "爱国者"
+      }
+    ],
+    "source_sha256": "bc09233c10c1694460374b47e7aa34060c40866332d29e457829fc9233ee859f"
+  },
+  "core": {
+    "code": "JT8-3",
+    "name": "昂首，足践烈焰",
+    "levelId": "Obt/Main/level_main_08-17",
+    "wiki": "https://prts.wiki/w/JT8-3",
+    "source": "https://github.com/Kengxxiao/ArknightsGameData/blob/master/zh_CN/gamedata/levels/obt/main/level_main_08-17.json",
+    "originalEnemies": [
+      {
+        "id": "enemy_1108_uterer",
+        "name": "乌萨斯裂兽"
+      },
+      {
+        "id": "enemy_1110_uamord",
+        "name": "乌萨斯着铠术师"
+      },
+      {
+        "id": "enemy_1111_ucommd",
+        "name": "乌萨斯突击者"
+      },
+      {
+        "id": "enemy_1515_bsnake",
+        "name": "“不死的黑蛇”"
+      }
+    ],
+    "source_sha256": "09395fbb210777b231370fdfc26e3012abd0a3838e9af45153a7d649b4ac6b37"
+  }
+}

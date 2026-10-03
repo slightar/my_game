@@ -1,0 +1,262 @@
+[
+  {
+    "name": "b_char_atkboost",
+    "bundle": "audio\\sound_beta_2\\btl_snd_0.ab",
+    "object": -6285796641923630363,
+    "duration": 2.117482900619507,
+    "channels": 2,
+    "frequency": 44100,
+    "bundleSha256": "86e6e4adecad2ec80189663ecb92e5bf9b1c4d2cc6e873540628c70b52dbcbab",
+    "exports": [
+      "skill.wav"
+    ],
+    "sampleSha256": "c8d468288c9308cb56a496d24ede9b10ae15acb2b27c33bf48795241ef29c7e1"
+  },
+  {
+    "name": "b_ui_achievestage",
+    "bundle": "audio\\sound_beta_2\\btl_snd_1.ab",
+    "object": -7661732438279303819,
+    "duration": 0.2913333475589752,
+    "channels": 2,
+    "frequency": 48000,
+    "bundleSha256": "6c1a15e51593083ad1532d8005f4509bbf46ffdc65a23263a6b66d4a2527c9d4",
+    "exports": [
+      "clear.wav"
+    ],
+    "sampleSha256": "88dde149bdf197865508a06b917208c89bfa85f0076ad085bd548cec4f0a15db"
+  },
+  {
+    "name": "b_char_tokenset",
+    "bundle": "audio\\sound_beta_2\\btl_snd_1.ab",
+    "object": 8015815660688944648,
+    "duration": 0.44891157746315,
+    "channels": 2,
+    "frequency": 44100,
+    "bundleSha256": "6c1a15e51593083ad1532d8005f4509bbf46ffdc65a23263a6b66d4a2527c9d4",
+    "exports": [
+      "operator_switch.wav"
+    ],
+    "sampleSha256": "eb04260bb1754d844e25032a7c0a585e6a8a822cdb16c8f274238f7d1e542c27"
+  },
+  {
+    "name": "b_ui_getresource",
+    "bundle": "audio\\sound_beta_2\\btl_snd_2.ab",
+    "object": -6071165858711008531,
+    "duration": 0.5751041769981384,
+    "channels": 2,
+    "frequency": 48000,
+    "bundleSha256": "d48594e5f9b0b9fd11c05d060ffe8407abc1eb0216d75423fd501b4cd94d3da0",
+    "exports": [
+      "investigate.wav"
+    ],
+    "sampleSha256": "41a18659f01c8ffc2e28922e2e9e31f71584439c5d6dbd6a9c3aec82b9c25cc0"
+  },
+  {
+    "name": "b_ui_hiddenunlock",
+    "bundle": "audio\\sound_beta_2\\btl_snd_2.ab",
+    "object": -5024079581206034626,
+    "duration": 2.3567917346954346,
+    "channels": 2,
+    "frequency": 48000,
+    "bundleSha256": "d48594e5f9b0b9fd11c05d060ffe8407abc1eb0216d75423fd501b4cd94d3da0",
+    "exports": [
+      "hidden_enter.wav"
+    ],
+    "sampleSha256": "6abd2e9de400c5ac2566ba84ec053e4fbcd36cb0f0ec55958c49b3ba0355a63e"
+  },
+  {
+    "name": "b_ui_dngrsmywrng",
+    "bundle": "audio\\sound_beta_2\\btl_snd_2.ab",
+    "object": -1381013232635811413,
+    "duration": 0.6870416402816772,
+    "channels": 2,
+    "frequency": 48000,
+    "bundleSha256": "d48594e5f9b0b9fd11c05d060ffe8407abc1eb0216d75423fd501b4cd94d3da0",
+    "exports": [
+      "encounter.wav"
+    ],
+    "sampleSha256": "acb5bc93716c5229dc2742c304c274aebbc865b3e79be7a15e4deb6df2e244fe"
+  },
+  {
+    "name": "b_ui_negativehint",
+    "bundle": "audio\\sound_beta_2\\btl_snd_2.ab",
+    "object": 4293627036830093207,
+    "duration": 0.8628541827201843,
+    "channels": 2,
+    "frequency": 48000,
+    "bundleSha256": "d48594e5f9b0b9fd11c05d060ffe8407abc1eb0216d75423fd501b4cd94d3da0",
+    "exports": [
+      "denied.wav"
+    ],
+    "sampleSha256": "7b03522314fff25b96ac61d521727c02afa8a34a53fbb8b5d8e64ac035bc2663"
+  },
+  {
+    "name": "b_ui_applypause",
+    "bundle": "audio\\sound_beta_2\\btl_snd_2.ab",
+    "object": 7184235297967455162,
+    "duration": 0.4573541581630707,
+    "channels": 2,
+    "frequency": 48000,
+    "bundleSha256": "d48594e5f9b0b9fd11c05d060ffe8407abc1eb0216d75423fd501b4cd94d3da0",
+    "exports": [
+      "pause.wav"
+    ],
+    "sampleSha256": "d9fb83dc2b7472dc2778e018ee2a1672b3e72ba037809759748c8b10287b40dc"
+  },
+  {
+    "name": "b_ui_popuphint",
+    "bundle": "audio\\sound_beta_2\\btl_snd_3.ab",
+    "object": -2520578570136123253,
+    "duration": 0.5,
+    "channels": 2,
+    "frequency": 48000,
+    "bundleSha256": "5ed94c4215e266b6c8d856479f987644752191d17fbd9ea4c0ffadfcc4124857",
+    "exports": [
+      "narration.wav"
+    ],
+    "sampleSha256": "5bb6911f032d33ae189a8c65413284bde1dc97b5d59162961c320b7d490b07dd"
+  },
+  {
+    "name": "g_ui_btn_h",
+    "bundle": "audio\\sound_beta_2\\general_1.ab",
+    "object": -2197470369916902191,
+    "duration": 0.4595464766025543,
+    "channels": 2,
+    "frequency": 44100,
+    "bundleSha256": "6a18ab470d05f333d102472e0a3aade570d909dca99702bed03f7d46ff66cbdd",
+    "exports": [
+      "ui_confirm.wav"
+    ],
+    "sampleSha256": "c08950e69ff01f1f097770dc3b840237bbc83aaf673c40e82295f1c730e530e2"
+  },
+  {
+    "name": "g_ui_tickup",
+    "bundle": "audio\\sound_beta_2\\general_6.ab",
+    "object": 2926821199903649879,
+    "duration": 0.18643991649150848,
+    "channels": 2,
+    "frequency": 44100,
+    "bundleSha256": "0297598aef82620d6b506604d432d4668f967eb2c5df3e710ffee890d0371972",
+    "exports": [
+      "ui_select.wav"
+    ],
+    "sampleSha256": "9b340172c5e1ea34bbe31aafd14c1d9cca5e836234b69c3f02c24f8fab8ec23c"
+  },
+  {
+    "name": "g_ui_tickdown",
+    "bundle": "audio\\sound_beta_2\\general_6.ab",
+    "object": 3603965496195145563,
+    "duration": 0.17884354293346405,
+    "channels": 2,
+    "frequency": 44100,
+    "bundleSha256": "0297598aef82620d6b506604d432d4668f967eb2c5df3e710ffee890d0371972",
+    "exports": [
+      "empty.wav"
+    ],
+    "sampleSha256": "36f89544ba3ab2766d34e2450f79178d4d6517af84fe5f5c47259242e7800eec"
+  },
+  {
+    "name": "g_ui_switchmap",
+    "bundle": "audio\\sound_beta_2\\general_7.ab",
+    "object": 6327145945950744270,
+    "duration": 0.4429999887943268,
+    "channels": 2,
+    "frequency": 48000,
+    "bundleSha256": "2c367f90b6ca7608d9c39e170d919e0fea68228ee75b4de8cb67fa5179d67faf",
+    "exports": [
+      "scene_enter.wav"
+    ],
+    "sampleSha256": "4e30d7a7c0b60e85f872dd2bcfe738c8e6a6a9e0bd400c0e0bb549e30fc392cd"
+  },
+  {
+    "name": "g_ui_unpick",
+    "bundle": "audio\\sound_beta_2\\general_8.ab",
+    "object": -838840176653818583,
+    "duration": 0.4659791588783264,
+    "channels": 2,
+    "frequency": 48000,
+    "bundleSha256": "36a730078b39dc57c7d15f445b869729bad4125383f3af26222d20a9b63b784b",
+    "exports": [
+      "ui_back.wav"
+    ],
+    "sampleSha256": "bb82c1d21e0d0e921ef5ea13ea5846f2d9567c318e94c44a3e713897d9f0d0cf"
+  },
+  {
+    "name": "p_atk_pistolup_dreload",
+    "bundle": "audio\\sound_beta_2\\player\\p_atk_2.ab",
+    "object": -6074940943859924185,
+    "duration": 0.34297916293144226,
+    "channels": 1,
+    "frequency": 48000,
+    "bundleSha256": "c61110615467e38d0a39333bcd4faf1ca4beca377167ed49b06717d3d5326d0a",
+    "exports": [
+      "reload.wav"
+    ],
+    "sampleSha256": "5e16f04ad19d92d9c00afad10f48eb77c295e63fbb93f17bf9e9b607db3e393b"
+  },
+  {
+    "name": "p_atk_smg_n",
+    "bundle": "audio\\sound_beta_2\\player\\p_atk_3.ab",
+    "object": -7256714717203204498,
+    "duration": 0.767097532749176,
+    "channels": 1,
+    "frequency": 44100,
+    "bundleSha256": "e514355c769145a9eab2a7e760eae2256be99c6ca57915afb8767367836a6722",
+    "exports": [
+      "gunshot.wav"
+    ],
+    "sampleSha256": "9ae8175d235c490281b13f853fa3fd73825bc7c756edb94a1dc05bfe3823dcd0"
+  },
+  {
+    "name": "p_atk_swordcut_d",
+    "bundle": "audio\\sound_beta_2\\player\\p_atk_3.ab",
+    "object": 7779327971502220024,
+    "duration": 0.29879167675971985,
+    "channels": 1,
+    "frequency": 48000,
+    "bundleSha256": "e514355c769145a9eab2a7e760eae2256be99c6ca57915afb8767367836a6722",
+    "exports": [
+      "slash.wav"
+    ],
+    "sampleSha256": "94cf6f5a0c87c568effc3e1181720a24aeedbad60642e2af83c4019a472ad847"
+  },
+  {
+    "name": "p_imp_chngun_n",
+    "bundle": "audio\\sound_beta_2\\player\\p_imp_0.ab",
+    "object": -8521062520645359566,
+    "duration": 0.1120000034570694,
+    "channels": 1,
+    "frequency": 48000,
+    "bundleSha256": "3243a51ee4bb8733f9538cbb39bba68d90a6d1df41e6955b5926deb1e559e715",
+    "exports": [
+      "enemy_hit.wav"
+    ],
+    "sampleSha256": "4eb1c3cdd23a83fc28c789403af3b43620f1280990a4eb6eb37cb99c7d7634d1"
+  },
+  {
+    "name": "p_imp_swordclose_n",
+    "bundle": "audio\\sound_beta_2\\player\\p_imp_1.ab",
+    "object": 2972047741711396887,
+    "duration": 0.43941667675971985,
+    "channels": 1,
+    "frequency": 48000,
+    "bundleSha256": "810027993143bac431820d5c6a6aeb635016f6b93a69fcc58b1fc936eeb5affe",
+    "exports": [
+      "player_hit.wav"
+    ],
+    "sampleSha256": "7f0d794d67cd27df0321c4386ccf398d77d711bafb5506d540f8210faafa6c59"
+  },
+  {
+    "name": "p_skill_swordrain",
+    "bundle": "audio\\sound_beta_2\\player\\p_skill_14.ab",
+    "object": -3847325302462598698,
+    "duration": 1.6009297370910645,
+    "channels": 1,
+    "frequency": 44100,
+    "bundleSha256": "a614bae13c4cff158244b8f992040abd204f06d2dfca750be287357de0cc8359",
+    "exports": [
+      "sword_rain.wav"
+    ],
+    "sampleSha256": "7636dc4d6121e5ec9a72d45c8369190f98dd5477d0fd0e33d4b15e98612ce45f"
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "gunshot": "p_atk_smg_n",
+  "empty": "g_ui_tickdown",
+  "reload": "p_atk_pistolup_dreload",
+  "player_hit": "p_imp_swordclose_n",
+  "enemy_hit": "p_imp_chngun_n",
+  "slash": "p_atk_swordcut_d",
+  "skill": "b_char_atkboost",
+  "sword_rain": "p_skill_swordrain",
+  "ui_confirm": "g_ui_btn_h",
+  "ui_select": "g_ui_tickup",
+  "ui_back": "g_ui_unpick",
+  "operator_switch": "b_char_tokenset",
+  "scene_enter": "g_ui_switchmap",
+  "investigate": "b_ui_getresource",
+  "encounter": "b_ui_dngrsmywrng",
+  "clear": "b_ui_achievestage",
+  "pause": "b_ui_applypause",
+  "narration": "b_ui_popuphint",
+  "denied": "b_ui_negativehint",
+  "hidden_enter": "b_ui_hiddenunlock"
+}
