@@ -65,6 +65,7 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
     Button(font, OperatorButton, ("编队 / " + leaderName).c_str(),
            pointer_.Hit(OperatorButton), Ink, Paper);
     Button(font, EnemyTrialButton, "小怪试炼 / N", pointer_.Hit(EnemyTrialButton), Ink, Paper);
+    Button(font, DeveloperButton, "开发者房间 / F12",pointer_.Hit(DeveloperButton),Ink,Paper);
     Surface({43, 457, 607, 174}, Fade(Ink, .87F));
     DrawRectangle(43, 457, 5, 174, Orange);
     font.Draw("CURRENT OPERATION", 65, 472, 12, Muted);
@@ -109,7 +110,7 @@ void MainMenu::DrawHome(const UiFont& font, const CharacterArt& art) const {
         slots += item ? std::string(KindName(item->kind)) + " / " : "空 / ";
     }
     Fit(font, slots, {912, 603, 300, 27}, 15, Paper);
-    Footer(font, "点击功能块 / ↑↓ 选择 · Enter 确认    C 角色编队    B 弑君者演示    N 小怪试炼    F6/F7/F8/F10/F11 调试");
+    Footer(font, "点击功能块 / ↑↓ 选择 · Enter 确认    C 角色编队    B 弑君者演示    N 小怪试炼    F12 开发者房间    F6/F7/F8/F10/F11 调试");
 }
 
 void MainMenu::DrawCharacterSelect(const UiFont& font, const CharacterArt& art) const {

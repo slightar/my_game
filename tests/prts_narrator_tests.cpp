@@ -94,5 +94,9 @@ int main(){try {
         auto ending=Begin();ending.Enter({"ending","任务路线已完成。",false,false,false,true});
         auto revision=ending.Revision();Advance(ending,300);Check(ending.Revision()==revision,"Ending received unsolicited ambient chatter");
     }
+    {
+        auto n=Begin();Advance(n,3);n.Notify(E::Wave,"目标确认：W。注意爆破落点。");n.Update(.05F,{0,true,true,true});
+        Check(n.Text()=="目标确认：W。注意爆破落点。","Boss briefing replaced by generic patrol message");
+    }
     std::cout<<"PRTS combat boundaries, whole-encounter summaries, quiet combat, seeded random timing/caps and exploration reactions passed\n";
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

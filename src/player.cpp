@@ -129,7 +129,7 @@ void Player::PlaceAt(Vector2 position, int facing) {
 }
 
 void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
-                    std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings, bool assistEnemyAim, bool traversalOnly, const std::vector<Rectangle>* platforms, const Rectangle* ramp) {
+                    std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings, bool assistEnemyAim, bool traversalOnly, const std::vector<Rectangle>* platforms, const Rectangle* ramp, const std::vector<Rectangle>* sealedFloor) {
     actions_={};
     hurtInvincibilityTimer_ = std::max(0.0F, hurtInvincibilityTimer_ - deltaTime);
     corrosionTimer_ = std::max(0.0F, corrosionTimer_ - deltaTime);
@@ -261,7 +261,10 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         position_.y = ceilingLimit;
         velocity_.y = 0.0F;
     }
-    if (position_.y + kHitboxHeight / 2.0F >= GameConfig::kFloorY) {
+    const bool overSealedFloor=sealedFloor&&std::any_of(sealedFloor->begin(),sealedFloor->end(),[&](const Rectangle& tile){
+        return position_.x>=tile.x&&position_.x<tile.x+tile.width;
+    });
+    if (!overSealedFloor&&position_.y + kHitboxHeight / 2.0F >= GameConfig::kFloorY) {
         position_.y = GameConfig::kFloorY - kHitboxHeight / 2.0F;
         velocity_.y = 0.0F;
         jumpCount_ = 0;
@@ -291,7 +294,7 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
         firing_=false;attackAnimationTime_=0;
         texasAttackAnimationTimer_=0;
         if(character_)animator_.Update(deltaTime,{velocity_,
-            onPlatform||position_.y+kHitboxHeight/2>=GameConfig::kFloorY-.5F,dodgeTimer_>0,false,false,false});
+            onPlatform||(!overSealedFloor&&position_.y+kHitboxHeight/2>=GameConfig::kFloorY-.5F),dodgeTimer_>0,false,false,false});
         return;
     }
     shotCooldown_ = std::max(0.0F, shotCooldown_ - deltaTime*(IsCold()?.65F:1.0F));
@@ -309,7 +312,7 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
             if(character_->Definition().attack.type==EffectType::Melee)++actions_.melee;else ++actions_.ranged;
             audio.Play(character_->Definition().attack.type == EffectType::Melee ? AudioCue::Slash : AudioCue::Gunshot);
         }
-        animator_.Update(deltaTime, {velocity_, position_.y + kHitboxHeight / 2 >= GameConfig::kFloorY - 0.5F,
+        animator_.Update(deltaTime, {velocity_, !overSealedFloor&&position_.y + kHitboxHeight / 2 >= GameConfig::kFloorY - 0.5F,
             dodgeTimer_ > 0, character_->PerformedAction(), false, character_->Definition().attack.type == EffectType::Melee});
         attackAnimationTime_ = firing_ ? attackAnimationTime_ + deltaTime : 0;
         return;

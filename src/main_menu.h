@@ -13,7 +13,7 @@
 class UiFont;
 class CharacterArt;
 
-enum class MenuAction { None, StartBattle, StartEnemyTrial, StartWorldPreview, Quit };
+enum class MenuAction { None, StartBattle, StartEnemyTrial, StartWorldPreview, StartDeveloperRoom, Quit };
 enum class MenuFeedback { None, Select, Confirm, Back, Denied };
 
 class MainMenu {
@@ -43,6 +43,14 @@ public:
     void SetStatus(std::string status) { if (!status.empty()) status_ = std::move(status); }
     const GameSettings& Settings() const { return settings_; }
     bool IsProtocolSuppressed() const { return progress_.IsProtocolSuppressed(); }
+    const char* MusicTrack() const {
+        switch(page_) {
+        case Page::CharacterSelect: case Page::Equipment: case Page::Map:
+        case Page::CityStage: case Page::WorldMap: case Page::NodeDetail:return "planning";
+        case Page::Archive: case Page::Ending: case Page::HiddenBoss:return "quiet";
+        default:return "home";
+        }
+    }
 
 private:
     MenuAction UpdateImpl(float deltaTime);

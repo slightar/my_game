@@ -50,7 +50,7 @@ void Game::ReloadCharacters() {
     std::vector<Character> characters;
     // Enemy names and combat labels come from the data table rather than a manually
     // maintained glyph list, so a newly added unit cannot silently render as '?'.
-    std::string glyphs = errors + EnemyGlyphText();
+    std::string glyphs = errors + EnemyGlyphText() + StoryBoss::Glyphs()+DeveloperRoom::Glyphs()+"自适应缓和标准进阶高压";
     for (auto& [id, c] : entries) {
         glyphs += c.name + c.description;
         for (const auto& skill : c.skills) glyphs += skill.name + skill.description;
@@ -63,9 +63,26 @@ void Game::ReloadCharacters() {
 }
 
 void Game::Reset() {
+    developerRoomActive_=false;
+    adaptiveDifficulty_.Cancel();
     prts_.Reset();
     worldEncounter_.Reset();
+    storyBoss_.Reset();
     bullets_.clear();
+    ResetOperators();
+    activeOperator_ = 0;
+    player_ = &operators_[0];
+    boss_.Reset();
+    if (enemyTrial_) enemies_.ResetTrial(); else enemies_.Clear();
+    bossActive_ = false;
+    cameraX_ = static_cast<float>(GameConfig::kScreenWidth) / 2.0F;
+    gateCloseTimer_ = 0.0F;
+    encounterBannerTimer_ = 0.0F;
+    paused_ = false;
+    pauseSelection_ = 0;
+}
+
+void Game::ResetOperators() {
     for (int slot = 0; slot < 2; ++slot) {
         const int selection = mainMenu_.SelectedCharacterIndex(slot);
         if (selection == 0)
@@ -78,16 +95,6 @@ void Game::Reset() {
             operators_[slot].Reset(slot == 0 ? OperatorKind::Exusiai
                                              : OperatorKind::Texas);
     }
-    activeOperator_ = 0;
-    player_ = &operators_[0];
-    boss_.Reset();
-    if (enemyTrial_) enemies_.ResetTrial(); else enemies_.Clear();
-    bossActive_ = false;
-    cameraX_ = static_cast<float>(GameConfig::kScreenWidth) / 2.0F;
-    gateCloseTimer_ = 0.0F;
-    encounterBannerTimer_ = 0.0F;
-    paused_ = false;
-    pauseSelection_ = 0;
 }
 
 void Game::SwitchOperator(int slot) {
@@ -108,6 +115,15 @@ void Game::SwitchOperator(int slot) {
 }
 
 void Game::Update(float deltaTime) {
+    const StoryBoss* score=developerRoomActive_?&developerRoom_.Boss():worldPreview_?&storyBoss_:nullptr;
+    const char* background=mainMenu_.MusicTrack();
+    if(inBattle_)background="battle";
+    if(worldPreview_)background=storyBoss_.Active()||enemies_.Remaining()>0||
+        std::any_of(enemies_.Bolts().begin(),enemies_.Bolts().end(),[](const auto& bolt){return bolt.lifetime>0;})?"battle":"quiet";
+    if(developerRoomActive_)background=developerRoom_.Boss().Active()?"battle":"planning";
+    bossAudio_.Sync(score,paused_||(developerRoomActive_&&developerRoom_.Frozen()),
+                    mainMenu_.Settings().SoundVolume()/100.0F,background,deltaTime);
+    if(developerRoomActive_){UpdateDeveloperRoom(deltaTime);return;}
     if(worldPreview_) {UpdateWorldPreview(deltaTime);return;}
     if (!inBattle_) {
         if (IsKeyPressed(KEY_F5)) ReloadCharacters();
@@ -138,7 +154,9 @@ void Game::Update(float deltaTime) {
         case MenuFeedback::Denied: audio_.Play(AudioCue::Denied); break;
         default: break;
         }
-        if (action == MenuAction::StartWorldPreview) {
+        if(action==MenuAction::StartDeveloperRoom) {
+            EnterDeveloperRoom();
+        } else if (action == MenuAction::StartWorldPreview) {
             worldDesignPreview_=mainMenu_.IsWorldDesignPreview();
             enemyTrial_=false;Reset();inBattle_=false;
             EnterWorldRegion(mainMenu_.SelectedWorldRegion());
@@ -236,7 +254,11 @@ void Game::Update(float deltaTime) {
         encounterBannerTimer_ =
             std::max(0.0F, encounterBannerTimer_ - deltaTime);
         if (enemyTrial_) enemies_.Update(deltaTime, player_->Position());
-        else boss_.Update(deltaTime, player_->Position(), player_->FacingDirection());
+        else {
+            const auto previous=boss_.EffectRevision();
+            boss_.Update(deltaTime, player_->Position(), player_->FacingDirection());
+            audio_.PlayCrownEffect(boss_,previous);
+        }
     }
     const bool previouslyCleared = EncounterCleared();
     UpdateBullets(deltaTime);
@@ -351,7 +373,8 @@ void Game::DrawPauseMenu() const {
 }
 
 void Game::UpdateBullets(float deltaTime) {
-    const bool mobs=enemyTrial_||worldPreview_||worldEncounter_.Active();
+    const bool story=worldPreview_&&storyBoss_.Present();
+    const bool mobs=!story&&(enemyTrial_||worldPreview_||worldEncounter_.Active());
     for (Bullet& bullet : bullets_) {
         if (bullet.activationDelay > 0.0F) {
             bullet.activationDelay =
@@ -363,15 +386,34 @@ void Game::UpdateBullets(float deltaTime) {
         bullet.position.y += bullet.velocity.y * deltaTime;
         bullet.lifetime -= deltaTime;
 
+        if(developerRoomActive_) {
+            if(bullet.destroysEnemyProjectile &&
+                (developerRoom_.Mobs().DestroyBolt(bullet.position,bullet.radius+7) ||
+                 developerRoom_.Boss().DestroyProjectile(bullet.position,bullet.radius+7))) {
+                bullet.lifetime=0;continue;
+            }
+            const bool hitMob=developerRoom_.Mobs().ResolveBullet(bullet,previous);
+            const bool hitSeal=developerRoom_.Boss().BreakSeal(bullet,previous);
+            const bool hitBoss=!hitSeal&&developerRoom_.Boss().ResolveBullet(bullet,previous);
+            if(hitMob||hitBoss||hitSeal)audio_.PlayBossHit();
+            continue;
+        }
+
         if (bullet.destroysEnemyProjectile &&
-            (mobs ? enemies_.DestroyBolt(bullet.position, bullet.radius + 7.0F)
+            (story?storyBoss_.DestroyProjectile(bullet.position,bullet.radius+7.0F):mobs ? enemies_.DestroyBolt(bullet.position, bullet.radius + 7.0F)
                          : boss_.DestroyProjectileAt(bullet.position, bullet.radius + 7.0F))) {
             bullet.lifetime = 0.0F;
             continue;
         }
 
+        if(story) {
+            if(storyBoss_.BreakSeal(bullet,previous))audio_.PlayBossHit();
+            else if(storyBoss_.ResolveBullet(bullet,previous)){audio_.PlayBossHit();adaptiveDifficulty_.ConnectedHit();}
+            continue;
+        }
+
         if (mobs) {
-            if ((bossActive_||worldEncounter_.Active()) && enemies_.ResolveBullet(bullet, previous)) audio_.PlayBossHit();
+            if ((bossActive_||worldEncounter_.Active()) && enemies_.ResolveBullet(bullet, previous)) {audio_.PlayBossHit();adaptiveDifficulty_.ConnectedHit();}
             continue;
         }
         if (!bullet.hasHit && bossActive_ && !boss_.IsDefeated() &&
@@ -392,7 +434,7 @@ void Game::UpdateBullets(float deltaTime) {
     }
 
     std::erase_if(bullets_, [this](const Bullet& bullet) {
-        const Rectangle room = worldPreview_?Rectangle{0,-500,WorldLayout::Find(worldRegion_)->width,1500}:GameConfig::kRoom;
+        const Rectangle room = developerRoomActive_?Rectangle{0,-500,developerRoom_.Width(),1500}:worldPreview_?Rectangle{0,-500,WorldLayout::Find(worldRegion_)->width,1500}:GameConfig::kRoom;
         const bool outside = bullet.position.x < room.x ||
                              bullet.position.x > room.x + room.width ||
                              bullet.position.y < room.y ||
@@ -518,6 +560,7 @@ void Game::DrawEncounterBanner() const {
 }
 
 void Game::Draw(float displayScale, Vector2 displayOffset) const {
+    if(developerRoomActive_){DrawDeveloperRoom(displayScale,displayOffset);return;}
     if(worldPreview_) {DrawWorldPreview(displayScale,displayOffset);return;}
     const Camera2D uiCamera{displayOffset, {}, 0.0F, displayScale};
     if (!inBattle_) {
@@ -547,7 +590,7 @@ void Game::Draw(float displayScale, Vector2 displayOffset) const {
     DrawBullets();
 
     if (enemyTrial_) enemyRenderer_.Draw(enemies_, uiFont_);
-    else boss_.Draw(uiFont_);
+    else bossRenderer_.Draw(boss_,uiFont_);
     player_->Draw(characterArt_);
     EndMode2D();
 

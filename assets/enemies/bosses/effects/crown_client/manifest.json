@@ -1,0 +1,149 @@
+{
+  "source_bundles": {
+    "battle\\prefabs\\effects\\red.ab": "2939c573a86a09c0a908f2a162b5719857862b131e6e9adfc187183df1513e1c",
+    "battle\\prefabs\\effects\\texas2.ab": "0e0389d9652d86152c69e2e31298b56ab6911e562fe931cf3b253ef5bd149568"
+  },
+  "textures": {
+    "-1074696917881622342": {
+      "name": "star_02_-1074696917881622342",
+      "original_name": "star_02",
+      "file": "star_02_-1074696917881622342.png",
+      "bundle": "refs\\fx\\texture\\star.ab",
+      "sha256": "f74fe25ec860fd1893d58227f19ee76b6edd827f53f60f8f84801c934c5e71bc"
+    },
+    "-1306121938919333102": {
+      "name": "trail_05_-1306121938919333102",
+      "original_name": "trail_05",
+      "file": "trail_05_-1306121938919333102.png",
+      "bundle": "refs\\fx\\texture\\trail.ab",
+      "sha256": "3a58789d2409692e36a168202c5fc4ef54bd883a50db204704c2d598ea09a6fe"
+    },
+    "-1796219560924012663": {
+      "name": "smoke_03_-1796219560924012663",
+      "original_name": "smoke_03",
+      "file": "smoke_03_-1796219560924012663.png",
+      "bundle": "refs\\fx\\texture\\smoke.ab",
+      "sha256": "8755b3f9614915885eb9d7f833abd6f9b8e67a0206d3e5906f70d3a49cb733a0"
+    },
+    "-2462001278280812032": {
+      "name": "star_54_-2462001278280812032",
+      "original_name": "star_54",
+      "file": "star_54_-2462001278280812032.png",
+      "bundle": "refs\\fx\\texture\\star.ab",
+      "sha256": "668d849ee838a15e9a8e6ff07c7f859cf691a0f83ba5e1d5192395242307132e"
+    },
+    "-2552297211423400305": {
+      "name": "texas2_02_-2552297211423400305",
+      "original_name": "texas2_02",
+      "file": "texas2_02_-2552297211423400305.png",
+      "bundle": "battle\\prefabs\\effects\\texas2.ab",
+      "sha256": "56d5cb87d1151a8488f34267468fffeba3d740090492373b47965fa388c013bb"
+    },
+    "-3284325798195296301": {
+      "name": "flipbook_107_-3284325798195296301",
+      "original_name": "flipbook_107",
+      "file": "flipbook_107_-3284325798195296301.png",
+      "bundle": "battle\\prefabs\\effects\\texas2.ab",
+      "sha256": "5a2f3f76c4162eb88fbe94c47a87be40d8d9ec96237caabf0ba5c3a07011f43c"
+    },
+    "-4350925073696678326": {
+      "name": "smoke_26_-4350925073696678326",
+      "original_name": "smoke_26",
+      "file": "smoke_26_-4350925073696678326.png",
+      "bundle": "refs\\fx\\texture\\smoke.ab",
+      "sha256": "65b15412b491ccbe1bc7d8b846214a608c9119b4b551250e53ade328a67977c9"
+    },
+    "-4875013267215690585": {
+      "name": "dilie_12_-4875013267215690585",
+      "original_name": "dilie_12",
+      "file": "dilie_12_-4875013267215690585.png",
+      "bundle": "refs\\fx\\texture\\vein.ab",
+      "sha256": "7fc8f6b4d752303a1709e5e07f5181be42b7367564bf63f0e0f6e37c0a46a670"
+    },
+    "-6521634554791918860": {
+      "name": "star_56_-6521634554791918860",
+      "original_name": "star_56",
+      "file": "star_56_-6521634554791918860.png",
+      "bundle": "refs\\fx\\texture\\star.ab",
+      "sha256": "acaad13bf20db7fa55cee4a49a9351db4b53415b01941ce1671a1a2f518b30e6"
+    },
+    "-7487179630749657250": {
+      "name": "trail_72_-7487179630749657250",
+      "original_name": "trail_72",
+      "file": "trail_72_-7487179630749657250.png",
+      "bundle": "refs\\fx\\texture\\trail.ab",
+      "sha256": "f0323ab78ba219767b38be57f901aa7853b23073345d162ba65f4f583ed68af4"
+    },
+    "-7887427954279609538": {
+      "name": "trail_08_-7887427954279609538",
+      "original_name": "trail_08",
+      "file": "trail_08_-7887427954279609538.png",
+      "bundle": "refs\\fx\\texture\\trail.ab",
+      "sha256": "c3d27b0165fb0e84fc74c4c4d2cf1ccf67e9d056fd2474e4ab70314f37c74484"
+    },
+    "3189305897729869812": {
+      "name": "star_64_3189305897729869812",
+      "original_name": "star_64",
+      "file": "star_64_3189305897729869812.png",
+      "bundle": "refs\\fx\\texture\\star.ab",
+      "sha256": "a955031c407abe5b640d2db84b22e18aeb00bd4f17b1d52d7391c10686a9b74e"
+    },
+    "3216512357931363151": {
+      "name": "ray_06_3216512357931363151",
+      "original_name": "ray_06",
+      "file": "ray_06_3216512357931363151.png",
+      "bundle": "refs\\fx\\texture\\ray.ab",
+      "sha256": "ccf42dd536906aa9319f9ed800d162b95eee3011e528cceb3a185e9cdd14f7cc"
+    },
+    "3706417703359858176": {
+      "name": "langtou_01_3706417703359858176",
+      "original_name": "langtou_01",
+      "file": "langtou_01_3706417703359858176.png",
+      "bundle": "battle\\prefabs\\effects\\red.ab",
+      "sha256": "eacf74c7e53b8a0327490a1f1223e268be49e628bd2b357e5c224a4eb150ba87"
+    },
+    "4875121831397181770": {
+      "name": "star_07_4875121831397181770",
+      "original_name": "star_07",
+      "file": "star_07_4875121831397181770.png",
+      "bundle": "refs\\fx\\texture\\star.ab",
+      "sha256": "58c7dc077da91f06ca440e6e817f789ce026e1220e57a494c480359e2b4816a3"
+    },
+    "5129873010304641518": {
+      "name": "trail_54_5129873010304641518",
+      "original_name": "trail_54",
+      "file": "trail_54_5129873010304641518.png",
+      "bundle": "refs\\fx\\texture\\trail.ab",
+      "sha256": "0bf636563ae62cf8d469af04a19dceaf6e5db66215f376fa19c3df091efbe24a"
+    },
+    "6630767819204711196": {
+      "name": "zhuaheng_01_6630767819204711196",
+      "original_name": "zhuaheng_01",
+      "file": "zhuaheng_01_6630767819204711196.png",
+      "bundle": "refs\\fx\\texture\\object.ab",
+      "sha256": "1ef6c99d2a9e19007b9501903465e39955a1f8ea8f0a498da719ce1471373a51"
+    },
+    "7674376297717895558": {
+      "name": "daoguang_03_7674376297717895558",
+      "original_name": "daoguang_03",
+      "file": "daoguang_03_7674376297717895558.png",
+      "bundle": "refs\\fx\\texture\\ray.ab",
+      "sha256": "2ac9341a29ef195aa00242d94cad159f2f2e8d84c76584ca5ce06a59abe2bb9b"
+    },
+    "8684959317573024417": {
+      "name": "daoguang_09_8684959317573024417",
+      "original_name": "daoguang_09",
+      "file": "daoguang_09_8684959317573024417.png",
+      "bundle": "refs\\fx\\texture\\ray.ab",
+      "sha256": "39a7aca65edaeeff3239edfaf976bb533b7b21f3e254866ee73c4f8c960d1d82"
+    }
+  },
+  "skipped_layers": [
+    {
+      "clip": "texas2_skill_03_hit_02",
+      "layer": "shitou",
+      "reason": "No resolved billboard texture; mesh/shader layer is not exported"
+    }
+  ],
+  "projection": "Existing source pixels/alpha and 60 Hz curves; 2D placement adaptation, no Unity mesh/shader reconstruction"
+}

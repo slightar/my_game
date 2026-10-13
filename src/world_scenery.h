@@ -11,12 +11,15 @@ public:
     WorldScenery(const WorldScenery&)=delete;
     WorldScenery& operator=(const WorldScenery&)=delete;
     bool Load(const WorldLayout::Region& region,bool wardShortcutOpen=false);
-    void Background(const WorldLayout::Region& region,float camera,float time) const;
+    void Background(const WorldLayout::Region& region,float camera,float time,float cold=0) const;
     void Foreground(const WorldLayout::Region& region,float camera) const;
     bool DepthReady() const { return depthBack_.id&&depthFront_.id&&frontBounds_[0].height>0&&frontBounds_[1].height>0&&frontBounds_[2].height>0; }
+    bool ColdReady() const {return coldShader_.id&&coldLocation_>=0;}
     static std::vector<Rectangle> Platforms(const WorldLayout::Region& region);
 private:
     Texture2D background_{};
+    Shader coldShader_{};
+    int coldLocation_=-1;
     Texture2D depthBack_{},depthFront_{};
     std::array<Rectangle,3> frontBounds_{};
     std::string depthTheme_;

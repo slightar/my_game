@@ -39,7 +39,7 @@ public:
 private:
     struct Pending { Topic topic; std::string detail; int priority; float expires; };
     bool Queue(Topic topic,int priority,const std::string& detail={});
-    void BeginBattle();
+    void BeginBattle(const std::string& detail={});
     void FinishBattle();
     void RandomAside(const Observation& observation,bool combat);
     std::uint32_t Random();

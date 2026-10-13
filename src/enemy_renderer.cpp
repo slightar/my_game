@@ -132,7 +132,7 @@ void EnemyRenderer::DrawUnit(const EnemyUnit& u,const UiFont& font)const {
     int row=u.moving?1:0,frame=int(u.animationTime*10/std::max(.01F,durations_[i][row]))%10;
     if(u.state==EnemyState::Windup){row=2;frame=std::clamp(int((1-u.timer/d.windup)*4),0,3);}
     if(u.state==EnemyState::Strike){row=2;frame=4+std::clamp(int(u.animationTime/.22F*4),0,3);}
-    if(u.state==EnemyState::Recover && u.stun<=0){row=2;frame=8+std::min(1,int(u.animationTime/std::max(.01F,d.recovery)*2));}
+    if(u.state==EnemyState::Recover && u.stun<=0){row=2;frame=8+std::min(1,int(u.animationTime/std::max(.01F,u.recoveryDuration>0?u.recoveryDuration:d.recovery)*2));}
     if(u.state==EnemyState::Dead){row=3;frame=std::min(9,int(u.animationTime/.8F*10));}
     // shield_v2.png is not a single-direction bake: whatever pipeline produced it left
     // the Idle row mirrored relative to the rig and the Move row un-mirrored, so the
@@ -180,7 +180,7 @@ void EnemyRenderer::DrawUnit(const EnemyUnit& u,const UiFont& font)const {
     else {DrawRectangleRec(u.Hitbox(),Fade(color,.7F));font.Draw("缺少素材",u.feet.x-36,u.Center().y,14,BLACK);}
     if(u.state==EnemyState::Dead)return;
     DrawRectangle(int(u.feet.x-35),int(u.feet.y-d.height-18),70,5,Fade(BLACK,.65F));
-    DrawRectangle(int(u.feet.x-35),int(u.feet.y-d.height-18),int(70*u.health/d.health),5,color);
+    DrawRectangle(int(u.feet.x-35),int(u.feet.y-d.height-18),int(70*std::clamp(u.health/std::max(.01F,u.maxHealth>0?u.maxHealth:d.health),0.0F,1.0F)),5,color);
     const float labelWidth=font.Measure(d.name,15);
     font.Draw(d.name,u.feet.x-labelWidth/2,u.feet.y-d.height-39,15,TacticalUi::kInk);
     if(u.Guarding()) DrawLineEx({u.feet.x+u.facing*(d.width/2+5),u.feet.y-d.height+16},{u.feet.x+u.facing*(d.width/2+5),u.feet.y-5},3,Fade(SKYBLUE,.75F));

@@ -52,11 +52,29 @@ void DrawDepth(Texture2D texture,const WorldDepth::Layer& layer,float camera,std
 }
 }
 WorldScenery::~WorldScenery(){
+    if(coldShader_.id)UnloadShader(coldShader_);
     if(background_.id)UnloadTexture(background_);
     if(depthBack_.id)UnloadTexture(depthBack_);
     if(depthFront_.id)UnloadTexture(depthFront_);
 }
 bool WorldScenery::Load(const Region& r,bool wardShortcutOpen){
+    if(std::string_view(r.id)=="ice"&&!coldShader_.id) {
+        coldShader_=LoadShaderFromMemory(nullptr,R"GLSL(#version 330
+in vec2 fragTexCoord;
+in vec4 fragColor;
+uniform sampler2D texture0;
+uniform vec4 colDiffuse;
+uniform float cold;
+out vec4 finalColor;
+void main() {
+    vec4 color=texture(texture0,fragTexCoord)*colDiffuse*fragColor;
+    float light=dot(color.rgb,vec3(.2126,.7152,.0722));
+    vec3 winter=mix(color.rgb,vec3(light),.32)*vec3(.60,.79,1.07);
+    winter=mix(winter,vec3(.23,.36,.49),.09);
+    finalColor=vec4(mix(color.rgb,winter,cold),color.a);
+})GLSL");
+        coldLocation_=GetShaderLocation(coldShader_,"cold");
+    }
     const auto folder=Utf8Path(GetApplicationDirectory())/"assets/environment"/
         (WorldArt::Repainted(r.id)?"scaled":"regions");
     const auto* scene=WorldArt::Find(r.id);
@@ -85,7 +103,7 @@ bool WorldScenery::Load(const Region& r,bool wardShortcutOpen){
     return background_.id!=0;
 }
 std::vector<Rectangle> WorldScenery::Platforms(const Region&){return {};}
-void WorldScenery::Background(const Region& r,float camera,float) const {
+void WorldScenery::Background(const Region& r,float camera,float,float cold) const {
     if(!background_.id)return;
     // Passage art and the walkable floor stay at exactly the world camera speed.
     const auto* scene=WorldArt::Find(r.id);if(!scene)return;
@@ -94,9 +112,16 @@ void WorldScenery::Background(const Region& r,float camera,float) const {
     const float width=height*float(background_.width)/float(background_.height);
     const float y=GameConfig::kFloorY-WorldArt::PaintedGround(r.id)*height;
     const float x=640-camera;
+    const bool chill=std::string_view(r.id)=="ice"&&coldShader_.id&&coldLocation_>=0&&cold>0;
+    if(chill) {
+        const float strength=std::clamp(cold/.72F,0.0F,1.0F);
+        SetShaderValue(coldShader_,coldLocation_,&strength,SHADER_UNIFORM_FLOAT);
+        BeginShaderMode(coldShader_);
+    }
     DrawTexturePro(background_,{0,0,float(background_.width),float(background_.height)},
                    {x,y,width,height},{},0,WHITE);
     DrawDepth(depthBack_,WorldDepth::Back,camera,r.id);
+    if(chill)EndShaderMode();
 }
 void WorldScenery::Foreground(const Region& r,float camera) const {
     if(!depthFront_.id)return;

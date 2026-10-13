@@ -55,16 +55,24 @@ bool EnemyUnit::Targetable() const { return health>0 && state!=EnemyState::Dead 
 bool EnemyUnit::Guarding() const { return EnemyData(kind).shield && stun<=0 && state!=EnemyState::Recover && state!=EnemyState::Dead; }
 bool EnemyUnit::InterceptsProjectiles() const { return !cloaked; }
 void EnemySystem::Clear() {
+    difficulty_={};
     units_.clear();bolts_.clear();nextId_=1;
     entryX_=kEntryX;leftBound_=GameConfig::kBossGateX+55;rightBound_=GameConfig::kRoom.x+GameConfig::kRoom.width-65;
     spawnQueue_.clear();nextSpawn_=0;spawnTimer_=0;entryPulse_=0;
 }
 unsigned EnemySystem::Spawn(EnemyKind kind, float x) {
+    return Spawn(kind,x,difficulty_);
+}
+unsigned EnemySystem::Spawn(EnemyKind kind,float x,CombatDifficulty difficulty,int facing) {
     EnemyUnit u;u.id=nextId_++;u.kind=kind;
+    u.difficulty=difficulty;u.facing=facing>=0?1:-1;
+    u.cloaked=IsCloakedKind(kind);
     u.feet={std::clamp(x,leftBound_,rightBound_), kind==EnemyKind::Drone ? GameConfig::kFloorY-260.0F : GameConfig::kFloorY};
-    u.health=EnemyData(kind).health;
+    u.maxHealth=u.health=EnemyData(kind).health*difficulty.health;
+    u.recoveryDuration=EnemyData(kind).recovery*difficulty.recovery;
     units_.push_back(u);return u.id;
 }
+void EnemySystem::PruneDead(){std::erase_if(units_,[](const auto& u){return u.state==EnemyState::Dead&&u.animationTime>.8F;});}
 void EnemySystem::ResetTrial() {
     Clear();
     // Authored action-game timing, inspired by PRTS SPAWN actions. No units exist
@@ -77,8 +85,9 @@ void EnemySystem::ResetTrial() {
         spawnQueue_.push_back(static_cast<EnemyKind>(i));
     spawnTimer_=kFirstSpawnDelay;
 }
-void EnemySystem::ResetEncounter(std::vector<EnemyKind> wave,float entryX,float left,float right) {
+void EnemySystem::ResetEncounter(std::vector<EnemyKind> wave,float entryX,float left,float right,CombatDifficulty difficulty) {
     Clear();leftBound_=left;rightBound_=std::max(left,right);
+    difficulty_=difficulty;
     entryX_=std::clamp(entryX,leftBound_,rightBound_);
     spawnQueue_=std::move(wave);spawnTimer_=kFirstSpawnDelay;
 }
@@ -98,7 +107,7 @@ void EnemySystem::Tick(float dt, Vector2 player) {
             auto& unit=units_.back();
             unit.facing=player.x>=unit.feet.x?1:-1;
             unit.cloaked=IsCloakedKind(unit.kind);
-            spawnTimer_+=kSpawnInterval;
+            spawnTimer_+=kSpawnInterval*difficulty_.spawnInterval;
             entryPulse_=.65F;
         }
     }
@@ -146,7 +155,7 @@ void EnemySystem::Tick(float dt, Vector2 player) {
             if(distance>d.reach || (KeepsDistance(u.kind) && distance<200)) {
                 float direction=static_cast<float>(u.facing);
                 if(KeepsDistance(u.kind) && distance<200) direction=-direction;
-                const float speed=d.speed*(u.haste>0?EnemySystem::kEnergizeSpeedScale:1.0F);
+                const float speed=d.speed*u.difficulty.movement*(u.haste>0?EnemySystem::kEnergizeSpeedScale:1.0F);
                 const float next=std::clamp(u.feet.x+direction*speed*dt,leftBound_,rightBound_);
                 u.moving=next!=u.feet.x;u.feet.x=next;
                 // Cornered ranged units can still shoot rather than becoming stuck backing up.
@@ -162,13 +171,13 @@ void EnemySystem::Tick(float dt, Vector2 player) {
                 // 术师 lobs a slow Arts bolt, 酸液源石虫 a slow corrosive spit (290 vs 410).
                 const bool arts=d.attack==EnemyAttack::ArtsBolt||d.attack==EnemyAttack::ColdBolt;
                 const bool corrosive=d.attack==EnemyAttack::AcidBolt;
-                const float speed=(arts||corrosive)?290.0F:410.0F;
+                const float speed=((arts||corrosive)?290.0F:410.0F)*u.difficulty.projectile;
                 EnemyBolt bolt{origin,origin,{ax/len*speed,ay/len*speed},3,arts,corrosive};
                 ++u.attacks;
                 bolt.cold=d.attack==EnemyAttack::ColdBolt && u.attacks%3==0;
                 bolt.shatter=d.shatter;
                 if(d.attack==EnemyAttack::Lob) {
-                    const float flight=std::clamp(std::abs(ax)/430.0F,.65F,1.35F);
+                    const float flight=std::clamp(std::abs(ax)/430.0F,.65F,1.35F)/u.difficulty.projectile;
                     bolt.gravity=680;
                     const float floorDelta=GameConfig::kFloorY-4-origin.y;
                     bolt.velocity={ax/flight,(floorDelta-.5F*bolt.gravity*flight*flight)/flight};
@@ -179,7 +188,7 @@ void EnemySystem::Tick(float dt, Vector2 player) {
             }
             SetState(u,EnemyState::Strike,.22F);
         } else if (u.state==EnemyState::Strike && u.timer<=0) {
-            SetState(u,EnemyState::Recover,d.recovery);
+            SetState(u,EnemyState::Recover,u.recoveryDuration);
         } else if (u.state==EnemyState::Recover && u.timer<=0) {
             u.facing=dx>=0?1:-1;SetState(u,EnemyState::Approach,0);
         }
@@ -213,7 +222,7 @@ bool EnemySystem::Damage(unsigned id, float damage, DamageType type, Vector2 sou
             else if(d.coldBlast) {u.stun=0;SetState(u,EnemyState::Fuse,.85F);}
             else SetState(u,EnemyState::Dead,0);
         } else if(stun>0 && u.state!=EnemyState::Fuse) {
-            u.stun=std::max(u.stun,stun);SetState(u,EnemyState::Recover,EnemyData(u.kind).recovery);
+            u.stun=std::max(u.stun,stun);SetState(u,EnemyState::Recover,u.recoveryDuration);
         }
         return true;
     }

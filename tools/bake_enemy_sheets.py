@@ -38,7 +38,7 @@ def main():
         def log_message(self, *_): pass
     server = http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Handler,directory=str(args.input)))
     threading.Thread(target=server.serve_forever,daemon=True).start()
-    with tempfile.TemporaryDirectory(prefix='enemy-bake-') as profile:
+    with tempfile.TemporaryDirectory(prefix='enemy-bake-', ignore_cleanup_errors=True) as profile:
         process = subprocess.Popen([r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
             '--headless', '--disable-gpu', '--enable-unsafe-swiftshader', '--no-first-run',
             '--no-default-browser-check', '--disable-extensions', '--disable-background-networking',

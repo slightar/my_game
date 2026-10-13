@@ -1,0 +1,215 @@
+{
+  "crownslayer": {
+    "model": "enemy_1502_crowns",
+    "columns": 20,
+    "rows": 6,
+    "cell": 256,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Disappear",
+      "Appear",
+      "Die"
+    ],
+    "durations": [
+      1,
+      1,
+      1,
+      0.5,
+      0.5,
+      1
+    ],
+    "anchor": [
+      98.41453552246094,
+      226.88961791992188
+    ],
+    "scale": 0.4496012859823925,
+    "facing": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "source": {
+      "model": "enemy_1502_crowns",
+      "name": "弑君者",
+      "bundle": "refs/arts/enm_art_base_0.ab",
+      "objects": {
+        ".skel": "1357249733162990167",
+        ".atlas": "-4430461967613491434",
+        "texture": "-4356411290783451830",
+        "alpha": "-4744950417346821776"
+      },
+      "skel_sha256": "b409ec5baab05344c1c5c3342b6fdb4821db4145918e4c60405f4ea07946d781"
+    },
+    "visible_height": 108,
+    "sprite_size": 166.55421686746988,
+    "reference": "https://prts.wiki/w/弑君者(敌方)"
+  },
+  "w": {
+    "model": "enemy_1504_cqbw",
+    "columns": 20,
+    "rows": 5,
+    "cell": 256,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Skill",
+      "Die"
+    ],
+    "durations": [
+      2,
+      2,
+      1.2999999523162842,
+      4.800000190734863,
+      3.3333332538604736
+    ],
+    "anchor": [
+      100.92842674255371,
+      238.4927520751953
+    ],
+    "scale": 0.4005174619395481,
+    "facing": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "source": {
+      "model": "enemy_1504_cqbw",
+      "name": "W",
+      "bundle": "refs/arts/enm_art_base_0.ab",
+      "objects": {
+        ".skel": "638912613092658456",
+        ".atlas": "-2015983665771250527",
+        "texture": "1674256642335974847",
+        "alpha": "-2541140086414606111"
+      },
+      "skel_sha256": "6153c2c1cb8e921196fb63b616e75a66e8e2947ce12f4889467ab318825a4b8e"
+    },
+    "visible_height": 108,
+    "sprite_size": 180.7058823529412,
+    "reference": "https://prts.wiki/w/W(敌方)"
+  },
+  "frostnova": {
+    "model": "enemy_1510_frstar2",
+    "columns": 20,
+    "rows": 7,
+    "cell": 512,
+    "animations": [
+      "Idle",
+      "Move",
+      "Attack",
+      "Skill_1",
+      "Skill_2",
+      "Skill_3",
+      "Die"
+    ],
+    "durations": [
+      4,
+      1.600000023841858,
+      1.600000023841858,
+      3,
+      7.199999809265137,
+      3.6666667461395264,
+      5.333333492279053
+    ],
+    "anchor": [
+      253.54354095458984,
+      475.80682373046875
+    ],
+    "scale": 0.22789654312050814,
+    "facing": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "source": {
+      "model": "enemy_1510_frstar2",
+      "bundle": "refs/arts/enm_art_16.ab",
+      "objects": {
+        ".skel": "5050448256571905853",
+        ".atlas": "3593885348397336199",
+        "texture": "-6060456872036056705",
+        "alpha": "-1662594451914735114"
+      },
+      "skel_sha256": "4e8947287e3b569979ff92514865290ecf43f10df0098357fa61eeda3fe45cc5"
+    },
+    "visible_height": 115,
+    "sprite_size": 555.4716981132076,
+    "reference": "https://prts.wiki/w/霜星，“冬痕”"
+  },
+  "patriot": {
+    "model": "enemy_1506_patrt",
+    "columns": 20,
+    "rows": 11,
+    "cell": 512,
+    "animations": [
+      "Idle_1",
+      "Move_1",
+      "Attack_1",
+      "Idle_2",
+      "Move_2",
+      "Attack_2",
+      "Skill",
+      "revive_1",
+      "revive_2",
+      "revive_3",
+      "Die"
+    ],
+    "durations": [
+      1.6666666269302368,
+      1.899999976158142,
+      1.5,
+      1.2000000476837158,
+      2,
+      1.3666666746139526,
+      3.433333396911621,
+      1.2000000476837158,
+      1.3333333730697632,
+      3.6666667461395264,
+      5.333333492279053
+    ],
+    "anchor": [
+      230.8503074645996,
+      423.8214416503906
+    ],
+    "scale": 0.37771664616485556,
+    "facing": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "source": {
+      "model": "enemy_1506_patrt",
+      "bundle": "refs/arts/enm_art_16.ab",
+      "objects": {
+        ".skel": "-6463626288695417448",
+        ".atlas": "-8723663538081658152",
+        "texture": "975411521042983477",
+        "alpha": "-4022987933588345613"
+      },
+      "skel_sha256": "93940c09827c7f45649b72a27c3dff5f061ae9e110087aaf453d6f046568daf0"
+    },
+    "visible_height": 175,
+    "sprite_size": 396.46017699115043,
+    "reference": "https://prts.wiki/w/爱国者"
+  }
+}

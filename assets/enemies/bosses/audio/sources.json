@@ -1,0 +1,42 @@
+{
+  "frost_phase1": {
+    "clip": "m_bat_frostnova_loop",
+    "bundle": "audio\\sound_beta_2\\music\\beta2_180603\\m_bat_frostnova.ab",
+    "duration": 109.33333587646484,
+    "sample_sha256": "34ebaac5c6380fa83c737ddad217969933bbc4f308952c4330e41e38ac2758ac",
+    "file": "frost_phase1.ogg",
+    "encoding": "Vorbis q5"
+  },
+  "frost_phase2": {
+    "clip": "m_bat_frostnovaevolution_loop",
+    "bundle": "audio\\sound_beta_2\\music\\static\\m_bat\\m_bat_frostnovaevolution.ab",
+    "duration": 115.55558013916016,
+    "sample_sha256": "e206165ef7b9631466d3062fd0400bbc563f6b5087cc5130119620c545fbebf8",
+    "file": "frost_phase2.ogg",
+    "encoding": "Vorbis q5"
+  },
+  "patriot": {
+    "clip": "m_bat_patriot_loop",
+    "bundle": "audio\\sound_beta_2\\music\\act9d2d0\\m_bat_patriot.ab",
+    "duration": 81.23077392578125,
+    "sample_sha256": "b94cc62b9e52730c2edc4111031d6ac5a18541cabc680a3ce44922d77ed65759",
+    "file": "patriot.ogg",
+    "encoding": "Vorbis q5"
+  },
+  "ice_ring": {
+    "clip": "e_aoe_frostnovaice_h1",
+    "bundle": "audio\\sound_beta_2\\enemy\\e_aoe\\e_aoe_frostnovaice_h1.ab",
+    "duration": 5.188186168670654,
+    "sample_sha256": "74eccb10669a429b73eaf1c98a389bf5ba64de77312d8d0243f57aca3a952343",
+    "file": "ice_ring.wav",
+    "encoding": "original PCM"
+  },
+  "ice_seal": {
+    "clip": "e_aoe_frostnovaice_h2",
+    "bundle": "audio\\sound_beta_2\\enemy\\e_aoe\\e_aoe_frostnovaice_h2.ab",
+    "duration": 4.109433174133301,
+    "sample_sha256": "e38b8c4df365209bc837d6c95e477fcd049526a069553e2b0ea93502171a711d",
+    "file": "ice_seal.wav",
+    "encoding": "original PCM"
+  }
+}

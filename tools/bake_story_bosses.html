@@ -1,0 +1,32 @@
+<!doctype html><meta charset="utf-8">
+<script src="pixi.js"></script><script src="spine.js"></script><script>
+// Offline original enemy models. Shared setup anchor avoids per-frame resizing.
+(async()=>{try{
+ const models=await(await fetch('models.json')).json(), sources=await(await fetch('sources.json')).json();
+ const clips={crownslayer:['Idle','Move','Attack','Disappear','Appear','Die'],w:['Idle','Move','Attack','Skill','Die']};
+ const app=new PIXI.Application({width:256,height:256,backgroundAlpha:0,antialias:true,preserveDrawingBuffer:true});app.stop();
+ const metadata={};
+ for(const [id,model] of Object.entries(models)) {
+  const loader=new PIXI.Loader();
+  await new Promise((resolve,reject)=>{loader.onError.add(reject);loader.add('rig',`${id}/${model}.skel`).load(resolve)});
+  const rig=new PIXI.spine.Spine(loader.resources.rig.spineData);rig.autoUpdate=false;app.stage.addChild(rig);
+  if(!rig.skeleton.data.defaultSkin&&rig.skeleton.data.skins.length)rig.skeleton.setSkinByName(rig.skeleton.data.skins[0].name);
+  const names=clips[id], animations=rig.spineData.animations;
+  const durations=names.map(n=>{const clip=animations.find(a=>a.name===n);if(!clip)throw Error(`${id}: missing ${n}`);return clip.duration});
+  function pose(row,col) {rig.skeleton.setToSetupPose();rig.state.clearTracks();rig.state.setAnimation(0,names[row],false);rig.update(durations[row]*col/(row<2?20:19))}
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(let row=0;row<names.length;row++)for(let col=0;col<20;col++) {
+   pose(row,col);const b=rig.getBounds();if(!b.width||!b.height)continue;
+   x0=Math.min(x0,b.x);y0=Math.min(y0,b.y);x1=Math.max(x1,b.x+b.width);y1=Math.max(y1,b.y+b.height);
+  }
+  const scale=Math.min(236/(x1-x0),224/(y1-y0));rig.scale.set(scale);rig.position.set(128-(x0+x1)*scale/2,240-y1*scale);
+  pose(0,0);const bounds=rig.getBounds(),anchor=[bounds.x+bounds.width/2,bounds.y+bounds.height];
+  const sheet=document.createElement('canvas');sheet.width=5120;sheet.height=256*names.length;
+  const context=sheet.getContext('2d');
+  for(let row=0;row<names.length;row++)for(let col=0;col<20;col++){pose(row,col);app.renderer.render(app.stage);context.drawImage(app.view,col*256,row*256)}
+  metadata[id]={model,columns:20,rows:names.length,cell:256,animations:names,durations,anchor,scale,facing:names.map(()=>1),source:sources[id]};
+  await fetch('/bake/'+id,{method:'POST',body:sheet.toDataURL('image/png').split(',')[1]});app.stage.removeChild(rig);rig.destroy();
+ }
+ await fetch('/done',{method:'POST',body:JSON.stringify(metadata,null,2)});
+}catch(e){await fetch('/error',{method:'POST',body:String(e.stack||e)})}})();
+</script>

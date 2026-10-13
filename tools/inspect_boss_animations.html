@@ -1,0 +1,12 @@
+<!doctype html><meta charset="utf-8">
+<script src="pixi.js"></script><script src="spine.js"></script><script>
+(async()=>{try{
+ const models=await(await fetch('models.json')).json(), result={};
+ for(const [id,model] of Object.entries(models)) {
+  const loader=new PIXI.Loader();
+  await new Promise((resolve,reject)=>{loader.onError.add(reject);loader.add('rig',`${id}/${model}.skel`).load(resolve)});
+  result[id]=loader.resources.rig.spineData.animations.map(a=>({name:a.name,duration:a.duration}));
+ }
+ await fetch('/done',{method:'POST',body:JSON.stringify(result,null,2)});
+}catch(e){await fetch('/error',{method:'POST',body:String(e.stack||e)})}})();
+</script>

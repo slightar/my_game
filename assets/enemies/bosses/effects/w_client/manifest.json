@@ -1,0 +1,51 @@
+{
+  "source_bundles": {
+    "battle\\prefabs\\effects\\cqbw.ab": "9ea09fc85b72746c746326b940f0af5aa1a8e5669d9cd71db16ed4e786530407"
+  },
+  "textures": {
+    "-1074696917881622342": {
+      "name": "star_02_-1074696917881622342",
+      "original_name": "star_02",
+      "file": "star_02_-1074696917881622342.png",
+      "bundle": "refs\\fx\\texture\\star.ab",
+      "sha256": "f74fe25ec860fd1893d58227f19ee76b6edd827f53f60f8f84801c934c5e71bc"
+    },
+    "-5177635814654685401": {
+      "name": "star_12_-5177635814654685401",
+      "original_name": "star_12",
+      "file": "star_12_-5177635814654685401.png",
+      "bundle": "refs\\fx\\texture\\star.ab",
+      "sha256": "d54a8268c1bdf9bae9d6600bfb14681356402a5c876b660be673be7e5fe1eaa2"
+    },
+    "-6594314517349497333": {
+      "name": "smoke_16_-6594314517349497333",
+      "original_name": "smoke_16",
+      "file": "smoke_16_-6594314517349497333.png",
+      "bundle": "refs\\fx\\texture\\smoke.ab",
+      "sha256": "8cb1453d85bc55548fc97f87e003cd3e4d38ae8f12214bb29b2d9fe4929df606"
+    },
+    "-7887427954279609538": {
+      "name": "trail_08_-7887427954279609538",
+      "original_name": "trail_08",
+      "file": "trail_08_-7887427954279609538.png",
+      "bundle": "refs\\fx\\texture\\trail.ab",
+      "sha256": "c3d27b0165fb0e84fc74c4c4d2cf1ccf67e9d056fd2474e4ab70314f37c74484"
+    },
+    "5157747962160573218": {
+      "name": "trail_48_5157747962160573218",
+      "original_name": "trail_48",
+      "file": "trail_48_5157747962160573218.png",
+      "bundle": "refs\\fx\\texture\\trail.ab",
+      "sha256": "76b473ea7ca76b00267e49f3fc13908dd34da27a81c6b315af0187d986cb02ed"
+    },
+    "6378925852128267826": {
+      "name": "smoke_02_6378925852128267826",
+      "original_name": "smoke_02",
+      "file": "smoke_02_6378925852128267826.png",
+      "bundle": "refs\\fx\\texture\\smoke.ab",
+      "sha256": "67aee8144e229d58cac20830fee6ba2add5ccb0a445c8d6ea06f21c09cf90354"
+    }
+  },
+  "skipped_layers": [],
+  "projection": "Existing source pixels/alpha and 60 Hz curves; 2D placement adaptation, no Unity mesh/shader reconstruction"
+}

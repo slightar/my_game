@@ -1,6 +1,7 @@
 #pragma once
 #include "enemy_data.h"
 #include "game_types.h"
+#include "adaptive_difficulty.h"
 #include <vector>
 
 enum class EnemyState { Approach, Windup, Strike, Recover, Fuse, Blast, Dead };
@@ -10,6 +11,8 @@ struct EnemyUnit {
     Vector2 feet{};
     int facing = -1;
     float health = 0, timer = 0, animationTime = 0, stun = 0, flash = 0;
+    float maxHealth = 0, recoveryDuration = 0;
+    CombatDifficulty difficulty{};
     // Spike-proofing for the "walk around it" reward: a guard cannot be back-stabbed
     // during the first moments of an encounter, before it has had a chance to face
     // anything. Counts up while the unit is in Approach.
@@ -64,9 +67,12 @@ public:
     static constexpr float kEnergizeSpeedScale = 1.5F;
     void Clear();
     void ResetTrial();
-    void ResetEncounter(std::vector<EnemyKind> wave,float entryX,float left,float right);
+    void ResetEncounter(std::vector<EnemyKind> wave,float entryX,float left,float right,CombatDifficulty difficulty={});
+    const CombatDifficulty& Difficulty() const {return difficulty_;}
     float EntryX() const {return entryX_;}
     unsigned Spawn(EnemyKind kind, float x);
+    unsigned Spawn(EnemyKind kind,float x,CombatDifficulty difficulty,int facing=-1);
+    void PruneDead();
     void Update(float dt, Vector2 playerPosition);
     bool ResolveBullet(Bullet& bullet, Vector2 previousPosition);
     bool DestroyBolt(Vector2 position, float radius);
@@ -93,4 +99,5 @@ private:
     std::vector<EnemyKind> spawnQueue_;
     std::size_t nextSpawn_ = 0;
     float spawnTimer_ = 0, entryPulse_ = 0;
+    CombatDifficulty difficulty_{};
 };

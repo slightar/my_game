@@ -1,0 +1,23 @@
+<!doctype html><meta charset="utf-8">
+<script src="pixi.js"></script><script src="spine.js"></script><script>
+(async()=>{try{
+ const models=await(await fetch('models.json')).json();
+ const sources=await(await fetch('sources.json')).json();
+ const model=models.w_mine,loader=new PIXI.Loader();
+ await new Promise((resolve,reject)=>{loader.onError.add(reject);loader.add('rig',`w_mine/${model}.skel`).load(resolve)});
+ const app=new PIXI.Application({width:128,height:128,backgroundAlpha:0,antialias:true,preserveDrawingBuffer:true});app.stop();
+ const rig=new PIXI.spine.Spine(loader.resources.rig.spineData);rig.autoUpdate=false;app.stage.addChild(rig);
+ if(!rig.skeleton.data.defaultSkin&&rig.skeleton.data.skins.length)rig.skeleton.setSkinByName(rig.skeleton.data.skins[0].name);
+ const names=rig.spineData.animations.map(a=>a.name);
+ const idle=names.find(n=>n.toLowerCase()==='idle');if(!idle)throw Error('Mine rig has no idle: '+names);
+ rig.state.setAnimation(0,idle,true);rig.update(.25);
+ let b=rig.getBounds();if(!b.width||!b.height)throw Error('Empty mine bounds');
+ const scale=Math.min(112/b.width,112/b.height);rig.scale.set(scale);
+ b=rig.getBounds();rig.position.set(64-(b.x+b.width/2),120-(b.y+b.height));
+ app.renderer.render(app.stage);
+ await fetch('/bake/w_mine',{method:'POST',body:app.view.toDataURL('image/png').split(',')[1]});
+ const bounds=rig.getBounds();
+ await fetch('/done',{method:'POST',body:JSON.stringify({w_mine:{...sources.w_mine,
+  animations:names,pose:idle,time:.25,cell:128,anchor:[64,120],bounds:[bounds.x,bounds.y,bounds.width,bounds.height]}},null,2)});
+}catch(e){await fetch('/error',{method:'POST',body:String(e.stack||e)})}})();
+</script>

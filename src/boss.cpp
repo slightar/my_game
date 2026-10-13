@@ -1,14 +1,10 @@
 #include "boss.h"
 
 #include "game_types.h"
-#include "ui_font.h"
-#include "ui_theme.h"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <filesystem>
-#include <string>
 
 namespace {
 
@@ -20,7 +16,7 @@ constexpr float kMeleeDuration = 0.18F;
 constexpr float kMeleeReach = 64.0F;
 constexpr float kRushWindupDuration = 0.34F;
 constexpr float kRushTeleportOutDuration = 0.24F;
-constexpr float kRushTeleportInDuration = 0.2F;
+constexpr float kRushTeleportInDuration = 0.55F;
 constexpr float kRushTeleportBehindDistance = 150.0F;
 constexpr float kRushDuration = 0.82F;
 constexpr float kRushSpeed = 1040.0F;
@@ -32,72 +28,93 @@ constexpr float kDartRadius = 10.0F;
 constexpr float kRecoverDuration = 0.28F;
 constexpr float kEnragedRecoverDuration = 0.16F;
 constexpr std::array<float, 3> kDartAngles{-0.24F, 0.0F, 0.24F};
-constexpr int kSpriteColumns = 10;
-constexpr int kSpriteRows = 6;
-constexpr float kSpriteHeight = 120.0F;
-
-std::string AssetPath(const char* relativePath) {
-    return (std::filesystem::path(GetApplicationDirectory()) / relativePath).string();
-}
-
 Vector2 Lerp(Vector2 start, Vector2 end, float amount) {
     return {start.x + (end.x - start.x) * amount,
             start.y + (end.y - start.y) * amount};
 }
 
+bool BladeHits(Vector2 from,Vector2 to,Rectangle body,float radius) {
+    const Rectangle expanded{body.x-radius,body.y-radius,body.width+radius*2,body.height+radius*2};
+    float enter=0,leave=1;
+    const auto axis=[&](float start,float delta,float low,float high) {
+        if(std::abs(delta)<.00001F)return start>=low&&start<=high;
+        float a=(low-start)/delta,b=(high-start)/delta;
+        if(a>b)std::swap(a,b);
+        enter=std::max(enter,a);leave=std::min(leave,b);return enter<=leave;
+    };
+    return axis(from.x,to.x-from.x,expanded.x,expanded.x+expanded.width)&&
+           axis(from.y,to.y-from.y,expanded.y,expanded.y+expanded.height);
+}
+
 }  // namespace
 
-Boss::Boss() {
-    const std::string spritePath =
-        AssetPath("assets/enemies/crownslayer_battle.png");
-    if (FileExists(spritePath.c_str())) {
-        battleSprite_ = LoadTexture(spritePath.c_str());
-        SetTextureFilter(battleSprite_, TEXTURE_FILTER_BILINEAR);
-    }
-}
-
-Boss::~Boss() {
-    if (IsTextureValid(battleSprite_)) {
-        UnloadTexture(battleSprite_);
-    }
-}
-
 void Boss::Reset() {
-    position_ = {GameConfig::kBossArena.x + GameConfig::kBossArena.width -
-                     210.0F,
-                 GameConfig::kFloorY - kRadius};
+    Reset(GameConfig::kBossArena,
+          {GameConfig::kBossArena.x + GameConfig::kBossArena.width - 210.0F,
+           GameConfig::kFloorY - kRadius});
+}
+
+void Boss::Reset(Rectangle arena, Vector2 position, float maxHealth) {
+    arena_=arena;
+    floorY_=arena.y+arena.height-28.0F;
+    maxHealth_=maxHealth;
+    position_=position;
     slashStart_ = position_;
     slashTarget_ = position_;
     state_ = State::Idle;
     stateTimer_ = kIdleDuration;
     facingDirection_ = -1;
-    health_ = kMaxHealth;
+    health_ = maxHealth_;
     nextRangedAttack_ = 0;
+    meleeSerial_=0;
+    fanAim_=retreatStart_=position_;
+    retreatTargetX_=position_.x;
     animationTime_ = 0.0F;
     rushTeleportTargetX_ = position_.x;
     stunTimer_ = 0.0F;
     darts_.clear();
+    shadowAim_=shadowLanding_=position_;shadowStrike_=0;shadowCooldown_=8;
+    shadowImpactWindow_=0;shadowRecover_=false;shadowHit_.fill(false);
+    shadowTraces_.clear();bladeSweeps_.clear();
+    effectRevision_=0;effectCue_=EffectCue::Charge;
 }
 
 void Boss::Update(float deltaTime, Vector2 playerPosition,
-                  int playerFacingDirection) {
+                  int playerFacingDirection,bool continueFrame) {
+    if(!continueFrame)BeginAttackFrame();
+    float remaining=std::clamp(deltaTime,0.0F,.25F);
+    while(remaining>.000001F) {
+        const float step=std::min(remaining,1.0F/120);
+        Tick(step,playerPosition,playerFacingDirection);remaining-=step;
+    }
+}
+
+void Boss::BeginAttackFrame(){bladeSweeps_.clear();}
+
+void Boss::Tick(float deltaTime,Vector2 playerPosition,int playerFacingDirection) {
     animationTime_ += deltaTime;
     if (state_ == State::Defeated) {
         return;
     }
 
     UpdateDarts(deltaTime);
+    for(auto& trace:shadowTraces_)trace.age+=deltaTime;
+    std::erase_if(shadowTraces_,[](const auto& trace){return trace.age>(trace.final?1.6F:.7F);});
+    shadowImpactWindow_=std::max(0.0F,shadowImpactWindow_-deltaTime);
     if (stunTimer_ > 0.0F) {
         stunTimer_ = std::max(0.0F, stunTimer_ - deltaTime);
         return;
     }
     stateTimer_ -= deltaTime;
+    shadowCooldown_=std::max(0.0F,shadowCooldown_-deltaTime);
     switch (state_) {
         case State::Idle:
             facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
             if (stateTimer_ <= 0.0F) {
-                if (std::abs(playerPosition.x - position_.x) <= kMeleeRange) {
-                    StartMelee(playerPosition);
+                if(shadowCooldown_<=0)StartShadow(playerPosition);
+                else if (std::abs(playerPosition.x - position_.x) <= kMeleeRange) {
+                    if(meleeSerial_++%3==2)StartFanRetreat(playerPosition);
+                    else StartMelee(playerPosition);
                 } else {
                     switch (nextRangedAttack_) {
                         case 0:
@@ -106,11 +123,14 @@ void Boss::Update(float deltaTime, Vector2 playerPosition,
                         case 1:
                             StartAirSlash(playerPosition);
                             break;
-                        default:
+                        case 2:
                             StartDartVolley(playerPosition);
                             break;
+                        default:
+                            StartFanRetreat(playerPosition);
+                            break;
                     }
-                    nextRangedAttack_ = (nextRangedAttack_ + 1) % 3;
+                    nextRangedAttack_ = (nextRangedAttack_ + 1) % 4;
                 }
             }
             break;
@@ -126,7 +146,7 @@ void Boss::Update(float deltaTime, Vector2 playerPosition,
             if (stateTimer_ <= 0.0F) {
                 state_ = State::Recover;
                 animationTime_ = 0.0F;
-                stateTimer_ = health_ <= kMaxHealth / 2
+                stateTimer_ = health_ <= maxHealth_ / 2
                                   ? kEnragedRecoverDuration
                                   : kRecoverDuration;
             }
@@ -134,7 +154,7 @@ void Boss::Update(float deltaTime, Vector2 playerPosition,
         case State::RushTeleportOut:
             if (stateTimer_ <= 0.0F) {
                 position_.x = rushTeleportTargetX_;
-                position_.y = GameConfig::kFloorY - kRadius;
+                position_.y = floorY_ - kRadius;
                 facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
                 state_ = State::RushTeleportIn;
                 animationTime_ = 0.0F;
@@ -142,7 +162,6 @@ void Boss::Update(float deltaTime, Vector2 playerPosition,
             }
             break;
         case State::RushTeleportIn:
-            facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
             if (stateTimer_ <= 0.0F) {
                 state_ = State::Rush;
                 animationTime_ = 0.0F;
@@ -158,16 +177,16 @@ void Boss::Update(float deltaTime, Vector2 playerPosition,
             break;
         case State::Rush: {
             position_.x += static_cast<float>(facingDirection_) * kRushSpeed * deltaTime;
-            const float left = GameConfig::kBossArena.x + 28.0F + kRadius;
-            const float right = GameConfig::kBossArena.x +
-                                GameConfig::kBossArena.width - 28.0F - kRadius;
+            const float left = arena_.x + 28.0F + kRadius;
+            const float right = arena_.x +
+                                arena_.width - 28.0F - kRadius;
             const float clampedX = std::clamp(position_.x, left, right);
             const bool hitWall = clampedX != position_.x;
             position_.x = clampedX;
             if (stateTimer_ <= 0.0F || hitWall) {
                 state_ = State::Recover;
                 animationTime_ = 0.0F;
-                stateTimer_ = health_ <= kMaxHealth / 2
+                stateTimer_ = health_ <= maxHealth_ / 2
                                   ? kEnragedRecoverDuration
                                   : kRecoverDuration;
             }
@@ -188,7 +207,7 @@ void Boss::Update(float deltaTime, Vector2 playerPosition,
                 position_ = slashTarget_;
                 state_ = State::Recover;
                 animationTime_ = 0.0F;
-                stateTimer_ = health_ <= kMaxHealth / 2
+                stateTimer_ = health_ <= maxHealth_ / 2
                                   ? kEnragedRecoverDuration
                                   : kRecoverDuration;
             }
@@ -200,16 +219,72 @@ void Boss::Update(float deltaTime, Vector2 playerPosition,
                 LaunchDarts();
                 state_ = State::Recover;
                 animationTime_ = 0.0F;
-                stateTimer_ = health_ <= kMaxHealth / 2
+                stateTimer_ = health_ <= maxHealth_ / 2
                                   ? kEnragedRecoverDuration
                                   : kRecoverDuration;
             }
             break;
+        case State::FanRetreat: {
+            const float t=std::clamp(animationTime_/.45F,0.0F,1.0F);
+            const float ease=t*t*(3-2*t);
+            position_={retreatStart_.x+(retreatTargetX_-retreatStart_.x)*ease,
+                       floorY_-kRadius-std::sin(t*3.14159265F)*85};
+            if(stateTimer_<=0) {
+                position_={retreatTargetX_,floorY_-kRadius};
+                LaunchFan();
+                state_=State::Recover;animationTime_=0;
+                stateTimer_=.48F; // A clear counterattack window after the spread.
+            }
+            break;
+        }
+        case State::ShadowWindup:
+        case State::ShadowPause:
+            if(stateTimer_<=0)StartShadowSlash();
+            break;
+        case State::ShadowSlash: {
+            const Vector2 before=position_;
+            const float t=std::clamp(1-stateTimer_/ShadowSlashDuration(shadowStrike_),0.0F,1.0F);
+            position_=Lerp(shadowStarts_[shadowStrike_],shadowEnds_[shadowStrike_],t);
+            bladeSweeps_.push_back({before,position_,shadowStrike_});
+            if(stateTimer_<=0) {
+                position_=shadowEnds_[shadowStrike_];
+                shadowTraces_.push_back({shadowStarts_[shadowStrike_],position_,0,facingDirection_,false});
+                ++shadowStrike_;animationTime_=0;
+                if(shadowStrike_<3)PrepareShadowSlash(false);
+                else {
+                    // Retarget once above the player's current position, then keep the warning fixed.
+                    shadowLanding_={std::clamp(playerPosition.x,arena_.x+28+kRadius,
+                                              arena_.x+arena_.width-28-kRadius),floorY_-kRadius};
+                    position_={shadowLanding_.x,std::max(arena_.y+kRadius,
+                                      std::min(shadowLanding_.y-260,playerPosition.y-220))};
+                    state_=State::ShadowFinalWindup;stateTimer_=kShadowFinalWindup;
+                    slashStart_=position_;slashTarget_=shadowLanding_;
+                }
+            }
+            break;
+        }
+        case State::ShadowFinalWindup:
+            if(stateTimer_<=0){state_=State::ShadowFinal;stateTimer_=.24F;animationTime_=0;}
+            break;
+        case State::ShadowFinal: {
+            const Vector2 before=position_;
+            const float t=std::clamp(1-stateTimer_/.24F,0.0F,1.0F);
+            position_=Lerp(slashStart_,slashTarget_,t*t);
+            bladeSweeps_.push_back({before,position_,3});
+            if(stateTimer_<=0) {
+                position_=slashTarget_;shadowImpactWindow_=.16F;
+                ++effectRevision_;effectCue_=EffectCue::Impact;
+                shadowTraces_.push_back({slashStart_,position_,0,facingDirection_,true});
+                state_=State::Recover;stateTimer_=1.1F;animationTime_=0;
+            }
+            break;
+        }
         case State::Recover:
             if (stateTimer_ <= 0.0F) {
                 state_ = State::Idle;
+                shadowRecover_=false;
                 animationTime_ = 0.0F;
-                stateTimer_ = health_ <= kMaxHealth / 2
+                stateTimer_ = health_ <= maxHealth_ / 2
                                   ? kEnragedIdleDuration
                                   : kIdleDuration;
             }
@@ -219,9 +294,43 @@ void Boss::Update(float deltaTime, Vector2 playerPosition,
     }
 }
 
+bool Boss::ShadowActive() const {
+    return state_==State::ShadowWindup||state_==State::ShadowSlash||state_==State::ShadowPause||
+           state_==State::ShadowFinalWindup||state_==State::ShadowFinal;
+}
+
+void Boss::StartShadow(Vector2 player) {
+    const float ground=floorY_-kRadius;
+    shadowAim_={std::clamp(player.x,arena_.x+280,arena_.x+arena_.width-280),ground};
+    shadowLanding_=shadowAim_;
+    // All three routes lock before the first slash; moving away beats the combo.
+    shadowStarts_={Vector2{shadowAim_.x-240,ground},Vector2{shadowAim_.x+240,ground-110},
+                   Vector2{shadowAim_.x-240,ground-110}};
+    shadowEnds_={Vector2{shadowAim_.x+240,ground},Vector2{shadowAim_.x-240,ground},
+                 Vector2{shadowAim_.x+240,ground}};
+    shadowHit_.fill(false);shadowStrike_=0;shadowRecover_=true;
+    shadowImpactWindow_=0;shadowTraces_.clear();darts_.clear();
+    PrepareShadowSlash(true);
+    shadowCooldown_=health_<=maxHealth_*.5F?12.0F:16.0F;
+}
+
+void Boss::PrepareShadowSlash(bool first) {
+    // Teleport BEFORE the harmless windup, never on the damaging strike's first frame.
+    position_=shadowStarts_[shadowStrike_];
+    facingDirection_=shadowEnds_[shadowStrike_].x>=position_.x?1:-1;
+    state_=first?State::ShadowWindup:State::ShadowPause;
+    stateTimer_=first?kShadowStartWindup:kShadowFollowWindup;animationTime_=0;
+    ++effectRevision_;effectCue_=EffectCue::Charge;
+}
+
+void Boss::StartShadowSlash() {
+    state_=State::ShadowSlash;stateTimer_=ShadowSlashDuration(shadowStrike_);animationTime_=0;
+    ++effectRevision_;effectCue_=EffectCue::Slash;
+}
+
 void Boss::StartMelee(Vector2 playerPosition) {
     facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
-    position_.y = GameConfig::kFloorY - kRadius;
+    position_.y = floorY_ - kRadius;
     state_ = State::MeleeWindup;
     animationTime_ = 0.0F;
     stateTimer_ = kMeleeWindupDuration;
@@ -229,10 +338,10 @@ void Boss::StartMelee(Vector2 playerPosition) {
 
 void Boss::StartRush(Vector2 playerPosition, int playerFacingDirection) {
     facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
-    position_.y = GameConfig::kFloorY - kRadius;
-    if (health_ <= kMaxHealth / 2) {
-        const float left = GameConfig::kBossArena.x + 28.0F + kRadius;
-        const float right = GameConfig::kBossArena.x + GameConfig::kBossArena.width -
+    position_.y = floorY_ - kRadius;
+    if (health_ <= maxHealth_ / 2) {
+        const float left = arena_.x + 28.0F + kRadius;
+        const float right = arena_.x + arena_.width -
                             28.0F - kRadius;
         rushTeleportTargetX_ = std::clamp(
             playerPosition.x - static_cast<float>(playerFacingDirection) *
@@ -249,15 +358,15 @@ void Boss::StartRush(Vector2 playerPosition, int playerFacingDirection) {
 
 void Boss::StartAirSlash(Vector2 playerPosition) {
     facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
-    const float left = GameConfig::kBossArena.x + 80.0F;
-    const float right = GameConfig::kBossArena.x +
-                        GameConfig::kBossArena.width - 80.0F;
+    const float left = arena_.x + 80.0F;
+    const float right = arena_.x +
+                        arena_.width - 80.0F;
     slashStart_ = {
         std::clamp(playerPosition.x - static_cast<float>(facingDirection_) * 260.0F,
                    left, right),
-        GameConfig::kBossArena.y + 120.0F};
+        arena_.y + 120.0F};
     slashTarget_ = {std::clamp(playerPosition.x, left, right),
-                    GameConfig::kFloorY - kRadius};
+                    floorY_ - kRadius};
     position_ = slashStart_;
     state_ = State::AirSlashWindup;
     animationTime_ = 0.0F;
@@ -266,7 +375,7 @@ void Boss::StartAirSlash(Vector2 playerPosition) {
 
 void Boss::StartDartVolley(Vector2 playerPosition) {
     facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
-    position_.y = GameConfig::kFloorY - kRadius;
+    position_.y = floorY_ - kRadius;
     state_ = State::DartWindup;
     animationTime_ = 0.0F;
     stateTimer_ = kDartWindupDuration;
@@ -285,6 +394,23 @@ void Boss::LaunchDarts() {
     }
 }
 
+void Boss::StartFanRetreat(Vector2 playerPosition) {
+    facingDirection_=playerPosition.x>=position_.x?1:-1;
+    fanAim_=playerPosition;retreatStart_=position_;
+    retreatTargetX_=std::clamp(position_.x-facingDirection_*220.0F,
+                             arena_.x+28+kRadius,arena_.x+arena_.width-28-kRadius);
+    state_=State::FanRetreat;animationTime_=0;stateTimer_=.75F;
+}
+
+void Boss::LaunchFan() {
+    const Vector2 origin{position_.x+facingDirection_*34.0F,position_.y-24};
+    const float aim=std::atan2(fanAim_.y-origin.y,fanAim_.x-origin.x);
+    for(float offset:{-.36F,-.18F,0.0F,.18F,.36F}) {
+        const float angle=aim+offset;
+        darts_.push_back({origin,{std::cos(angle)*620,std::sin(angle)*620},angle});
+    }
+}
+
 void Boss::UpdateDarts(float deltaTime) {
     for (Dart& dart : darts_) {
         dart.position.x += dart.velocity.x * deltaTime;
@@ -292,145 +418,13 @@ void Boss::UpdateDarts(float deltaTime) {
         dart.rotation += 12.0F * deltaTime;
     }
 
-    std::erase_if(darts_, [](const Dart& dart) {
-        const Rectangle room = GameConfig::kBossArena;
+    std::erase_if(darts_, [this](const Dart& dart) {
+        const Rectangle room = arena_;
         return dart.position.x < room.x ||
                dart.position.x > room.x + room.width ||
                dart.position.y < room.y ||
                dart.position.y > room.y + room.height;
     });
-}
-
-void Boss::DrawDarts() const {
-    for (const Dart& dart : darts_) {
-        const Vector2 blade{
-            std::cos(dart.rotation) * 13.0F,
-            std::sin(dart.rotation) * 13.0F};
-        const Vector2 cross{-blade.y * 0.72F, blade.x * 0.72F};
-        DrawCircleV(dart.position, kDartRadius + 3.0F, Fade(RED, 0.22F));
-        DrawLineEx({dart.position.x - blade.x, dart.position.y - blade.y},
-                   {dart.position.x + blade.x, dart.position.y + blade.y},
-                   5.0F, LIGHTGRAY);
-        DrawLineEx({dart.position.x - cross.x, dart.position.y - cross.y},
-                   {dart.position.x + cross.x, dart.position.y + cross.y},
-                   4.0F, MAROON);
-    }
-}
-
-void Boss::DrawBattleSprite() const {
-    if (!IsTextureValid(battleSprite_)) {
-        DrawFallbackBody();
-        return;
-    }
-
-    int row = 0;
-    bool loops = true;
-    float framesPerSecond = 10.0F;
-    switch (state_) {
-        case State::Rush:
-            row = 1;  // Move
-            break;
-        case State::MeleeWindup:
-        case State::Melee:
-        case State::DartWindup:
-            row = 2;  // Attack
-            framesPerSecond = 24.0F;
-            loops = false;
-            break;
-        case State::AirSlash:
-            row = 2;  // Attack
-            framesPerSecond = 34.0F;
-            loops = false;
-            break;
-        case State::RushTeleportOut:
-            row = 3;  // Disappear
-            framesPerSecond = 20.0F;
-            loops = false;
-            break;
-        case State::RushTeleportIn:
-        case State::AirSlashWindup:
-            row = 4;  // Appear
-            framesPerSecond = 20.0F;
-            loops = false;
-            break;
-        case State::RushWindup:
-            row = 2;  // Attack preparation
-            framesPerSecond = 24.0F;
-            loops = false;
-            break;
-        case State::Defeated:
-            row = 5;  // Die
-            loops = false;
-            break;
-        case State::Idle:
-        case State::Recover:
-        default:
-            row = 0;  // Idle
-            break;
-    }
-
-    int frame = static_cast<int>(animationTime_ * framesPerSecond);
-    frame = loops ? frame % kSpriteColumns
-                  : std::min(frame, kSpriteColumns - 1);
-    const float frameWidth = static_cast<float>(battleSprite_.width) /
-                             static_cast<float>(kSpriteColumns);
-    const float frameHeight = static_cast<float>(battleSprite_.height) /
-                              static_cast<float>(kSpriteRows);
-    const float spriteWidth = kSpriteHeight * frameWidth / frameHeight;
-    const Rectangle source{frameWidth * static_cast<float>(frame),
-                           frameHeight * static_cast<float>(row),
-                           facingDirection_ < 0 ? -frameWidth : frameWidth,
-                           frameHeight};
-    const Rectangle destination{
-        position_.x,
-        position_.y + kRadius + kSpriteHeight * 0.13F,
-        spriteWidth,
-        kSpriteHeight};
-    DrawTexturePro(battleSprite_, source, destination,
-                   {spriteWidth / 2.0F, kSpriteHeight}, 0.0F,
-                   state_ == State::Defeated
-                       ? Fade(WHITE, 0.88F)
-                       : (stunTimer_ > 0.0F ? Color{170, 215, 255, 255}
-                                            : WHITE));
-}
-
-void Boss::DrawFallbackBody() const {
-    DrawCircleV(position_, kRadius + 5.0F, BLACK);
-    DrawCircleV(position_, kRadius, DARKPURPLE);
-    DrawRectangle(static_cast<int>(position_.x) - 21,
-                  static_cast<int>(position_.y) - 12, 42, 12, BLACK);
-    const float direction = static_cast<float>(facingDirection_);
-    DrawLineEx({position_.x + direction * 18.0F, position_.y + 5.0F},
-               {position_.x + direction * 62.0F, position_.y + 30.0F},
-               7.0F, LIGHTGRAY);
-}
-
-void Boss::Draw(const UiFont& font) const {
-    DrawDarts();
-
-    if (state_ == State::Defeated) {
-        DrawBattleSprite();
-        return;
-    }
-
-    DrawBattleSprite();
-    font.Draw("弑君者", position_.x - 25.0F, position_.y - 50.0F, 14.0F, MAROON);
-}
-
-void Boss::DrawHud(const UiFont& font) const {
-    constexpr float width = 520.0F;
-    constexpr float height = 54.0F;
-    const float x = static_cast<float>(GameConfig::kScreenWidth) - width - 32.0F;
-    constexpr float y = 28.0F;
-    const float ratio = health_ / kMaxHealth;
-    TacticalUi::DrawCutPanel({x, y, width, height}, TacticalUi::kPanel,
-                             Fade(RAYWHITE, 0.20F), 13.0F);
-    font.Draw("BOSS // 弑君者", x + 18.0F, y + 8.0F, 15.0F,
-              TacticalUi::kPaper);
-    font.Draw(TextFormat("%03i%%", static_cast<int>(ratio * 100.0F)),
-              x + width - 66.0F, y + 8.0F, 13.0F, TacticalUi::kMuted);
-    TacticalUi::DrawProgressLine({x + 18.0F, y + 39.0F}, width - 40.0F,
-                                 ratio, TacticalUi::kRed, 7.0F);
 }
 
 void Boss::TakeDamage(float damage) {
@@ -442,6 +436,7 @@ void Boss::TakeDamage(float damage) {
         state_ = State::Defeated;
         animationTime_ = 0.0F;
         darts_.clear();
+        shadowTraces_.clear();bladeSweeps_.clear();shadowImpactWindow_=0;shadowRecover_=false;
     }
 }
 
@@ -482,6 +477,13 @@ bool Boss::AttackHits(Rectangle playerHitbox, Rectangle projectileHitbox) {
         return false;
     }
 
+    for(const auto& sweep:bladeSweeps_)if(!shadowHit_[sweep.strike]&&BladeHits(sweep.from,sweep.to,playerHitbox,22)) {
+        shadowHit_[sweep.strike]=true;return true;
+    }
+    if(shadowImpactWindow_>0&&!shadowHit_[3]&&CheckCollisionCircleRec(slashTarget_,110,playerHitbox)) {
+        shadowHit_[3]=true;return true;
+    }
+
     if (state_ == State::Melee) {
         const Vector2 hitboxCenter{
             position_.x + static_cast<float>(facingDirection_) * kMeleeReach,
@@ -493,8 +495,14 @@ bool Boss::AttackHits(Rectangle playerHitbox, Rectangle projectileHitbox) {
 }
 bool Boss::CanDealContactDamage() const {
     return stunTimer_ <= 0.0F &&
+           !ShadowActive() && !shadowRecover_ &&
            state_ != State::RushTeleportOut &&
            state_ != State::RushTeleportIn &&
+           state_ != State::MeleeWindup &&
+           state_ != State::RushWindup &&
+           state_ != State::AirSlashWindup &&
+           state_ != State::DartWindup &&
+           state_ != State::FanRetreat &&
            state_ != State::Defeated;
 }
 bool Boss::IsDefeated() const { return state_ == State::Defeated; }

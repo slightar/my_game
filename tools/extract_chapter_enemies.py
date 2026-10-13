@@ -25,6 +25,7 @@ MODELS = {
     'ursus_assault': 'enemy_1111_ucommd',
 }
 STAGES = {'bridge':'1-8','wtower':'1-12','ice':'6-16','industry':'7-18','core':'JT8-3'}
+BOSS_MODELS = {'crownslayer':'enemy_1502_crowns','w':'enemy_1504_cqbw'}
 
 
 def main():
@@ -33,9 +34,11 @@ def main():
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--source',type=Path,required=True)
     p.add_argument('--runtime',type=Path,required=True)
+    p.add_argument('--bosses',action='store_true',help='Extract the two original chapter-one Boss rigs instead of troops')
     args=p.parse_args();args.output.mkdir(parents=True,exist_ok=True)
     handbook=json.loads((args.source/'enemy_handbook_table.json').read_text(encoding='utf-8'))['enemyData']
-    pending=dict(MODELS);metadata={}
+    selected=BOSS_MODELS if args.bosses else MODELS
+    pending=dict(selected);metadata={}
     for bundle in sorted((args.client/'refs/arts').glob('enm_art_*.ab')):
         if not pending:break
         objects={}
@@ -61,7 +64,7 @@ def main():
             print(key,metadata[key]['name'],bundle.name,flush=True);del pending[key]
     if pending:raise RuntimeError('Missing exact client models: '+str(pending))
     for name in ['pixi.js','spine.js']:shutil.copyfile(args.runtime/name,args.output/name)
-    (args.output/'models.json').write_text(json.dumps(MODELS),encoding='utf-8')
+    (args.output/'models.json').write_text(json.dumps(selected),encoding='utf-8')
     (args.output/'sources.json').write_text(json.dumps(metadata,ensure_ascii=False,indent=2),encoding='utf-8')
     stages=json.loads((args.source/'stage_table.json').read_text(encoding='utf-8'))['stages']
     chapters={}

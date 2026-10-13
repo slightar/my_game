@@ -1,6 +1,16 @@
 #include "audio_system.h"
 #include "file_path.h"
+#include "boss.h"
 #include <algorithm>
+
+void AudioSystem::PlayCrownEffect(const Boss& boss,unsigned previousRevision) const {
+    if(boss.IsDefeated()||boss.EffectRevision()==previousRevision)return;
+    switch(boss.LastEffectCue()) {
+    case Boss::EffectCue::Charge:Play(AudioCue::Skill);break;
+    case Boss::EffectCue::Slash:Play(AudioCue::Slash);break;
+    case Boss::EffectCue::Impact:Play(AudioCue::SwordRain);break;
+    }
+}
 
 namespace {
 struct CueDefinition { const char* file; float gain; double interval; int voices; };

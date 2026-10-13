@@ -10,7 +10,8 @@
 class WorldEncounter {
 public:
     void Reset() { cleared_.clear();active_=false;wave_=0; }
-    void Enter(const std::string& id,EnemySystem& enemies) {
+    void Enter(const std::string& id,EnemySystem& enemies,CombatDifficulty difficulty={}) {
+        difficulty_=difficulty;
         id_=id;active_=WorldLayout::Internal(id);wave_=cleared_.contains(id)?2:0;
         enemies.Clear();
     }
@@ -27,7 +28,7 @@ public:
         if(Cleared(enemies)){cleared_.insert(id_);return;}
         const float width=WorldLayout::Find(id_)->width;
         if(wave_<2&&(wave_==0||enemies.Cleared())&&x>=width*(wave_==0?.30F:.63F)) {
-            enemies.ResetEncounter(Formation(id_,wave_),width*(wave_==0?.52F:.85F),80,width-80);
+            enemies.ResetEncounter(Formation(id_,wave_),width*(wave_==0?.52F:.85F),80,width-80,difficulty_);
             ++wave_;
         }
     }
@@ -39,4 +40,5 @@ private:
     std::set<std::string> cleared_;
     bool active_=false;
     int wave_=0;
+    CombatDifficulty difficulty_{};
 };

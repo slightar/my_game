@@ -2,22 +2,23 @@
 
 #include "raylib.h"
 
+#include <cstddef>
+#include <array>
 #include <vector>
+#include <memory>
 
 class UiFont;
+class BossClientFx;
 
 class Boss {
 public:
-    Boss();
-    ~Boss();
-
-    Boss(const Boss&) = delete;
-    Boss& operator=(const Boss&) = delete;
-
     void Reset();
+    void Reset(Rectangle arena, Vector2 position, float maxHealth=60);
     void Update(float deltaTime, Vector2 playerPosition,
-                int playerFacingDirection);
-    void Draw(const UiFont& font) const;
+                int playerFacingDirection, bool continueFrame=false);
+    // Story encounters subdivide an outer frame; retain every blade sweep until collision.
+    void BeginAttackFrame();
+    void Draw(const UiFont& font, Texture2D sprite,const BossClientFx* effects=nullptr) const;
     void DrawHud(const UiFont& font) const;
 
     void TakeDamage(float damage);
@@ -30,7 +31,6 @@ public:
     [[nodiscard]] bool CanDealContactDamage() const;
     [[nodiscard]] bool IsDefeated() const;
 
-private:
     enum class State {
         Idle,
         MeleeWindup,
@@ -42,10 +42,34 @@ private:
         AirSlashWindup,
         AirSlash,
         DartWindup,
+        FanRetreat,
+        ShadowWindup,
+        ShadowSlash,
+        ShadowPause,
+        ShadowFinalWindup,
+        ShadowFinal,
         Recover,
         Defeated
     };
 
+    State CurrentState() const {return state_;}
+    float Health() const {return health_;}
+    int Facing() const {return facingDirection_;}
+    float AnimationTime() const {return animationTime_;}
+    float StunTime() const {return stunTimer_;}
+    float BlinkTarget() const {return rushTeleportTargetX_;}
+    std::size_t DartCount() const {return darts_.size();}
+    Vector2 ShadowAim() const {return shadowAim_;}
+    Vector2 ShadowLanding() const {return shadowLanding_;}
+    static constexpr float ShadowSlashDuration(int strike) {return strike<2?.30F:.18F;}
+    int ShadowStrike() const {return shadowStrike_;}
+    bool ShadowActive() const;
+    enum class EffectCue {Charge,Slash,Impact};
+    unsigned EffectRevision() const {return effectRevision_;}
+    EffectCue LastEffectCue() const {return effectCue_;}
+
+private:
+    friend class BossClientFx;
     struct Dart {
         Vector2 position{};
         Vector2 velocity{};
@@ -56,18 +80,30 @@ private:
     void StartRush(Vector2 playerPosition, int playerFacingDirection);
     void StartAirSlash(Vector2 playerPosition);
     void StartDartVolley(Vector2 playerPosition);
+    void StartFanRetreat(Vector2 playerPosition);
+    void Tick(float dt,Vector2 player,int playerFacing);
+    void StartShadow(Vector2 player);
+    void PrepareShadowSlash(bool first);
+    void StartShadowSlash();
+    struct ShadowTrace {Vector2 from{},to{};float age=0;int facing=1;bool final=false;};
+    struct BladeSweep {Vector2 from{},to{};int strike=0;};
+    void LaunchFan();
     void LaunchDarts();
     void UpdateDarts(float deltaTime);
-    void DrawDarts() const;
-    void DrawBattleSprite() const;
-    void DrawFallbackBody() const;
+    void DrawBattleSprite(Texture2D battleSprite_) const;
 
     static constexpr float kRadius = 34.0F;
     static constexpr float kMaxHealth = 60.0F;
+    static constexpr float kShadowStartWindup = 1.20F;
+    static constexpr float kShadowFollowWindup = .75F;
+    static constexpr float kShadowFinalWindup = .90F;
 
     Vector2 position_{};
     Vector2 slashStart_{};
     Vector2 slashTarget_{};
+    Vector2 fanAim_{},retreatStart_{};
+    float retreatTargetX_=0;
+    int meleeSerial_=0;
     State state_ = State::Idle;
     float stateTimer_ = 0.0F;
     int facingDirection_ = -1;
@@ -76,6 +112,31 @@ private:
     float animationTime_ = 0.0F;
     float rushTeleportTargetX_ = 0.0F;
     float stunTimer_ = 0.0F;
-    Texture2D battleSprite_{};
+    Rectangle arena_{};
+    float floorY_=0, maxHealth_=kMaxHealth;
     std::vector<Dart> darts_;
+    Vector2 shadowAim_{},shadowLanding_{};
+    std::array<Vector2,3> shadowStarts_{},shadowEnds_{};
+    std::array<bool,4> shadowHit_{};
+    int shadowStrike_=0;
+    float shadowCooldown_=8,shadowImpactWindow_=0;
+    bool shadowRecover_=false;
+    std::vector<ShadowTrace> shadowTraces_;
+    std::vector<BladeSweep> bladeSweeps_;
+    unsigned effectRevision_=0;
+    EffectCue effectCue_=EffectCue::Charge;
+};
+
+// Texture ownership stays outside the reusable, headless combat simulation.
+class BossRenderer {
+public:
+    BossRenderer();
+    ~BossRenderer();
+    BossRenderer(const BossRenderer&)=delete;
+    BossRenderer& operator=(const BossRenderer&)=delete;
+    void Draw(const Boss& boss,const UiFont& font) const;
+    bool EffectsReady() const;
+private:
+    Texture2D sprite_{};
+    std::unique_ptr<BossClientFx> effects_;
 };

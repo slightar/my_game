@@ -23,7 +23,7 @@ public:
     void Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
                 std::vector<Bullet>& bullets, AudioSystem& audio, const GameSettings& settings,
                 bool assistEnemyAim = false, bool traversalOnly = false, const std::vector<Rectangle>* platforms = nullptr,
-                const Rectangle* ramp = nullptr);
+                const Rectangle* ramp = nullptr, const std::vector<Rectangle>* sealedFloor = nullptr);
     void UpdateDefeatAnimation(float deltaTime);
     void SetHorizontalBounds(float left, float right);
     void Draw(const CharacterArt& art) const;
@@ -43,6 +43,7 @@ public:
     // True while 酸液源石虫's corrosion is active, i.e. while post-hit invincibility is
     // halved. Surfaced so the HUD can warn about it.
     [[nodiscard]] bool IsCorroded() const;
+    [[nodiscard]] bool FellThroughFloor() const {return position_.y+kHitboxHeight/2>GameConfig::kFloorY+55;}
     [[nodiscard]] bool DefeatAnimationFinished() const;
     [[nodiscard]] OperatorKind Kind() const;
     [[nodiscard]] int Health() const { return health_; }

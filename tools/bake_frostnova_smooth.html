@@ -1,0 +1,48 @@
+<!doctype html><meta charset="utf-8">
+<script src="pixi.js"></script><script src="spine.js"></script><script>
+// Sample the original Spine clips at 30 Hz. Transparent bounds are packed so
+// long clips do not allocate an enormous mostly-empty fixed-cell sheet.
+(async()=>{try{
+ const models=await(await fetch('models.json')).json();
+ const model=models.frostnova;
+ const source=await(await fetch('sources.json')).json();
+ const names=['Idle','Move','Attack','Skill_1','Skill_2','Skill_3','Die'];
+ const app=new PIXI.Application({width:512,height:512,backgroundAlpha:0,antialias:true,preserveDrawingBuffer:true});app.stop();
+ const loader=new PIXI.Loader();
+ await new Promise((resolve,reject)=>{loader.onError.add(reject);loader.add('rig',`frostnova/${model}.skel`).load(resolve)});
+ const rig=new PIXI.spine.Spine(loader.resources.rig.spineData);rig.autoUpdate=false;app.stage.addChild(rig);
+ if(!rig.skeleton.data.defaultSkin&&rig.skeleton.data.skins.length)rig.skeleton.setSkinByName(rig.skeleton.data.skins[0].name);
+ const clips=names.map(n=>{const c=rig.spineData.animations.find(a=>a.name===n);if(!c)throw Error(`Missing original ${n}`);return c});
+ function pose(row,time){rig.skeleton.setToSetupPose();rig.state.clearTracks();rig.state.setAnimation(0,names[row],false);rig.update(time)}
+ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+ for(let row=0;row<names.length;row++)for(let i=0;i<20;i++){
+  pose(row,clips[row].duration*i/(row<2?20:19));const b=rig.getBounds();if(!b.width||!b.height)continue;
+  x0=Math.min(x0,b.x);y0=Math.min(y0,b.y);x1=Math.max(x1,b.x+b.width);y1=Math.max(y1,b.y+b.height);
+ }
+ const scale=Math.min(492/(x1-x0),480/(y1-y0));rig.scale.set(scale);rig.position.set(256-(x0+x1)*scale/2,496-y1*scale);
+ pose(0,0);const bounds=rig.getBounds(),anchor=[bounds.x+bounds.width/2,bounds.y+bounds.height];
+ const scratch=document.createElement('canvas');scratch.width=scratch.height=512;const sc=scratch.getContext('2d',{willReadFrequently:true});
+ const staging=document.createElement('canvas');staging.width=4096;staging.height=4096;const ctx=staging.getContext('2d');
+ const animations={};let x=0,y=0,rowHeight=0;
+ for(let row=0;row<names.length;row++){
+  const clip=clips[row],frames=[],count=Math.ceil(clip.duration*30);
+  for(let i=0;i<count;i++){
+   pose(row,Math.min(clip.duration-.0001,i/30));app.renderer.render(app.stage);
+   sc.clearRect(0,0,512,512);sc.drawImage(app.view,0,0);
+   const data=sc.getImageData(0,0,512,512).data;let lx=512,ly=512,rx=0,by=0;
+   for(let py=0;py<512;py++)for(let px=0;px<512;px++)if(data[(py*512+px)*4+3]>8){lx=Math.min(lx,px);ly=Math.min(ly,py);rx=Math.max(rx,px+1);by=Math.max(by,py+1)}
+   if(rx<=lx){frames.push({x:0,y:0,w:0,h:0,bx:0,by:0});continue}
+   const w=rx-lx,h=by-ly,pad=2;
+   if(x+w+pad>staging.width){x=0;y+=rowHeight;rowHeight=0}
+   if(y+h+pad>staging.height)throw Error(`Trimmed atlas exceeded 4096px at ${names[row]} frame ${i}`);
+   ctx.drawImage(scratch,lx,ly,w,h,x,y,w,h);
+   frames.push({x,y,w,h,bx:lx,by:ly});x+=w+pad;rowHeight=Math.max(rowHeight,h+pad);
+  }
+  animations[names[row]]={duration:clip.duration,frames};
+ }
+ const usedHeight=y+rowHeight;const atlas=document.createElement('canvas');atlas.width=4096;atlas.height=Math.ceil(usedHeight/4)*4;
+ atlas.getContext('2d').drawImage(staging,0,0,4096,usedHeight,0,0,4096,usedHeight);
+ await fetch('/bake/frostnova',{method:'POST',body:atlas.toDataURL('image/png').split(',')[1]});
+ await fetch('/done',{method:'POST',body:JSON.stringify({model,source:source.frostnova,fps:30,width:atlas.width,height:atlas.height,anchor,scale,animations},null,2)});
+}catch(e){await fetch('/error',{method:'POST',body:String(e.stack||e)})}})();
+</script>

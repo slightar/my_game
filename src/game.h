@@ -13,7 +13,11 @@
 #include "scene_traversal.h"
 #include "world_encounter.h"
 #include "prts_narrator.h"
+#include "story_boss.h"
+#include "story_boss_renderer.h"
 #include "character_repository.h"
+#include "developer_room.h"
+#include "boss_audio.h"
 
 #include <vector>
 #include <array>
@@ -35,6 +39,11 @@ private:
     // The retained world prototype is entered only by its integration test.
     friend struct WorldPreviewTestAccess;
     void Reset();
+    void ResetOperators();
+    void EnterDeveloperRoom();
+    void UpdateDeveloperRoom(float deltaTime);
+    void DrawDeveloperRoom(float displayScale,Vector2 displayOffset) const;
+    void RestoreDeveloperOperators();
     void SwitchOperator(int slot);
     void DrawOperatorSlots() const;
     void ReloadCharacters();
@@ -53,6 +62,7 @@ private:
     void DrawPrts(bool upper,bool combat) const;
 
     AudioSystem audio_;
+    BossAudio bossAudio_;
     UiFont uiFont_;
     CharacterArt characterArt_;
     MainMenu mainMenu_;
@@ -61,6 +71,12 @@ private:
     Player* player_ = &operators_[0];
     int activeOperator_ = 0;
     Boss boss_;
+    BossRenderer bossRenderer_;
+    StoryBoss storyBoss_;
+    StoryBossRenderer storyBossRenderer_;
+    DeveloperRoom developerRoom_;
+    bool developerRoomActive_=false;
+    std::string developerSceneryRegion_="approach_wtower";
     EnemySystem enemies_;
     EnemyRenderer enemyRenderer_;
     bool enemyTrial_ = false;
@@ -71,6 +87,9 @@ private:
     PrtsNarrator prts_;
     SceneTraversal worldTraversal_;
     WorldEncounter worldEncounter_;
+    AdaptiveDifficulty adaptiveDifficulty_;
+    CombatDifficulty encounterDifficulty_{};
+    std::string encounterDifficultyLabel_="标准";
     float worldInspect_=0,worldNoteTime_=0;
     float worldTransition_ = -1;
     bool worldAttackHeld_ = false;

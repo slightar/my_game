@@ -83,13 +83,13 @@ bool PrtsNarrator::Queue(Topic topic,int priority,const std::string& detail) {
     return true;
 }
 
-void PrtsNarrator::BeginBattle() {
+void PrtsNarrator::BeginBattle(const std::string& detail) {
     if(battleStarted_)return;
     battleStarted_=true;battleFinished_=false;battle_={};
     nextCombat_=time_+RandomDelay(45,70);
     // A battle boundary cancels exploration chatter. Further reinforcement waves
     // remain part of this same encounter and do not produce another briefing.
-    pending_.clear();Queue(Topic::Wave,80);
+    pending_.clear();Queue(Topic::Wave,80,detail);
 }
 
 void PrtsNarrator::FinishBattle() {
@@ -127,7 +127,7 @@ void PrtsNarrator::Notify(Event event,const std::string& detail) {
     case Event::Dodge:if(fighting)++battle_.dodges;break;
     case Event::Jump:if(!fighting)++exploreJumps_;break;
     case Event::Switch:if(fighting)++battle_.switches;break;
-    case Event::Wave:BeginBattle();break;
+    case Event::Wave:BeginBattle(detail);break;
     case Event::Damage:if(fighting)++battle_.damage;break;
     case Event::Clear:battleClearRequested_=true;break;
     case Event::Investigate:Queue(Topic::Investigate,78,detail);break;

@@ -1,0 +1,34 @@
+{
+  "home": {
+    "clip": "m_sys_void_loop",
+    "bundle": "audio\\sound_beta_2\\music\\beta1_180603\\m_sys_void.ab",
+    "duration": 128.0,
+    "sample_sha256": "26600fc22a039a96b7315c2b8ad9c6baa8d23ec8012580845fcc36ddb8b5e423",
+    "file": "home.ogg",
+    "encoding": "Vorbis q5"
+  },
+  "planning": {
+    "clip": "m_dia_darkness02_loop",
+    "bundle": "audio\\sound_beta_2\\music\\beta1_180603\\m_dia_darkness02.ab",
+    "duration": 59.076961517333984,
+    "sample_sha256": "ce1bdd41c9d566665ffaf86b0d789945adc7b9274dd01c2268ced130aa7def36",
+    "file": "planning.ogg",
+    "encoding": "Vorbis q5"
+  },
+  "quiet": {
+    "clip": "m_dia_darkness01_loop",
+    "bundle": "audio\\sound_beta_2\\music\\beta1_180603\\m_dia_darkness01.ab",
+    "duration": 59.076961517333984,
+    "sample_sha256": "11ca1d3ffa6d02ecdd6509cf58b6057ade497020337c02af0ede2086977de216",
+    "file": "quiet.ogg",
+    "encoding": "Vorbis q5"
+  },
+  "battle": {
+    "clip": "m_bat_normalbattle_loop",
+    "bundle": "audio\\sound_beta_2\\music\\beta2_180603\\m_bat_normalbattle.ab",
+    "duration": 61.090885162353516,
+    "sample_sha256": "d641bf8ecf8e6f028edce193ca401bd7933fc195e5f246940932e73e46968ad7",
+    "file": "battle.ogg",
+    "encoding": "Vorbis q5"
+  }
+}

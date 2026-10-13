@@ -19,6 +19,7 @@ inline constexpr Rectangle HomeButtons[] = {
 inline constexpr int HomeOrder[]{0, 4, 1, 2, 3, 5};
 inline constexpr Rectangle EnemyTrialButton{432, 397, 218, 42};
 inline constexpr Rectangle OperatorButton{43, 397, 163, 42};
+inline constexpr Rectangle DeveloperButton{220,397,198,42};
 inline constexpr Rectangle CharacterSlots[] = {
     {840, 183, 176, 78}, {1032, 183, 176, 78}};
 inline constexpr Rectangle CharacterAssign{840, 553, 176, 50};

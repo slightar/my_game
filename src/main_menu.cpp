@@ -143,6 +143,7 @@ MenuAction MainMenu::UpdateImpl(float deltaTime) {
             break;
         }
         if (IsKeyPressed(KEY_N) || pointer_.Clicked(TerminalUi::EnemyTrialButton)) return MenuAction::StartEnemyTrial;
+        if (IsKeyPressed(KEY_F12) || pointer_.Clicked(TerminalUi::DeveloperButton)) return MenuAction::StartDeveloperRoom;
         if (IsKeyPressed(KEY_B)) return MenuAction::StartBattle;
         if (Up() || Down()) {
             for (int i = 0; i < 6; ++i) if (TerminalUi::HomeOrder[i] == homeSelection_) {
