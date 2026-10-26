@@ -88,7 +88,7 @@ void Game::EnterWorldRegion(const std::string& id,const std::string& from) {
     worldAttackHeld_=mainMenu_.Settings().Down(GameAction::Attack);
     worldEncounter_.Enter(worldDesignPreview_?"":id,enemies_,encounterDifficulty_);worldInspect_=0;worldNoteTime_=0;
     storyBoss_.Enter(worldDesignPreview_?"":id,region->width,encounterDifficulty_);
-    worldRegion_=id;worldPreview_=true;paused_=false;bullets_.clear();
+    worldRegion_=id;worldPreview_=true;paused_=false;bullets_.clear();combatFeedback_.Reset();
     float x=300,feetY=GameConfig::kFloorY;int facing=1;
     for(const auto& port:WorldLayout::Ports(id,!worldDesignPreview_))if(port.target->id==from) {
         // Enter at the beginning of the route, retaining the full panorama.
@@ -174,7 +174,7 @@ void Game::UpdateWorldPreview(float dt) {
         worldEncounter_.Update(player_->Position().x,enemies_);
         if(previousWave==0&&worldEncounter_.Wave()==1) {
             float workload=0;
-            for(int wave=0;wave<2;++wave)for(auto kind:WorldEncounter::Formation(worldRegion_,wave))
+            for(int wave=0;wave<2;++wave)for(auto kind:WorldEncounter::Formation(worldRegion_,wave,encounterDifficulty_))
                 workload+=EnemyData(kind).health;
             adaptiveDifficulty_.Begin(workload*encounterDifficulty_.health/3.0F,teamHealth());
         }
@@ -273,7 +273,7 @@ void Game::UpdateWorldPreview(float dt) {
 void Game::DrawWorldPreview(float scale,Vector2 offset) const {
     const auto* region=WorldLayout::Find(worldRegion_);if(!region)return;
     const Camera2D ui{offset,{},0,scale};
-    const Camera2D camera{{offset.x+640*scale,offset.y+360*scale},{cameraX_,360},0,scale};
+    const Camera2D camera{{offset.x+640*scale,offset.y+360*scale},{cameraX_+combatFeedback_.Offset().x,360+combatFeedback_.Offset().y},0,scale};
     BeginMode2D(ui);
     worldScenery_.Background(*region,cameraX_,worldTime_,storyBoss_.FrostWeather());
     storyBossRenderer_.DrawWeather(storyBoss_,cameraX_);
@@ -282,7 +282,7 @@ void Game::DrawWorldPreview(float scale,Vector2 offset) const {
     if(worldEncounter_.Active()){enemyRenderer_.DrawEntry(enemies_);enemyRenderer_.Draw(enemies_,uiFont_);}
     storyBossRenderer_.Draw(storyBoss_,uiFont_);
     DrawBullets();
-    player_->Draw(characterArt_);EndMode2D();
+    player_->Draw(characterArt_);combatFeedback_.Draw(characterArt_);EndMode2D();
     BeginMode2D(ui);
     worldScenery_.Foreground(*region,cameraX_);
     storyBossRenderer_.DrawAtmosphere(storyBoss_,cameraX_,uiFont_);

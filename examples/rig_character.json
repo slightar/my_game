@@ -4,6 +4,7 @@
   "description": "默认关节 / 自动迈腿摆臂 / 武器跟手",
   "assets": {
     "height": 130,
+    "motionTemplate": "melee",
     "parts": {
       "torso": { "image": "rig_parts/torso.png" },
       "head": { "image": "rig_parts/head.png" },

@@ -14,7 +14,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(raylib)
 add_library(prts_narration src/prts_narrator.cpp)
 target_include_directories(prts_narration PUBLIC src)
-add_library(story_bosses src/boss.cpp src/boss_renderer.cpp src/story_boss.cpp src/winter_boss.cpp src/story_boss_renderer.cpp src/winter_boss_renderer.cpp src/boss_client_fx.cpp src/crown_client_fx.cpp src/boss_audio.cpp)
+add_library(story_bosses src/boss.cpp src/boss_renderer.cpp src/story_boss.cpp src/winter_boss.cpp src/story_boss_renderer.cpp src/winter_boss_renderer.cpp src/boss_client_fx.cpp src/crown_client_fx.cpp src/boss_audio.cpp src/boss_expansion.cpp src/boss_expansion_fx.cpp)
 target_include_directories(story_bosses PUBLIC src third_party)
 target_link_libraries(story_bosses PUBLIC raylib)
 
@@ -22,9 +22,14 @@ add_library(developer_sandbox src/developer_room.cpp src/developer_room_view.cpp
 target_include_directories(developer_sandbox PUBLIC src)
 target_link_libraries(developer_sandbox PUBLIC story_bosses)
 
-add_library(character_core src/character.cpp src/character_repository.cpp src/character_animation.cpp)
+add_library(character_core src/character.cpp src/character_repository.cpp src/character_animation.cpp src/character_motion_templates.cpp
+    src/character_generation.cpp src/character_http.cpp src/character_sprite_processing.cpp
+    src/character_creator.cpp src/character_creator_platform.cpp)
 target_include_directories(character_core PUBLIC src third_party)
 target_link_libraries(character_core PUBLIC raylib)
+if (WIN32)
+    target_link_libraries(character_core PUBLIC winhttp comdlg32 imm32)
+endif()
 
 add_executable(character_tool src/character_tool.cpp)
 target_link_libraries(character_tool PRIVATE character_core)
@@ -48,6 +53,10 @@ add_executable(my_game
         src/platform_input.cpp)
 target_link_libraries(my_game PRIVATE character_core prts_narration story_bosses developer_sandbox)
 
+# Keep symbols/assertions, but avoid running the game's hot loops and JSON
+# loaders without optimization in the default CLion Debug configuration.
+option(GAME_OPTIMIZE_DEBUG_BUILD "Optimize Debug gameplay while retaining debug symbols" ON)
+
 include(CTest)
 if (BUILD_TESTING)
     add_executable(prts_narrator_tests tests/prts_narrator_tests.cpp)
@@ -61,9 +70,19 @@ if (BUILD_TESTING)
         src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp
         src/menu_views.cpp src/world_map.cpp src/action_map.cpp src/city_stage.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
     target_link_libraries(world_map_smoke PRIVATE character_core)
+    get_target_property(GAME_AUDIT_SOURCES world_map_smoke SOURCES)
+    list(REMOVE_ITEM GAME_AUDIT_SOURCES tests/world_map_smoke.cpp)
+    add_executable(performance_audit tests/performance_audit.cpp ${GAME_AUDIT_SOURCES})
+    target_link_libraries(performance_audit PRIVATE character_core prts_narration story_bosses developer_sandbox)
     add_executable(character_tests tests/character_tests.cpp)
     target_link_libraries(character_tests PRIVATE character_core)
     add_test(NAME character_tests COMMAND character_tests)
+    add_executable(character_generation_tests tests/character_generation_tests.cpp)
+    target_link_libraries(character_generation_tests PRIVATE character_core)
+    add_test(NAME character_generation_tests COMMAND character_generation_tests)
+    add_executable(character_creator_smoke tests/character_creator_smoke.cpp
+        src/character_art.cpp src/ui_font.cpp src/terminal_ui.cpp)
+    target_link_libraries(character_creator_smoke PRIVATE character_core prts_narration)
     add_executable(progress_tests tests/progress_tests.cpp src/progress_system.cpp src/story_data.cpp)
     target_include_directories(progress_tests PRIVATE src third_party)
     add_test(NAME progress_tests COMMAND progress_tests)
@@ -100,6 +119,12 @@ if (BUILD_TESTING)
     add_executable(boss_variety_tests tests/boss_variety_tests.cpp)
     target_link_libraries(boss_variety_tests PRIVATE story_bosses)
     add_test(NAME boss_variety_tests COMMAND boss_variety_tests)
+    add_executable(boss_expansion_tests tests/boss_expansion_tests.cpp)
+    target_link_libraries(boss_expansion_tests PRIVATE story_bosses)
+    add_test(NAME boss_expansion_tests COMMAND boss_expansion_tests)
+    add_executable(boss_animation_timing_tests tests/boss_animation_timing_tests.cpp)
+    target_link_libraries(boss_animation_timing_tests PRIVATE story_bosses)
+    add_test(NAME boss_animation_timing_tests COMMAND boss_animation_timing_tests)
     add_executable(character_render_smoke tests/character_render_smoke.cpp
         src/enemy_data.cpp src/enemy_system.cpp src/enemy_renderer.cpp src/character_art.cpp src/player.cpp src/audio_system.cpp src/main_menu.cpp src/menu_views.cpp src/world_map.cpp src/action_map.cpp src/city_stage.cpp src/terminal_ui.cpp src/story_data.cpp src/progress_system.cpp src/game_settings.cpp src/ui_font.cpp)
     target_link_libraries(character_render_smoke PRIVATE character_core)
@@ -113,6 +138,20 @@ if (BUILD_TESTING)
     endforeach()
 endif()
 
+if (GAME_OPTIMIZE_DEBUG_BUILD)
+    set(GAME_RUNTIME_TARGETS raylib my_game character_core prts_narration story_bosses developer_sandbox)
+    if (BUILD_TESTING)
+        list(APPEND GAME_RUNTIME_TARGETS world_map_smoke character_render_smoke game_enemy_smoke performance_audit)
+    endif()
+    foreach(GAME_RUNTIME_TARGET IN LISTS GAME_RUNTIME_TARGETS)
+        if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+            target_compile_options(${GAME_RUNTIME_TARGET} PRIVATE $<$<CONFIG:Debug>:-O2>)
+        elseif (MSVC)
+            target_compile_options(${GAME_RUNTIME_TARGET} PRIVATE $<$<CONFIG:Debug>:/O2>)
+        endif()
+    endforeach()
+endif()
+
 add_custom_command(TARGET my_game POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
                 ${CMAKE_SOURCE_DIR}/assets
@@ -123,9 +162,13 @@ if (WIN32)
     if (MINGW)
         set(GAME_EXECUTABLES my_game character_tool)
         if (BUILD_TESTING)
-            list(APPEND GAME_EXECUTABLES prts_narrator_tests world_layout_tests world_map_smoke character_tests character_render_smoke progress_tests settings_tests enemy_tests chapter_roster_tests story_boss_tests adaptive_difficulty_tests w_combat_tests boss_variety_tests winter_boss_tests developer_room_tests game_enemy_smoke ui_interaction_tests)
+            list(APPEND GAME_EXECUTABLES character_generation_tests character_creator_smoke)
+            list(APPEND GAME_EXECUTABLES prts_narrator_tests world_layout_tests world_map_smoke character_tests character_render_smoke progress_tests settings_tests enemy_tests chapter_roster_tests story_boss_tests adaptive_difficulty_tests w_combat_tests boss_variety_tests boss_expansion_tests boss_animation_timing_tests winter_boss_tests developer_room_tests game_enemy_smoke ui_interaction_tests)
         endif()
         get_filename_component(MINGW_RUNTIME_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+        if (BUILD_TESTING)
+            list(APPEND GAME_EXECUTABLES performance_audit)
+        endif()
         foreach(GAME_EXECUTABLE IN LISTS GAME_EXECUTABLES)
             target_link_options(${GAME_EXECUTABLE} PRIVATE -static-libgcc -static-libstdc++)
             add_custom_command(TARGET ${GAME_EXECUTABLE} POST_BUILD

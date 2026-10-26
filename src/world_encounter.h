@@ -1,7 +1,7 @@
 #pragma once
 #include "world_layout.h"
 #include "enemy_system.h"
-#include "chapter_encounters.h"
+#include "adaptive_encounters.h"
 #include <set>
 
 // Encounter progress belongs to the current excursion, not stage selection.
@@ -28,12 +28,12 @@ public:
         if(Cleared(enemies)){cleared_.insert(id_);return;}
         const float width=WorldLayout::Find(id_)->width;
         if(wave_<2&&(wave_==0||enemies.Cleared())&&x>=width*(wave_==0?.30F:.63F)) {
-            enemies.ResetEncounter(Formation(id_,wave_),width*(wave_==0?.52F:.85F),80,width-80,difficulty_);
+            enemies.ResetEncounter(Formation(id_,wave_,difficulty_),width*(wave_==0?.52F:.85F),80,width-80,difficulty_);
             ++wave_;
         }
     }
-    static std::vector<EnemyKind> Formation(std::string_view id,int wave) {
-        return ChapterFormation(id,wave);
+    static std::vector<EnemyKind> Formation(std::string_view id,int wave,CombatDifficulty difficulty={}) {
+        return AdaptiveEncounters::Formation(id,wave,difficulty);
     }
 private:
     std::string id_;

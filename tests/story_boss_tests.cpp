@@ -74,7 +74,9 @@ int main(int argc,char** argv){try {
     Check(!boss.ResolveBullet(slash,slash.position),"One slash damaged Boss repeatedly");
     Bullet fast;fast.position={boss.Position().x+400,boss.Position().y};fast.radius=4;fast.lifetime=1;fast.damage=5;
     Check(boss.ResolveBullet(fast,{boss.Position().x-400,boss.Position().y}),"Fast projectile tunneled through Boss");
-    boss.Damage(1000);Check(boss.Defeated()&&boss.Grenades().empty()&&boss.Blasts().empty(),"Defeat retained attacks");
+    Bullet finisher;finisher.kind=BulletKind::MeleeSlash;finisher.position=boss.Position();finisher.radius=40;finisher.damage=1000;finisher.lifetime=1;
+    Check(boss.ResolveBullet(finisher,finisher.position)&&finisher.impactEvents.size()==1&&finisher.impactEvents.front().killed,"Final Boss death missing kill feedback");
+    Check(boss.Defeated()&&boss.Grenades().empty()&&boss.Blasts().empty(),"Defeat retained attacks");
     boss.Enter("gray",2900);boss.Enter("bridge",2900);
     Check(boss.Defeated()&&!boss.TryStart(2000),"Returning resurrected cleared Boss");
     boss.Reset();Start(boss,"bridge");Check(!boss.Defeated()&&boss.Health()==60,"New action did not reset Boss");
@@ -123,7 +125,9 @@ int main(int argc,char** argv){try {
     boss.Damage(1,.5F);
     for(const auto& b:boss.Blasts())if(b.c4)Check(b.timer==0&&b.tracking==0,"Interrupt did not detonate C4");
     Check(boss.AttackHits({phaseTarget.x-19,566,38,78},{phaseTarget.x-12,587,24,36},source),"Interrupted C4 dealt no damage");
-    boss.Damage(1000);Check(boss.Defeated()&&boss.Blasts().empty(),"W left live explosives after defeat");
+    finisher={};finisher.kind=BulletKind::MeleeSlash;finisher.position=boss.Position();finisher.radius=40;finisher.damage=1000;finisher.lifetime=1;
+    Check(boss.ResolveBullet(finisher,finisher.position)&&finisher.impactEvents.size()==1&&finisher.impactEvents.front().killed,"Final Boss death missing kill feedback");
+    Check(boss.Defeated()&&boss.Blasts().empty(),"W left live explosives after defeat");
     if(argc==2) {
         const std::filesystem::path root=argv[1];nlohmann::json data;std::ifstream in(root/"manifest.json");in>>data;
         nlohmann::json fx;std::ifstream timeline(root/"effects/timelines.json");timeline>>fx;

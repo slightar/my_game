@@ -2,6 +2,7 @@
 #include "boss_client_fx.h"
 #include "game_types.h"
 #include "ui_font.h"
+#include "boss_animation_timing.h"
 #include "ui_theme.h"
 #include "file_path.h"
 #include <algorithm>
@@ -31,24 +32,27 @@ void Boss::DrawBattleSprite(Texture2D battleSprite_) const {
     bool loops = true;
     float framesPerSecond = 10.0F;
     float clipTime=animationTime_;
+    float pose=-1;
     switch (state_) {
         case State::Rush:
             row = 1;  // Move
             break;
         case State::MeleeWindup:
+            row=2;pose=BossAnimationTiming::Windup(animationTime_,.22F,.25F,.40F,.16F,.06F);break;
         case State::Melee:
+            row=2;pose=BossAnimationTiming::Release(.18F-stateTimer_,.40F,.18F);break;
         case State::DartWindup:
-            row = 2;  // Attack
-            framesPerSecond = 24.0F;
-            loops = false;
-            break;
+            row=2;pose=BossAnimationTiming::Windup(animationTime_,.42F,.25F,.50F,.28F,.08F);break;
+        case State::MirrorWindup:
+            row=2;pose=BossAnimationTiming::Windup(animationTime_,1.1F,.25F,.40F);break;
+        case State::MirrorVolley:
+            row=2;pose=BossAnimationTiming::Release(animationTime_,.40F,.35F);break;
         case State::AirSlash:
+            row=2;pose=BossAnimationTiming::Release(animationTime_,.35F,.28F);break;
         case State::ShadowSlash:
+            row=2;pose=BossAnimationTiming::Release(animationTime_,.35F,ShadowSlashDuration(shadowStrike_));break;
         case State::ShadowFinal:
-            row = 2;  // Attack
-            framesPerSecond = 34.0F;
-            loops = false;
-            break;
+            row=2;pose=BossAnimationTiming::Release(animationTime_,.35F,.24F);break;
         case State::RushTeleportOut:
             row = 3;  // Disappear
             framesPerSecond = 20.0F;
@@ -68,6 +72,8 @@ void Boss::DrawBattleSprite(Texture2D battleSprite_) const {
             break;
         case State::ShadowWindup:
         case State::ShadowPause:
+        case State::AmbushWindup:
+        case State::Ambush:
             // Finish appearing, then hold the ready pose until the actual slash.
             row = clipTime<.16F?4:2;
             if(clipTime>=.16F)clipTime=2.0F/20;
@@ -89,9 +95,8 @@ void Boss::DrawBattleSprite(Texture2D battleSprite_) const {
             break;
     }
 
-    int frame = static_cast<int>(clipTime * framesPerSecond);
-    frame = loops ? frame % kSpriteColumns
-                  : std::min(frame, kSpriteColumns - 1);
+    int frame=pose>=0?BossAnimationTiming::Frame(pose,kSpriteColumns):static_cast<int>(clipTime*framesPerSecond);
+    if(pose<0)frame=loops?frame%kSpriteColumns:std::min(frame,kSpriteColumns-1);
     const float frameWidth = static_cast<float>(battleSprite_.width) /
                              static_cast<float>(kSpriteColumns);
     const float frameHeight = static_cast<float>(battleSprite_.height) /

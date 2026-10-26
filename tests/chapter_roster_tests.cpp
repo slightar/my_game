@@ -1,4 +1,5 @@
 #include "chapter_encounters.h"
+#include "adaptive_encounters.h"
 #include "nlohmann/json.hpp"
 #include <fstream>
 #include <filesystem>
@@ -39,7 +40,45 @@ int main(int argc,char** argv) {try {
                 if(!std::filesystem::exists(root/(std::string(d.id)+".png")))throw std::runtime_error("Missing chapter sprite");
             }
         }
+        std::set<EnemyKind> allowed;
+        for(int wave:{0,1})for(auto kind:ChapterFormation(approach,wave))allowed.insert(kind);
+        for(int wave:{0,1}) {
+            const auto authored=ChapterFormation(approach,wave);
+            const std::set<EnemyKind> authoredKinds(authored.begin(),authored.end());
+            std::size_t previousSize=0;
+            float previousHealth=0;
+            for(float ability:{0.0F,.30F,.60F,1.0F}) {
+                const auto profile=CombatDifficulty::FromAbility(ability);
+                const auto formation=AdaptiveEncounters::Formation(approach,wave,profile);
+                if(formation.size()!=static_cast<std::size_t>(3+profile.FormationTier()))
+                    throw std::runtime_error("Adaptive chapter wave count incorrect");
+                if(profile.FormationTier()==1&&formation!=ChapterFormation(approach,wave))
+                    throw std::runtime_error("Standard difficulty changed the authored roster");
+                float totalHealth=0;
+                int ranged=0;
+                std::set<EnemyKind> present;
+                for(auto kind:formation) {
+                    if(!allowed.contains(kind))throw std::runtime_error("Adaptive wave crossed chapter rosters");
+                    if(std::count(formation.begin(),formation.end(),kind)>2)
+                        throw std::runtime_error("Adaptive wave stacked the same unit too many times");
+                    totalHealth+=EnemyData(kind).health*profile.health;
+                    ranged+=EnemyData(kind).attack!=EnemyAttack::Melee;
+                    present.insert(kind);
+                }
+                if(profile.FormationTier()>1&&ranged>static_cast<int>((formation.size()+1)/2))
+                    throw std::runtime_error("Adaptive wave overwhelmed the player with ranged units");
+                if(profile.FormationTier()>1&&present.size()<std::min(allowed.size(),
+                    authoredKinds.size()+static_cast<std::size_t>(profile.FormationTier()-1)))
+                    throw std::runtime_error("Adaptive wave failed to introduce an available role");
+                if(formation.size()<=previousSize||totalHealth<=previousHealth)
+                    throw std::runtime_error("Increasing ability did not increase encounter workload");
+                previousSize=formation.size();previousHealth=totalHealth;
+            }
+        }
     }
     if(introduced.size()!=20||troops!=40)throw std::runtime_error("Chapter roster coverage incomplete");
-    std::cout<<"Five authentic Boss stage rosters, 40 wave slots, 20 exact client variants and proportions passed\n";
+    const auto gentleIce=AdaptiveEncounters::Formation("approach_ice",1,CombatDifficulty::FromAbility(0));
+    if(std::find(gentleIce.begin(),gentleIce.end(),EnemyKind::Icebreaker)!=gentleIce.end())
+        throw std::runtime_error("Gentle winter wave retained the icebreaker");
+    std::cout<<"Five authentic stage rosters, adaptive 3/4/5/6-unit waves, chapter-safe role variety and pressure caps passed\n";
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

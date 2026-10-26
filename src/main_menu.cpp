@@ -34,6 +34,17 @@ void MainMenu::OpenCharacterSelect() {
 }
 
 void MainMenu::SetCustomCharacters(std::vector<Character> characters) {
+    const auto remap=[&](int index,int fallback) {
+        if(index<2)return std::clamp(index,0,1);
+        const auto* old=CharacterForSelection(index);
+        if(old)for(int i=0;i<int(characters.size());++i)if(characters[i].id==old->id)return i+2;
+        return fallback;
+    };
+    for(int slot=0;slot<2;++slot) {
+        characterLineup_[slot]=remap(characterLineup_[slot],slot);
+        draftCharacterLineup_[slot]=remap(draftCharacterLineup_[slot],slot);
+    }
+    characterSelection_=remap(characterSelection_,0);
     customCharacters_ = std::move(characters);
     const int count = 2 + static_cast<int>(customCharacters_.size());
     for (int slot = 0; slot < 2; ++slot) {
@@ -42,7 +53,7 @@ void MainMenu::SetCustomCharacters(std::vector<Character> characters) {
     }
     if (characterLineup_[0] == characterLineup_[1])
         characterLineup_ = {0, 1};
-    draftCharacterLineup_ = characterLineup_;
+    if(draftCharacterLineup_[0]==draftCharacterLineup_[1])draftCharacterLineup_={0,1};
     characterSelection_ = std::clamp(characterSelection_, 0, count - 1);
 }
 
@@ -116,6 +127,15 @@ MenuAction MainMenu::Update(float deltaTime) {
 
 MenuAction MainMenu::UpdateImpl(float deltaTime) {
     pointer_ = ReadUiPointer(pointerState_);
+    if(confirmingDeletion_) {
+        if(IsKeyPressed(KEY_ESCAPE)||pointer_.Clicked(TerminalUi::DeleteCancel)||pointer_.Clicked(TerminalUi::Back)) {
+            confirmingDeletion_=false;deletingCharacter_.clear();return MenuAction::None;
+        }
+        if(IsKeyPressed(KEY_ENTER)||pointer_.Clicked(TerminalUi::DeleteConfirm)) {
+            confirmingDeletion_=false;return MenuAction::DeleteCharacter;
+        }
+        return MenuAction::None;
+    }
     if (page_ != Page::Splash && page_ != Page::Home && pointer_.Clicked(TerminalUi::Back)) {
         if (page_ == Page::KeyBindings && capturingKey_) { capturingKey_ = false; return MenuAction::None; }
         progress_.SetProtocolSuppressed(false);
@@ -138,6 +158,7 @@ MenuAction MainMenu::UpdateImpl(float deltaTime) {
         if (IsKeyPressed(KEY_ENTER) || pointer_.Clicked({430, 546, 420, 64})) page_ = Page::Home;
         break;
     case Page::Home:
+        if (IsKeyPressed(KEY_F4)) return MenuAction::CreateCharacter;
         if (IsKeyPressed(KEY_C) || pointer_.Clicked(TerminalUi::OperatorButton)) {
             OpenCharacterSelect();
             break;
@@ -163,6 +184,13 @@ MenuAction MainMenu::UpdateImpl(float deltaTime) {
         }
         break;
     case Page::CharacterSelect: {
+        if(IsKeyPressed(KEY_DELETE)||pointer_.Clicked(TerminalUi::CharacterDelete)) {
+            const auto* c=CharacterForSelection(characterSelection_);
+            if(c&&deletableCharacters_.contains(c->id)){deletingCharacter_=c->id;confirmingDeletion_=true;}
+            else status_="只能删除本地创建或导入的角色";
+            return MenuAction::None;
+        }
+        if (IsKeyPressed(KEY_F4) || pointer_.Clicked({1028, 94, 204, 27})) return MenuAction::CreateCharacter;
         if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) {
             draftCharacterLineup_ = characterLineup_;
             page_ = Page::Home;
@@ -178,7 +206,7 @@ MenuAction MainMenu::UpdateImpl(float deltaTime) {
         if (Right()) characterSlot_ = 1;
         const int start = std::clamp(characterSelection_ - 3, 0, std::max(0, count - 6));
         for (int row = 0; row < std::min(6, count - start); ++row) {
-            if (pointer_.Clicked({68, 171.0F + row * 67.0F, 350, 57}))
+            if (pointer_.Clicked(TerminalUi::RosterRow(row)))
                 characterSelection_ = start + row;
         }
         for (int slot = 0; slot < 2; ++slot)
@@ -244,7 +272,7 @@ MenuAction MainMenu::UpdateImpl(float deltaTime) {
     }
     case Page::Settings:
         if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_BACKSPACE)) { page_ = Page::Home; break; }
-        for (int i = 0; i < 5; ++i) if (pointer_.Clicked({84, 166.0F + i * 88, 1115, 71})) settingsSelection_ = i;
+        for (int i = 0; i < 5; ++i) if (pointer_.Clicked(TerminalUi::SettingsRow(i))) settingsSelection_ = i;
         if (pointer_.down && pointer_.Hit({680, 181, 365, 43})) settingsSelection_ = 0;
         if (pointer_.down && pointer_.Hit({680, 269, 365, 43})) settingsSelection_ = 1;
         if (Up()) settingsSelection_ = (settingsSelection_ + 4) % 5;
@@ -258,7 +286,7 @@ MenuAction MainMenu::UpdateImpl(float deltaTime) {
             if (settingsSelection_ == 0 && value != settings_.MasterVolume()) settings_.AdjustMaster(value - settings_.MasterVolume());
             else if (settingsSelection_ == 1 && value != settings_.SoundVolume()) settings_.AdjustSound(value - settings_.SoundVolume());
         }
-        if (IsKeyPressed(KEY_ENTER) || pointer_.Clicked({84, 166.0F + settingsSelection_ * 88, 1115, 71})) {
+        if (IsKeyPressed(KEY_ENTER) || pointer_.Clicked(TerminalUi::SettingsRow(settingsSelection_))) {
             if (settingsSelection_ == 2) page_ = Page::KeyBindings;
             else if (settingsSelection_ == 3) page_ = Page::ConfirmReset;
             else if (settingsSelection_ == 4) page_ = Page::Home;

@@ -64,6 +64,40 @@ void BossClientFx::DrawCrown(const Boss& b,const UiFont& font,Texture2D sprite) 
     };
     const float remaining=std::ceil(std::max(0.0F,b.stateTimer_)*10)/10;
 
+    for(const auto& echo:b.echoes_) {
+        const bool mirror=echo.consumed&&echo.position.y<b.floorY_-100;
+        const float release=std::max(0.0F,.2F-echo.remaining);
+        const float opacity=echo.delay>0?.22F+.10F*std::sin(echo.age*9):std::max(0.0F,.8F-release);
+        const int facing=b.fanAim_.x>=echo.position.x?1:-1;
+        Afterimage(sprite,echo.position,facing,echo.delay>0?.06F:release,opacity);
+        smoke({echo.position.x,echo.position.y+20},std::fmod(echo.age,.55F),105,opacity*.65F);
+        if(echo.delay>0) {
+            if(mirror) {
+                const float angle=std::atan2(b.fanAim_.y-echo.position.y,b.fanAim_.x-echo.position.x);
+                const float distance=std::hypot(b.fanAim_.x-echo.position.x,b.fanAim_.y-echo.position.y);
+                for(int i=-b.mirrorHalf_;i<=b.mirrorHalf_;++i) {
+                    const float a=angle+i*.19F;
+                    warnRoute(echo.position,{echo.position.x+std::cos(a)*distance,echo.position.y+std::sin(a)*distance});
+                }
+                raw(Impact,"dilieliang",echo.position,48,48,echo.age*65,Fade(WHITE,.55F));
+            } else {
+                raw("red_skill_02_start","kuosan",{echo.position.x,b.floorY_-4},144,34,0,Fade(Warning,.75F));
+                Quad("zhunxing_01",{echo.position.x,b.floorY_-5},144,25,0,Fade(Warning,.55F));
+            }
+            font.Draw(TextFormat("%.1fs",echo.delay),echo.position.x-22,echo.position.y-80,16,RAYWHITE);
+        } else if(mirror) {
+            slash({echo.position.x+facing*18,echo.position.y-8},release,facing>0?-45:135,145,.75F);
+            TimelineLayer(Impact,"dilieliang",release+.15F,echo.position,80,65,0,.55F,true,2);
+        } else {
+            slash({echo.position.x,echo.position.y-12},release,-55+release*160,185,1);
+            TimelineLayer(Hit,"smoke_01",release,{echo.position.x,echo.position.y-20},125,95,0,.75F);
+            TimelineLayer(Impact,"baoshan",release+.15F,{echo.position.x,echo.position.y-10},145,90,0,.6F,true,2);
+        }
+    }
+    if(b.state_==S::MirrorWindup||b.state_==S::AmbushWindup) {
+        font.Draw(b.state_==S::MirrorWindup?"离开交叉路线":"离开标记",b.fanAim_.x-75,b.floorY_-132,19,RAYWHITE);
+    }
+
     for(const auto& dart:b.darts_) {
         const float angle=std::atan2(dart.velocity.y,dart.velocity.x)*180/Pi;
         BeginBlendMode(BLEND_ADDITIVE);

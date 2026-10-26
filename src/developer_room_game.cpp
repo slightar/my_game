@@ -90,7 +90,7 @@ void Game::UpdateDeveloperRoom(float dt) {
 
 void Game::DrawDeveloperRoom(float scale,Vector2 offset) const {
     const Camera2D ui{offset,{},0,scale};
-    const Camera2D camera{{offset.x+640*scale,offset.y+360*scale},{cameraX_,360},0,scale};
+    const Camera2D camera{{offset.x+640*scale,offset.y+360*scale},{cameraX_+combatFeedback_.Offset().x,360+combatFeedback_.Offset().y},0,scale};
     BeginMode2D(ui);
     worldScenery_.Background(*WorldLayout::Find(developerSceneryRegion_),cameraX_,developerRoom_.Seconds(),developerRoom_.Boss().FrostWeather());
     storyBossRenderer_.DrawWeather(developerRoom_.Boss(),cameraX_);
@@ -99,7 +99,7 @@ void Game::DrawDeveloperRoom(float scale,Vector2 offset) const {
     developerRoom_.DrawMarker(uiFont_,player_->Position());
     enemyRenderer_.Draw(developerRoom_.Mobs(),uiFont_);
     storyBossRenderer_.Draw(developerRoom_.Boss(),uiFont_);
-    DrawBullets();player_->Draw(characterArt_);
+    DrawBullets();player_->Draw(characterArt_);combatFeedback_.Draw(characterArt_);
     EndMode2D();
     BeginMode2D(ui);
     storyBossRenderer_.DrawAtmosphere(developerRoom_.Boss(),cameraX_,uiFont_);

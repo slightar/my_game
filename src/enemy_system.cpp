@@ -249,6 +249,8 @@ bool EnemySystem::ResolveBullet(Bullet& bullet, Vector2 previous) {
         Vector2 source=previous;
         if(melee) source.x=bullet.position.x-(bullet.facingDirection==0?1:bullet.facingDirection)*bullet.radius*1.5F;
         if(Damage(id,bullet.damage,bullet.damageType,source,bullet.stunDuration)) {
+            for(const auto& target:units_)if(target.id==id){bullet.impactPoint=target.Center();bullet.hasImpact=true;
+                bullet.impactEvents.push_back({target.Center(),target.health<=0});break;}
             damaged=true;bullet.hitEnemyIds.push_back(id);
             if(!melee) {bullet.lifetime=0;bullet.hasHit=true;break;}
         }

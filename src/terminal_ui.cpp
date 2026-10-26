@@ -1,5 +1,6 @@
 #include "terminal_ui.h"
 #include "ui_font.h"
+#include "ui_theme.h"
 #include <algorithm>
 #include <cmath>
 
@@ -14,15 +15,29 @@ bool Pressed(Rectangle rect) {
     return pointerState.Held(rect);
 }
 Rectangle PressedRect(Rectangle rect) {
-    return Pressed(rect) ? Rectangle{rect.x, rect.y + 5.0F, rect.width, rect.height} : rect;
+    return Pressed(rect) ? Rectangle{rect.x, rect.y + 2.0F, rect.width, rect.height} : rect;
 }
 void PressedVeil(Rectangle rect) {
-    if (Pressed(rect)) DrawRectangleRec({rect.x, rect.y + 5.0F, rect.width, rect.height}, kPressedVeil);
+    if (Pressed(rect)) DrawRectangleRec({rect.x, rect.y + 2.0F, rect.width, rect.height}, kPressedVeil);
 }
-void Surface(Rectangle r, Color fill, Color stripe) {
+void HomeSurface(Rectangle r, Color fill) {
     DrawRectangleRec({r.x + 4, r.y + 5, r.width, r.height}, Fade(BLACK, .17F));
     DrawRectangleRec(r, fill);
+}
+void Surface(Rectangle r, Color fill, Color stripe) {
+    const bool light = int(fill.r)+fill.g+fill.b > 510;
+    if (r.width > 300 && r.height > 150)
+        TacticalUi::DrawCutPanel(r,fill,BLANK,10);
+    else DrawRectangleRec(r,fill);
+    DrawLineEx({r.x,r.y},{r.x+r.width,r.y},1,light?Fade(WHITE,.7F):Fade(Paper,.18F));
     if (stripe.a) DrawRectangleRec({r.x, r.y, 4, r.height}, stripe);
+}
+void SectionHeading(const UiFont& font, Rectangle r, const char* title,
+                    const char* subtitle, bool light) {
+    const Color text=light?Ink:Paper;
+    font.Draw(subtitle,r.x,r.y,11,light?OnPaper:Muted);
+    Fit(font,title,{r.x,r.y+19,r.width,33},27,text);
+    DrawLineEx({r.x,r.y+r.height},{r.x+r.width,r.y+r.height},1,light?Fade(Ink,.2F):Fade(Paper,.2F));
 }
 void Fit(const UiFont& font, const std::string& text, Rectangle r, float size, Color color) {
     const float width = font.Measure(text.c_str(), size);
@@ -48,16 +63,41 @@ void Wrap(const UiFont& font, const std::string& text, Rectangle r, float size, 
 void Button(const UiFont& font, Rectangle r, const char* title, bool selected, Color fill, Color text) {
     const Rectangle drawRect=PressedRect(r);
     Surface(drawRect, fill);
+    const bool hovered=pointerState.Hit(r);
+    if (hovered && !selected) DrawRectangleLinesEx(drawRect,1,Blue);
     if (selected) {
-        DrawRectangleRec({drawRect.x, drawRect.y + drawRect.height - 4, drawRect.width, 4}, Blue);
-        DrawRectangleLinesEx({drawRect.x - 3, drawRect.y - 3, drawRect.width + 6, drawRect.height + 6}, 1, Fade(Paper, .85F));
+        DrawRectangleRec({drawRect.x, drawRect.y, 3, drawRect.height}, fill.b>fill.r+50?Paper:Blue);
+        DrawRectangleLinesEx(drawRect,1,fill.b>fill.r+50?Paper:Blue);
     }
     const float padding=std::min(22.0F,drawRect.width*.18F);
-    Fit(font, title, {drawRect.x + padding, drawRect.y, drawRect.width - padding*2, drawRect.height}, 26, text);
+    Fit(font, title, {drawRect.x + padding, drawRect.y, drawRect.width - padding*2, drawRect.height},
+        drawRect.height<36?17:drawRect.height<55?21:26, text);
     // Pressed state stays purely visual; the action is committed by the caller on release.
     PressedVeil(r);
 }
 void Background(const UiFont& font, const char* title, const char* subtitle, bool back) {
+    if (back) {
+        ClearBackground(Canvas);
+        DrawRectangleGradientH(0,89,1280,564,{29,35,40,255},Canvas);
+        // Quiet architectural field; all texture stays behind the content panels.
+        for(int x=32;x<1280;x+=64)DrawLine(x,106,x,636,Fade(Paper,.025F));
+        DrawTriangle({842,91},{1280,91},{1280,530},Fade(Paper,.035F));
+        DrawRectangle(28,110,3,514,Fade(Paper,.18F));
+        for(int y=110;y<636;y+=16)DrawRectangle(22,y,7,1,Fade(Paper,.20F));
+        DrawRectangle(0,0,1280,89,Ink);
+        DrawRectangleRec(Back,Paper);
+        DrawLineEx({75,35},{64,46},2,Ink);
+        DrawLineEx({64,46},{75,57},2,Ink);
+        if(pointerState.Hit(Back))DrawRectangle(28,66,98,4,Blue);
+        PressedVeil(Back);
+        font.Draw(title,153,18,32,Paper);
+        font.Draw(subtitle,155,59,11,Muted);
+        font.Draw("RHODES ISLAND",1076,29,13,Paper);
+        font.Draw("OPERATIONS TERMINAL",1077,51,10,Muted);
+        DrawRectangle(153,87,80,2,Blue);
+        DrawLine(253,88,1248,88,Fade(Paper,.16F));
+        return;
+    }
     ClearBackground({103, 113, 120, 255});
     DrawRectangleGradientV(0, 0, 1280, 720, {149, 158, 161, 255}, {67, 77, 86, 255});
     // Low-contrast architectural planes retain readability without a new background asset.
@@ -79,8 +119,9 @@ void Background(const UiFont& font, const char* title, const char* subtitle, boo
     DrawRectangle(0, 89, 1280, 2, Fade(Paper, .25F));
 }
 void Footer(const UiFont& font, const char* text) {
-    DrawRectangle(0, 653, 1280, 67, Fade(Ink, .97F));
-    DrawRectangle(32, 666, 4, 22, Blue);
+    DrawRectangle(0, 653, 1280, 67, Ink);
+    DrawRectangle(32,653,1216,1,Fade(Paper,.22F));
+    DrawRectangle(32, 669, 4, 16, Blue);
     Fit(font, text, {49, 666, 1173, 24}, 17, Paper);
     font.Draw("RHODES ISLAND  /  DEVELOPMENT BUILD", 49, 698, 10, Muted);
 }

@@ -132,6 +132,32 @@ Character LocalCharacterRepository::Import(const fs::path& jsonFile) {
     return c;
 }
 
+fs::path LocalCharacterRepository::Remove(const std::string& id) {
+    if (id.empty() || id.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-") != std::string::npos)
+        throw std::runtime_error("Invalid character id");
+    const auto root = fs::canonical(root_);
+    fs::path source;
+    for (const auto& entry : fs::directory_iterator(root)) {
+        if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
+        Character c;
+        try { c = Character::FromJson(Read(entry.path())); } catch (...) { continue; }
+        if (c.id != id) continue;
+        if (!source.empty()) throw std::runtime_error("Duplicate character id; deletion cancelled");
+        if (entry.is_symlink() || fs::canonical(entry.path()).parent_path() != root)
+            throw std::runtime_error("Character definition is outside local storage");
+        source = entry.path();
+    }
+    if (source.empty()) throw std::runtime_error("Local character not found");
+    const auto trash = root / ".trash";
+    if (fs::exists(trash) && (fs::is_symlink(trash) || fs::canonical(trash).parent_path() != root))
+        throw std::runtime_error("Invalid character recovery directory");
+    fs::create_directories(trash);
+    if (fs::canonical(trash).parent_path() != root) throw std::runtime_error("Recovery directory is outside local storage");
+    const auto destination = trash / (id + "-" + Token() + ".json");
+    fs::rename(source,destination);
+    return destination;
+}
+
 CloudCharacterRepository::CloudCharacterRepository(CharacterCloudApi api, fs::path assetRoot)
     : api_(std::move(api)), assetRoot_(std::move(assetRoot)) {}
 

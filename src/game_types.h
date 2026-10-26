@@ -35,6 +35,8 @@ enum class DamageType {
     Arts
 };
 
+struct BulletImpact { Vector2 position; bool killed=false; };
+
 struct Bullet {
     Vector2 position{};
     Vector2 velocity{};
@@ -50,4 +52,9 @@ struct Bullet {
     int facingDirection = 0;
     bool hasHit = false;
     std::vector<unsigned> hitEnemyIds; // A melee swing may hit each mob once, including multiple targets.
+    Vector2 impactPoint{};
+    bool hasImpact=false;
+    float visualAge=0;
+    bool usesTemplateVisual=false;
+    std::vector<BulletImpact> impactEvents; // Cleared each collision step; supports multi-target melee.
 };

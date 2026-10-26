@@ -104,7 +104,7 @@ Character Character::FromJson(const std::string& text) {
     if (j.contains("assets")) {
         const auto& a = j.at("assets");
         Fields(a, {"portrait", "sprite", "columns", "rows", "idleRow", "runRow", "attackRow", "defeatedRow", "fps", "height",
-                   "animationMode", "motionStrength", "jumpRow", "fallRow", "dodgeRow", "hurtRow", "parts", "rowFrameCounts"});
+                   "animationMode", "motionStrength", "motionTemplate", "jumpRow", "fallRow", "dodgeRow", "hurtRow", "parts", "rowFrameCounts"});
         c.assets.portrait = a.value("portrait", std::string{}); c.assets.sprite = a.value("sprite", std::string{});
         c.assets.columns = Integer(a, "columns", 1); c.assets.rows = Integer(a, "rows", 1);
         if (a.contains("rowFrameCounts")) {
@@ -121,6 +121,7 @@ Character Character::FromJson(const std::string& text) {
         c.assets.fps = a.value("fps", 8.0F); c.assets.height = a.value("height", 112.0F);
         c.assets.animationMode = a.value("animationMode", std::string("auto"));
         c.assets.motionStrength = a.value("motionStrength", 1.0F);
+        c.assets.motionTemplate = a.value("motionTemplate", std::string("auto"));
         const auto optionalRow = [&](const char* field) {
             if (!a.contains(field)) return -1;
             Check(a.at(field).is_number_integer(), std::string("Expected integer: ") + field);
@@ -180,6 +181,8 @@ void Character::Validate() const {
     Check(assets.animationMode == "auto" || assets.animationMode == "procedural" ||
           assets.animationMode == "frames" || assets.animationMode == "rig", "Unknown animationMode");
     Number(assets.motionStrength, 0, 2, "motionStrength");
+    Check(assets.motionTemplate == "auto" || assets.motionTemplate == "melee" ||
+          assets.motionTemplate == "ranged" || assets.motionTemplate == "caster", "Unknown motionTemplate");
     for (int row : {assets.runRow, assets.attackRow, assets.jumpRow, assets.fallRow, assets.dodgeRow, assets.hurtRow, assets.defeatedRow})
         Check(row >= -1 && row < assets.rows, "Animation row outside sprite grid");
     if (!assets.parts.empty() || assets.animationMode == "rig") Check(assets.parts.count("torso"), "A rig needs a torso part");
@@ -221,6 +224,7 @@ std::string Character::ToJson() const {
     j["assets"]["animationMode"] = assets.animationMode;
     j["assets"]["rowFrameCounts"] = assets.rowFrameCounts;
     j["assets"]["motionStrength"] = assets.motionStrength;
+    j["assets"]["motionTemplate"] = assets.motionTemplate;
     j["assets"]["jumpRow"] = assets.jumpRow; j["assets"]["fallRow"] = assets.fallRow;
     j["assets"]["dodgeRow"] = assets.dodgeRow; j["assets"]["hurtRow"] = assets.hurtRow;
     j["assets"]["parts"] = Json::object();
@@ -242,7 +246,7 @@ void CharacterRuntime::Apply(const SkillEffect& e, Vector2 pos, int facing, Vect
     if (e.type == EffectType::Buff) return;
     for (int i = 0; i < e.count && bullets.size() < 4096; ++i) {
         const float offset = static_cast<float>(i) - static_cast<float>(e.count - 1) / 2;
-        Bullet b;
+        Bullet b;b.usesTemplateVisual=true;
         b.position = {pos.x + facing * 48.0F, pos.y - 16};
         b.velocity = {facing * std::cos(offset * e.spread) * e.speed, std::sin(offset * e.spread) * e.speed};
         b.lifetime = e.lifetime; b.radius = e.radius; b.damage = e.amount * multiplier;

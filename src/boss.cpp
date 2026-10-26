@@ -77,6 +77,7 @@ void Boss::Reset(Rectangle arena, Vector2 position, float maxHealth) {
     shadowImpactWindow_=0;shadowRecover_=false;shadowHit_.fill(false);
     shadowTraces_.clear();bladeSweeps_.clear();
     effectRevision_=0;effectCue_=EffectCue::Charge;
+    echoes_.clear();mirrorCooldown_=12;ambushCooldown_=19;mirrorHalf_=1;
 }
 
 void Boss::Update(float deltaTime, Vector2 playerPosition,
@@ -98,6 +99,12 @@ void Boss::Tick(float deltaTime,Vector2 playerPosition,int playerFacingDirection
     }
 
     UpdateDarts(deltaTime);
+    for(auto& echo:echoes_) {
+        echo.age+=deltaTime;
+        if(echo.delay>0)echo.delay=std::max(0.0F,echo.delay-deltaTime);
+        else echo.remaining-=deltaTime;
+    }
+    std::erase_if(echoes_,[](const auto& echo){return echo.remaining<-.65F;});
     for(auto& trace:shadowTraces_)trace.age+=deltaTime;
     std::erase_if(shadowTraces_,[](const auto& trace){return trace.age>(trace.final?1.6F:.7F);});
     shadowImpactWindow_=std::max(0.0F,shadowImpactWindow_-deltaTime);
@@ -107,11 +114,15 @@ void Boss::Tick(float deltaTime,Vector2 playerPosition,int playerFacingDirection
     }
     stateTimer_ -= deltaTime;
     shadowCooldown_=std::max(0.0F,shadowCooldown_-deltaTime);
+    mirrorCooldown_=std::max(0.0F,mirrorCooldown_-deltaTime);
+    ambushCooldown_=std::max(0.0F,ambushCooldown_-deltaTime);
     switch (state_) {
         case State::Idle:
             facingDirection_ = playerPosition.x >= position_.x ? 1 : -1;
             if (stateTimer_ <= 0.0F) {
                 if(shadowCooldown_<=0)StartShadow(playerPosition);
+                else if(mirrorCooldown_<=0)StartMirror(playerPosition);
+                else if(ambushCooldown_<=0)StartAmbush(playerPosition);
                 else if (std::abs(playerPosition.x - position_.x) <= kMeleeRange) {
                     if(meleeSerial_++%3==2)StartFanRetreat(playerPosition);
                     else StartMelee(playerPosition);
@@ -237,6 +248,20 @@ void Boss::Tick(float deltaTime,Vector2 playerPosition,int playerFacingDirection
             }
             break;
         }
+        case State::MirrorWindup:
+            if(stateTimer_<=0) {
+                LaunchMirror();state_=State::MirrorVolley;stateTimer_=.35F;animationTime_=0;
+                ++effectRevision_;effectCue_=EffectCue::Slash;
+            }
+            break;
+        case State::AmbushWindup:
+            if(stateTimer_<=0){state_=State::Ambush;stateTimer_=1.0F;animationTime_=0;
+                ++effectRevision_;effectCue_=EffectCue::Slash;}
+            break;
+        case State::MirrorVolley:
+        case State::Ambush:
+            if(stateTimer_<=0){state_=State::Recover;stateTimer_=1.0F;animationTime_=0;}
+            break;
         case State::ShadowWindup:
         case State::ShadowPause:
             if(stateTimer_<=0)StartShadowSlash();
@@ -437,6 +462,7 @@ void Boss::TakeDamage(float damage) {
         animationTime_ = 0.0F;
         darts_.clear();
         shadowTraces_.clear();bladeSweeps_.clear();shadowImpactWindow_=0;shadowRecover_=false;
+        echoes_.clear();
     }
 }
 
@@ -477,6 +503,12 @@ bool Boss::AttackHits(Rectangle playerHitbox, Rectangle projectileHitbox) {
         return false;
     }
 
+    for(auto& echo:echoes_)if(state_!=State::MirrorWindup&&state_!=State::MirrorVolley&&
+        echo.delay<=0&&echo.remaining>0&&!echo.consumed&&
+        CheckCollisionRecs(playerHitbox,{echo.position.x-72,echo.position.y-62,144,96})) {
+        echo.consumed=true;return true;
+    }
+
     for(const auto& sweep:bladeSweeps_)if(!shadowHit_[sweep.strike]&&BladeHits(sweep.from,sweep.to,playerHitbox,22)) {
         shadowHit_[sweep.strike]=true;return true;
     }
@@ -503,6 +535,8 @@ bool Boss::CanDealContactDamage() const {
            state_ != State::AirSlashWindup &&
            state_ != State::DartWindup &&
            state_ != State::FanRetreat &&
+           state_ != State::MirrorWindup && state_ != State::MirrorVolley &&
+           state_ != State::AmbushWindup && state_ != State::Ambush &&
            state_ != State::Defeated;
 }
 bool Boss::IsDefeated() const { return state_ == State::Defeated; }

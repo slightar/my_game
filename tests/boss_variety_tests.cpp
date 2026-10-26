@@ -24,7 +24,8 @@ void ReachW(StoryBoss& boss,StoryBossState state,bool low=false) {
         if(boss.State()==state&&(!low||boss.LowArcVolley()))return;
         boss.Update(Step,Follow(boss));
     }
-    throw std::runtime_error("W never used its new attack pattern");
+    throw std::runtime_error("W never used attack state="+std::to_string(int(state))+" low="+std::to_string(low)+
+        " phaseTwo="+std::to_string(boss.PhaseTwo()));
 }
 }
 

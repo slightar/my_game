@@ -149,8 +149,7 @@ void MainMenu::DrawMap(const UiFont& font) const {
     }
     const auto* selected=progress_.FindNode(mapPreview_);
     if(selected && progress_.IsUnlocked(selected->id)) {
-        font.Skin().Draw("stage_btn_shadow",{876,160,372,484});
-        font.Skin().Draw("stage_sprite_background",{887,171,347,463});
+        Surface({887,171,347,463},Paper);
         const auto* chapter=StoryData::FindChapter(selected->chapterId);
         const std::string art="stage_main_"+std::to_string(chapter?std::min(chapter->order,6):0);
         font.Skin().Draw(art.c_str(),{899,181,323,191});
@@ -162,12 +161,12 @@ void MainMenu::DrawMap(const UiFont& font) const {
         Fit(font,"奖励 / "+Rewards(*selected),{909,497,300,25},15,Ink);
         font.Draw(mapStartReady_?"起点已就绪 · 地图场景尚未实现":"开发占位：地图场景尚未接入",909,532,14,Ink);
         const auto start=PressedRect(Start);
-        font.Skin().DrawRegion("stage_bkg_hilight",{18,10,130,34},start);
+        Surface(start,Blue);
         font.Skin().Draw("stage_confirm_icon",{start.x+15,start.y+10,32,32},Paper);
         Fit(font,mapStartReady_?"起点已就绪":"开始行动",{start.x+64,start.y,start.width-84,start.height},27,Paper);
         PressedVeil(Start);
     } else {
-        font.Skin().Draw("stage_btn_shadow",{876,160,372,484});
+        Surface({887,171,347,463},Ink);
         font.Skin().Draw(chapterArt.c_str(),{889,198,343,273});
         font.Draw("请选择行动节点",970,493,21,Paper);
         font.Draw("按住左键拖动路线",990,530,14,Muted);

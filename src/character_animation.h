@@ -1,5 +1,6 @@
 #pragma once
 #include "character.h"
+#include "character_motion_templates.h"
 
 enum class CharacterAction { Idle, Run, Jump, Fall, Land, Dodge, Attack, Hurt, Defeated };
 struct CharacterMotion {
@@ -9,6 +10,7 @@ struct CharacterMotion {
     bool attackTriggered = false;
     bool dead = false;
     bool melee = false;
+    CharacterMotionStyle style = CharacterMotionStyle::Auto;
 };
 struct CharacterPose {
     Vector2 offset{}; // Character-height units, independent of world movement/collisions.
@@ -24,10 +26,18 @@ public:
     [[nodiscard]] CharacterPose Pose() const { return pose_; }
     [[nodiscard]] CharacterAction Action() const { return action_; }
     [[nodiscard]] float ActionTime() const { return actionTime_; }
+    [[nodiscard]] bool Attacking() const {
+        return attack_ > 0 && action_ != CharacterAction::Hurt &&
+            action_ != CharacterAction::Dodge && action_ != CharacterAction::Defeated;
+    }
+    [[nodiscard]] float AttackProgress() const { return 1 - attack_ / attackDuration_; }
+    [[nodiscard]] CharacterMotionStyle MotionStyle() const { return style_; }
     [[nodiscard]] int Row(const CharacterAssets& assets) const;
 private:
     CharacterPose pose_{};
     CharacterAction action_ = CharacterAction::Idle;
     float time_ = 0, phase_ = 0, actionTime_ = 0, attack_ = 0, hurt_ = 0, land_ = 0;
     bool grounded_ = true;
+    float attackDuration_ = .24F;
+    CharacterMotionStyle style_ = CharacterMotionStyle::Ranged;
 };

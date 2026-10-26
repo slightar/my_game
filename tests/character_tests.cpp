@@ -2,6 +2,7 @@
 #include "character_image.h"
 #include "file_path.h"
 #include "character_animation.h"
+#include "combat_feedback.h"
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -88,6 +89,42 @@ void SpriteFrames() {
     c.assets.rowFrameCounts = {9}; Throws([&] { c.Validate(); });
     Throws([] { (void)Character::FromJson(R"({"id":"x","name":"x","assets":{"rowFrameCounts":[1.5]}})"); });
 }
+void MotionTemplates() {
+    auto c = Example();
+    Require(ResolveCharacterMotionStyle(c) == CharacterMotionStyle::Ranged, "Legacy ranged template missing");
+    c.attack.damageType = DamageType::Arts;
+    Require(ResolveCharacterMotionStyle(c) == CharacterMotionStyle::Caster, "Legacy arts template missing");
+    c.attack.type = EffectType::Melee;
+    Require(ResolveCharacterMotionStyle(c) == CharacterMotionStyle::Melee, "Legacy melee template missing");
+    c.assets.motionTemplate = "caster";
+    c = Character::FromJson(c.ToJson());
+    Require(ResolveCharacterMotionStyle(c) == CharacterMotionStyle::Caster, "Explicit template not preserved");
+    c.assets.motionTemplate = "unknown"; Throws([&] { c.Validate(); });
+    for (auto style : {CharacterMotionStyle::Melee,CharacterMotionStyle::Ranged,CharacterMotionStyle::Caster}) {
+        CharacterAnimator animator;
+        CharacterMotion motion; motion.style=style; motion.attackTriggered=true;
+        animator.Update(.016F,motion);
+        motion.attackTriggered=false;
+        for (int i=0;i<5;++i) animator.Update(.016F,motion);
+        Require(animator.Attacking(), "Attack did not remain visible after trigger");
+        const auto pose = animator.Pose();
+        if (style == CharacterMotionStyle::Melee) Require(pose.offset.x>.04F && pose.angle>8, "Melee silhouette barely moves");
+        if (style == CharacterMotionStyle::Ranged) Require(pose.offset.x<-.03F && pose.angle<-4, "Ranged recoil missing");
+        if (style == CharacterMotionStyle::Caster) Require(pose.offset.y<-.025F, "Caster lift missing");
+        for (int i=0;i<70;++i) animator.Update(.016F,motion);
+        Require(!animator.Attacking() && animator.Action()==CharacterAction::Idle &&
+            std::abs(animator.Pose().offset.x)<.001F, "Attack did not recover");
+        motion.attackTriggered=true; motion.grounded=false; motion.velocity={320,-200};
+        animator.Update(.016F,motion);
+        CharacterAssets assets; assets.attackRow=2;
+        Require(animator.Action()==CharacterAction::Jump && animator.Row(assets)==2, "Air attack row missing");
+        motion.attackTriggered=false; animator.TriggerHurt(); animator.Update(.016F,motion);
+        Require(!animator.Attacking() && animator.Action()==CharacterAction::Hurt, "Hurt failed to interrupt attack");
+    }
+    CharacterAnimator running;
+    running.Update(.05F,{{320,0},true,false,true,false,true,CharacterMotionStyle::Melee});
+    Require(running.Pose().legFront*running.Pose().legBack<0, "Attack stopped rig locomotion");
+}
 void Runtime() {
     const auto c = Example(); CharacterRuntime a(c), b(c);
     int healthA = 2, healthB = 2; std::vector<Bullet> bullets;
@@ -161,6 +198,30 @@ void Repository(const fs::path& root) {
     { std::ofstream out(root / "input" / "broken.png"); out << "not a PNG"; }
     { std::ofstream out(root / "input" / "character.json"); out << c.ToJson(); }
     Throws([&] { repo.Import(root / "input" / "character.json"); });
+    const auto archived=repo.Remove(imported.id);
+    Require(repo.LoadAll().characters.empty(),"Deleted character remains listed");
+    Require(fs::exists(archived)&&fs::exists(repo.Root()/imported.assets.sprite),"Delete lost recoverable files");
+    Throws([&]{repo.Remove("../escape");});Throws([&]{repo.Remove(imported.id);});
+    fs::rename(archived,repo.Root()/(imported.id+".json"));
+    Require(repo.LoadAll().characters.size()==1,"Deleted character cannot be recovered");
+}
+void Feedback() {
+    CombatFeedback feedback;Bullet strike;strike.kind=BulletKind::MeleeSlash;strike.position={90,100};
+    Require(feedback.Advance(.02F)==.02F,"Miss slowed simulation");feedback.Hit(strike);
+    Require(feedback.Count()==1&&feedback.ShakeStrength()==1,"Ordinary hit exceeded gentle shake");
+    Require(feedback.Advance(.02F)==.02F,"Hit consumed simulation time");
+    for(int i=0;i<50;++i)feedback.Hit(strike);
+    Require(feedback.Count()==1&&feedback.ShakeStrength()<=1,"Burst feedback was not bounded");
+    strike.impactEvents={{{90,100},true}};feedback.Hit(strike);
+    Require(feedback.Count()==1&&feedback.ShakeStrength()==4,"Merged kill lost its stronger shake");
+    feedback.Advance(.02F);strike.impactEvents.clear();feedback.Hit(strike);
+    Require(feedback.ShakeStrength()>3,"Ordinary hit replaced kill shake");
+    for(int i=0;i<5;++i)feedback.Advance(.1F);
+    Require(feedback.Count()==0&&feedback.ShakeStrength()==0&&feedback.Offset().x==0,"Expired feedback remained active");
+    strike.impactEvents={{{90,100},false},{{190,100},true},{{290,100},false}};feedback.Hit(strike);
+    Require(feedback.Count()==3&&feedback.ShakeStrength()==4,"Multi-target impact lost a kill");
+    Require(feedback.Advance(.5F)==.5F&&feedback.Count()==0,"Frame hitch changed simulation or retained stale effects");
+    feedback.Hit(strike);feedback.Reset();Require(feedback.Count()==0&&feedback.ShakeStrength()==0,"Reset retained shake");
 }
 void Cloud(const fs::path& root) {
     auto c = Example();
@@ -192,7 +253,7 @@ int main() {
     const auto root = parent / ("my_game_character_tests_" + std::to_string(std::chrono::high_resolution_clock::now().time_since_epoch().count()));
     try {
         fs::create_directories(root);
-        Serialization(); Animation(); SpriteFrames(); Runtime(); Repository(root); Cloud(root);
+        Serialization(); Animation(); MotionTemplates(); SpriteFrames(); Runtime(); Repository(root); Cloud(root);Feedback();
         Require(fs::equivalent(root.parent_path(), parent) && root.filename().string().starts_with("my_game_character_tests_"), "Unsafe test cleanup");
         fs::remove_all(root);
         std::cout << "Character serialization, validation, combat, import and cloud contract tests passed\n";

@@ -44,5 +44,5 @@ public:
         DrawTexturePro(found->second,source,destination,{},0,tint);return true;
     }
 private:
-    std::map<std::string, Texture2D> textures_;
+    std::map<std::string, Texture2D, std::less<>> textures_;
 };

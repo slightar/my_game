@@ -11,7 +11,13 @@ void CharacterAnimator::Update(float dt, const CharacterMotion& m) {
     land_ = std::max(0.0F, land_ - dt);
     if (!grounded_ && m.grounded) land_ = 0.16F;
     grounded_ = m.grounded;
-    if (m.attackTriggered && !m.dead) attack_ = 0.24F;
+    if (m.attackTriggered && !m.dead) {
+        style_ = m.style == CharacterMotionStyle::Auto
+            ? (m.melee ? CharacterMotionStyle::Melee : CharacterMotionStyle::Ranged) : m.style;
+        attackDuration_ = GetCharacterActionTemplate(style_).duration;
+        attack_ = attackDuration_;
+    }
+    if (m.dead || m.dodging || hurt_ > 0) attack_ = 0;
     const float speed = std::clamp(std::abs(m.velocity.x) / 320.0F, 0.0F, 2.0F);
     phase_ = std::fmod(phase_ + dt * 10 * speed, 2 * PI);
     const auto next = m.dead ? CharacterAction::Defeated : hurt_ > 0 ? CharacterAction::Hurt :
@@ -42,11 +48,12 @@ void CharacterAnimator::Update(float dt, const CharacterMotion& m) {
     }
     // Upper-body attack layers over locomotion; legs continue their gait in rig mode.
     if (attack_ > 0) {
-        const float pulse = std::sin((1 - attack_ / 0.24F) * PI);
-        target.armFront = m.melee ? -100 + pulse * 165 : -85 - pulse * 12;
-        target.armBack = -35 * pulse;
-        target.angle += m.melee ? pulse * 10 : -pulse * 5;
-        target.offset.x += m.melee ? pulse * 0.035F : -pulse * 0.025F;
+        const auto attack = SampleCharacterAttack(style_, AttackProgress());
+        target.armFront = attack.armFront; target.armBack = attack.armBack;
+        target.head += attack.head;
+        target.angle += attack.angle;
+        target.offset.x += attack.shift; target.offset.y += attack.lift;
+        target.scale.x *= attack.scaleX; target.scale.y *= attack.scaleY;
     }
     if (m.dodging) { target.scale = {1.16F, 0.82F}; target.angle = 15; target.armFront = 40; target.armBack = 50; }
     if (hurt_ > 0) { target.angle = -12 * hurt_ / 0.18F; target.scale = {1.07F, 0.93F}; }
@@ -65,6 +72,8 @@ void CharacterAnimator::Update(float dt, const CharacterMotion& m) {
 }
 
 int CharacterAnimator::Row(const CharacterAssets& a) const {
+    // Preserve airborne locomotion but use the attack layer/row when firing.
+    if (Attacking()) return a.attackRow;
     switch (action_) {
         case CharacterAction::Run: return a.runRow;
         case CharacterAction::Attack: return a.attackRow;

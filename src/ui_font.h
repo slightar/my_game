@@ -3,10 +3,12 @@
 #include "raylib.h"
 #include "ui_assets.h"
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 class UiFont {
 public:
-    UiFont();
+    explicit UiFont(bool deferFontLoad = false);
     ~UiFont();
 
     UiFont(const UiFont&) = delete;
@@ -19,7 +21,13 @@ public:
     [[nodiscard]] const UiAssets& Skin() const { return skin_; }
 
 private:
+    friend struct UiFontTestAccess;
     UiAssets skin_;
     Font font_{};
     bool ownsFont_ = false;
+    std::vector<int> loadedCodepoints_;
+    std::unordered_map<int, int> glyphIndices_;
+    int fallbackGlyph_ = 0;
+    void IndexGlyphs();
+    [[nodiscard]] int GlyphIndex(int codepoint) const;
 };

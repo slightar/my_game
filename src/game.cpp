@@ -21,9 +21,10 @@ float SmoothStep(float value) {
 
 }  // namespace
 
-Game::Game() {
+Game::Game() : uiFont_(true), characterCreator_(Utf8Path(GetApplicationDirectory())) {
     SetMasterVolume(mainMenu_.Settings().MasterVolume() / 100.0F);
     audio_.SetEffectsVolume(mainMenu_.Settings().SoundVolume() / 100.0F);
+    // Load the complete glyph set once, including imported character labels.
     ReloadCharacters();
     Reset();
 }
@@ -32,6 +33,7 @@ void Game::ReloadCharacters() {
     characterArt_.ClearCustomCharacters();
     const auto app = Utf8Path(GetApplicationDirectory());
     std::map<std::string, Character> entries;
+    std::set<std::string> deletable;
     std::string errors;
     // Imported definitions override bundled examples with the same stable id.
     for (const auto& root : {app / "assets" / "characters", app / "characters"}) {
@@ -42,6 +44,7 @@ void Game::ReloadCharacters() {
                 TraceLog(LOG_WARNING, "%s", error.c_str()); errors += error + " ";
             }
             for (auto& c : result.characters) {
+                if(root==app/"characters")deletable.insert(c.id);
                 characterArt_.RegisterCharacter(c, root);
                 entries.insert_or_assign(c.id, std::move(c));
             }
@@ -58,11 +61,15 @@ void Game::ReloadCharacters() {
     }
     customCharacters_ = characters;
     mainMenu_.SetCustomCharacters(customCharacters_);
-    uiFont_.SetAdditionalText(glyphs);
+    mainMenu_.SetDeletableCharacters(std::move(deletable));
+    characterGlyphs_ = glyphs;
+    creatorGlyphs_ = characterCreator_.Glyphs();
+    uiFont_.SetAdditionalText(characterGlyphs_ + creatorGlyphs_);
     mainMenu_.SetStatus(errors.empty() ? "" : "配置文件: " + errors);
 }
 
 void Game::Reset() {
+    combatFeedback_.Reset();
     developerRoomActive_=false;
     adaptiveDifficulty_.Cancel();
     prts_.Reset();
@@ -123,9 +130,19 @@ void Game::Update(float deltaTime) {
     if(developerRoomActive_)background=developerRoom_.Boss().Active()?"battle":"planning";
     bossAudio_.Sync(score,paused_||(developerRoomActive_&&developerRoom_.Frozen()),
                     mainMenu_.Settings().SoundVolume()/100.0F,background,deltaTime);
+    combatFeedback_.Advance(deltaTime);
     if(developerRoomActive_){UpdateDeveloperRoom(deltaTime);return;}
     if(worldPreview_) {UpdateWorldPreview(deltaTime);return;}
     if (!inBattle_) {
+        if (characterCreator_.Active()) {
+            if (characterCreator_.Update(deltaTime, characterArt_, [this] { RenderFrame(); })) {
+                ReloadCharacters(); mainMenu_.OpenCharacterSelect();
+                mainMenu_.SetStatus("角色已保存，可在编队中选择出战");
+            }
+            const auto glyphs = characterCreator_.Glyphs();
+            if (glyphs != creatorGlyphs_) { creatorGlyphs_=glyphs; uiFont_.SetAdditionalText(characterGlyphs_+creatorGlyphs_); }
+            return;
+        }
         if (IsKeyPressed(KEY_F5)) ReloadCharacters();
         if (IsFileDropped()) {
             const auto dropped = LoadDroppedFiles();
@@ -154,6 +171,7 @@ void Game::Update(float deltaTime) {
         case MenuFeedback::Denied: audio_.Play(AudioCue::Denied); break;
         default: break;
         }
+        if (action == MenuAction::CreateCharacter) { characterCreator_.Open(characterArt_); return; }
         if(action==MenuAction::StartDeveloperRoom) {
             EnterDeveloperRoom();
         } else if (action == MenuAction::StartWorldPreview) {
@@ -166,6 +184,13 @@ void Game::Update(float deltaTime) {
             inBattle_ = true;
             prts_.Enter({enemyTrial_?"enemy_trial":"boss_demo","行动准备完成。前进后进入交战区域。"});
             audio_.Play(AudioCue::SceneEnter);
+        } else if (action == MenuAction::DeleteCharacter) {
+            try {
+                LocalCharacterRepository repository(Utf8Path(GetApplicationDirectory())/"characters");
+                repository.Remove(mainMenu_.RequestedDeletion());
+                ReloadCharacters();
+                mainMenu_.SetStatus("角色已删除，素材保留在本地回收区");
+            } catch (...) { mainMenu_.SetStatus("删除失败，请检查角色文件与目录权限"); }
         } else if (action == MenuAction::Quit) {
             quitRequested_ = true;
         }
@@ -315,7 +340,7 @@ void Game::DrawOperatorSlots() const {
         DrawRectangleRec(box, active ? Color{232, 235, 235, 245}
                                      : Color{27, 30, 34, 226});
         DrawRectangleRec({box.x, box.y, 4, box.height},
-                         active ? Color{182, 218, 78, 255}
+                         active ? TerminalUi::Blue
                                 : available ? Fade(WHITE, 0.65F)
                                             : Fade(WHITE, 0.18F));
         const Color color = active ? Color{25, 29, 33, 255}
@@ -334,18 +359,16 @@ void Game::DrawPauseMenu() const {
     DrawRectangle(0, 0, GameConfig::kScreenWidth, GameConfig::kScreenHeight,
                   Fade(BLACK, 0.68F));
     const Rectangle panel{410.0F, 176.0F, 460.0F, 370.0F};
-    TacticalUi::DrawCutPanel(panel, TacticalUi::kPanel,
-                             TacticalUi::kCyan, 30.0F, 2.0F);
-    DrawRectangle(static_cast<int>(panel.x + 30.0F),
-                  static_cast<int>(panel.y),
-                  static_cast<int>(panel.width - 30.0F), 6,
-                  TacticalUi::kOrange);
-    TacticalUi::DrawCornerMarks(panel, Fade(RAYWHITE, 0.65F));
+    TerminalUi::Surface(panel, TerminalUi::Ink);
+    DrawRectangle(410,176,460,108,TerminalUi::Paper);
+    DrawRectangle(410,176,5,108,TerminalUi::Blue);
+    uiFont_.Draw("OPERATION / PAUSED", 440,192,12,TerminalUi::OnPaper);
+    uiFont_.Draw("II",810,200,48,Fade(TerminalUi::Ink,.12F));
 
     const char* title = "行动暂停";
     const float titleWidth = uiFont_.Measure(title, 42.0F);
     uiFont_.Draw(title, 640.0F - titleWidth / 2.0F, 220.0F,
-                 42.0F, RAYWHITE);
+                 42.0F, TerminalUi::Ink);
 
     const Rectangle options[2] = {
         {470.0F, 310.0F, 340.0F, 65.0F},
@@ -360,7 +383,7 @@ void Game::DrawPauseMenu() const {
                       static_cast<int>(options[index].y),
                       selected ? 8 : 3,
                       static_cast<int>(options[index].height),
-                      selected ? TacticalUi::kOrange : TacticalUi::kMuted);
+                      selected ? TerminalUi::Blue : TacticalUi::kMuted);
         const float labelWidth = uiFont_.Measure(labels[index], 25.0F);
         uiFont_.Draw(labels[index],
                      options[index].x + (options[index].width - labelWidth) / 2.0F,
@@ -376,11 +399,13 @@ void Game::UpdateBullets(float deltaTime) {
     const bool story=worldPreview_&&storyBoss_.Present();
     const bool mobs=!story&&(enemyTrial_||worldPreview_||worldEncounter_.Active());
     for (Bullet& bullet : bullets_) {
+        bullet.impactEvents.clear();bullet.hasImpact=false;
         if (bullet.activationDelay > 0.0F) {
             bullet.activationDelay =
                 std::max(0.0F, bullet.activationDelay - deltaTime);
             continue;
         }
+        bullet.visualAge+=deltaTime;
         const Vector2 previous = bullet.position;
         bullet.position.x += bullet.velocity.x * deltaTime;
         bullet.position.y += bullet.velocity.y * deltaTime;
@@ -395,7 +420,7 @@ void Game::UpdateBullets(float deltaTime) {
             const bool hitMob=developerRoom_.Mobs().ResolveBullet(bullet,previous);
             const bool hitSeal=developerRoom_.Boss().BreakSeal(bullet,previous);
             const bool hitBoss=!hitSeal&&developerRoom_.Boss().ResolveBullet(bullet,previous);
-            if(hitMob||hitBoss||hitSeal)audio_.PlayBossHit();
+            if(hitMob||hitBoss||hitSeal){audio_.PlayBossHit();combatFeedback_.Hit(bullet);}
             continue;
         }
 
@@ -407,19 +432,21 @@ void Game::UpdateBullets(float deltaTime) {
         }
 
         if(story) {
-            if(storyBoss_.BreakSeal(bullet,previous))audio_.PlayBossHit();
-            else if(storyBoss_.ResolveBullet(bullet,previous)){audio_.PlayBossHit();adaptiveDifficulty_.ConnectedHit();}
+            if(storyBoss_.BreakSeal(bullet,previous)){audio_.PlayBossHit();combatFeedback_.Hit(bullet);}
+            else if(storyBoss_.ResolveBullet(bullet,previous)){audio_.PlayBossHit();combatFeedback_.Hit(bullet);adaptiveDifficulty_.ConnectedHit();}
             continue;
         }
 
         if (mobs) {
-            if ((bossActive_||worldEncounter_.Active()) && enemies_.ResolveBullet(bullet, previous)) {audio_.PlayBossHit();adaptiveDifficulty_.ConnectedHit();}
+            if ((bossActive_||worldEncounter_.Active()) && enemies_.ResolveBullet(bullet, previous)) {audio_.PlayBossHit();combatFeedback_.Hit(bullet);adaptiveDifficulty_.ConnectedHit();}
             continue;
         }
         if (!bullet.hasHit && bossActive_ && !boss_.IsDefeated() &&
             CheckCollisionCircles(bullet.position, bullet.radius,
                                   boss_.Position(), boss_.Radius())) {
             boss_.TakeDamage(bullet.damage);
+            bullet.impactPoint=boss_.Position();bullet.hasImpact=true;
+            bullet.impactEvents.push_back({boss_.Position(),boss_.IsDefeated()});combatFeedback_.Hit(bullet);
             if (bullet.stunDuration > 0.0F) {
                 boss_.Stun(bullet.stunDuration);
             }
@@ -559,13 +586,27 @@ void Game::DrawEncounterBanner() const {
                  Fade(Color{239, 57, 64, 255}, alpha));
 }
 
+void Game::RenderFrame() const {
+    const float displayScale = std::min(
+        static_cast<float>(GetScreenWidth()) / GameConfig::kScreenWidth,
+        static_cast<float>(GetScreenHeight()) / GameConfig::kScreenHeight);
+    const Vector2 displayOffset{
+        (GetScreenWidth() - GameConfig::kScreenWidth * displayScale) / 2.0F,
+        (GetScreenHeight() - GameConfig::kScreenHeight * displayScale) / 2.0F};
+    BeginDrawing();
+    ClearBackground(BLACK);
+    Draw(displayScale, displayOffset);
+    EndDrawing();
+}
+
 void Game::Draw(float displayScale, Vector2 displayOffset) const {
     if(developerRoomActive_){DrawDeveloperRoom(displayScale,displayOffset);return;}
     if(worldPreview_) {DrawWorldPreview(displayScale,displayOffset);return;}
     const Camera2D uiCamera{displayOffset, {}, 0.0F, displayScale};
     if (!inBattle_) {
         BeginMode2D(uiCamera);
-        mainMenu_.Draw(uiFont_, characterArt_);
+        if (characterCreator_.Active()) characterCreator_.Draw(uiFont_, characterArt_);
+        else mainMenu_.Draw(uiFont_, characterArt_);
         EndMode2D();
         return;
     }
@@ -581,7 +622,7 @@ void Game::Draw(float displayScale, Vector2 displayOffset) const {
          displayOffset.y +
              static_cast<float>(GameConfig::kScreenHeight) * displayScale /
                  2.0F},
-        {cameraX_, static_cast<float>(GameConfig::kScreenHeight) / 2.0F},
+        {cameraX_+combatFeedback_.Offset().x, static_cast<float>(GameConfig::kScreenHeight) / 2.0F+combatFeedback_.Offset().y},
         0.0F, displayScale};
     BeginMode2D(worldCamera);
     DrawMap();
@@ -592,6 +633,7 @@ void Game::Draw(float displayScale, Vector2 displayOffset) const {
     if (enemyTrial_) enemyRenderer_.Draw(enemies_, uiFont_);
     else bossRenderer_.Draw(boss_,uiFont_);
     player_->Draw(characterArt_);
+    combatFeedback_.Draw(characterArt_);
     EndMode2D();
 
     BeginMode2D(uiCamera);
@@ -660,58 +702,23 @@ void Game::DrawBullets() const {
             continue;
         }
         if (bullet.kind == BulletKind::MeleeSlash) {
-            if (characterArt_.HasTexasSkill2Effects()) {
-                const int effectFacing = bullet.facingDirection == 0
-                                             ? player_->FacingDirection()
-                                             : bullet.facingDirection;
-                characterArt_.DrawTexasSkill2Slash(
-                    bullet.position, effectFacing,
-                    bullet.visualVariant == 1,
-                    bullet.damageType == DamageType::Arts,
-                    bullet.lifetime, bullet.radius);
-                continue;
-            }
-            const Color slashColor = bullet.damageType == DamageType::Arts
-                                         ? Color{237, 42, 57, 255}
-                                         : Color{215, 230, 240, 255};
-            DrawCircleV(bullet.position, bullet.radius,
-                        Fade(slashColor, 0.08F));
-            DrawLineEx({bullet.position.x - bullet.radius * 0.75F,
-                        bullet.position.y - bullet.radius * 0.58F},
-                       {bullet.position.x + bullet.radius * 0.75F,
-                        bullet.position.y + bullet.radius * 0.58F},
-                       13.0F, Fade(BLACK, 0.72F));
-            DrawLineEx({bullet.position.x - bullet.radius * 0.72F,
-                        bullet.position.y - bullet.radius * 0.55F},
-                       {bullet.position.x + bullet.radius * 0.72F,
-                        bullet.position.y + bullet.radius * 0.55F},
-                       8.0F, Fade(slashColor, 0.86F));
-            if (bullet.damageType == DamageType::Arts) {
-                DrawLineEx({bullet.position.x - bullet.radius * 0.68F,
-                            bullet.position.y + bullet.radius * 0.62F},
-                           {bullet.position.x + bullet.radius * 0.68F,
-                            bullet.position.y - bullet.radius * 0.62F},
-                           11.0F, Fade(BLACK, 0.68F));
-                DrawLineEx({bullet.position.x - bullet.radius * 0.64F,
-                            bullet.position.y + bullet.radius * 0.58F},
-                           {bullet.position.x + bullet.radius * 0.64F,
-                            bullet.position.y - bullet.radius * 0.58F},
-                           6.0F, Fade(RED, 0.78F));
+            const int facing=bullet.facingDirection==0?player_->FacingDirection():bullet.facingDirection;
+            if(bullet.damageType==DamageType::Arts&&!bullet.usesTemplateVisual) {
+                characterArt_.DrawTexasSkill2Slash(bullet.position,facing,bullet.visualVariant==1,true,bullet.lifetime,bullet.radius);
+            } else if(!bullet.usesTemplateVisual) {
+                characterArt_.DrawTexasNormalSlash({bullet.position.x-facing*bullet.radius*.7F,bullet.position.y},
+                                                  facing,bullet.visualAge,bullet.radius*3.0F);
+            } else {
+                characterArt_.DrawCombatSlash(bullet.position,bullet.visualAge/.22F,bullet.radius*2.0F,facing);
             }
             continue;
         }
         if (bullet.kind == BulletKind::SwordWave) {
-            const float direction = bullet.velocity.x >= 0.0F ? 1.0F : -1.0F;
-            DrawLineEx({bullet.position.x - direction * 14.0F,
-                        bullet.position.y - 28.0F},
-                       {bullet.position.x + direction * 9.0F,
-                        bullet.position.y},
-                       7.0F, Fade(RAYWHITE, 0.88F));
-            DrawLineEx({bullet.position.x + direction * 9.0F,
-                        bullet.position.y},
-                       {bullet.position.x - direction * 14.0F,
-                        bullet.position.y + 28.0F},
-                       7.0F, Fade(SKYBLUE, 0.82F));
+            const int facing=bullet.velocity.x>=0?1:-1;
+            // Sustain the full crescent while travelling, then play its authored dissipation.
+            const float age=bullet.visualAge<.07F?bullet.visualAge:
+                bullet.lifetime<.10F?.07F+(.10F-bullet.lifetime):.07F;
+            characterArt_.DrawTexasNormalSlash({bullet.position.x-facing*21,bullet.position.y},facing,age,90);
             continue;
         }
         if (bullet.kind == BulletKind::FallingSword) {

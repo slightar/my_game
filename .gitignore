@@ -9,3 +9,4 @@ output/texas_vfx/_work/*.npy
 /output/
 __pycache__/
 *.py[cod]
+**/character_api.local.json

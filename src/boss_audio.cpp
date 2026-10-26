@@ -74,10 +74,12 @@ void BossAudio::Sync(const StoryBoss* boss,bool paused,float volume,const char* 
             if(boss->State()==StoryBossState::IceRing&&IsSoundValid(ring_))PlaySound(ring_);
             if((boss->State()==StoryBossState::BlackIce||boss->State()==StoryBossState::Revive)&&IsSoundValid(seal_))PlaySound(seal_);
             if(boss->State()==StoryBossState::FrostStep&&IsSoundValid(seal_))PlaySound(seal_);
+            if((boss->State()==StoryBossState::Prism||boss->State()==StoryBossState::Thorn)&&IsSoundValid(ring_))PlaySound(ring_);
         }
         if(!paused&&volume>0&&boss->Kind()==StoryBossKind::Patriot) {
             if(boss->State()==StoryBossState::LeapWindup&&IsSoundValid(leap_))PlaySound(leap_);
             if(boss->State()==StoryBossState::Recover&&boss->RecoveryFrom()==StoryBossState::Leap&&IsSoundValid(impact_))PlaySound(impact_);
+            if((boss->State()==StoryBossState::Quake||boss->State()==StoryBossState::Lance)&&IsSoundValid(impact_))PlaySound(impact_);
         }
     }
     if(!active||paused||volume<=0){for(auto sound:{ring_,seal_,leap_,impact_})if(IsSoundValid(sound))StopSound(sound);}

@@ -35,15 +35,31 @@ int main() {
         MainMenu menu; menu.SetCustomCharacters(list.characters); menu.OpenHome();
         Player player; player.Reset(list.characters.front());
         const auto output = app / "character-qa"; std::filesystem::create_directories(output);
-        const auto render = [&](const char* filename, auto draw) {
-            auto target = LoadRenderTexture(1280, 720);
+        const auto render = [&](const char* filename, auto draw, int width=1280, int height=720) {
+            SetWindowSize(width,height);
+            auto target = LoadRenderTexture(width,height);
             if (!target.id) throw std::runtime_error("Render target allocation failed");
-            BeginTextureMode(target); ClearBackground(Color{28, 33, 41, 255}); draw(); EndTextureMode();
+            BeginTextureMode(target); ClearBackground(Color{28, 33, 41, 255});
+            const float scale=std::min(width/1280.0F,height/720.0F);
+            BeginMode2D({{(width-1280*scale)/2,(height-720*scale)/2},{},0,scale});
+            draw(); EndMode2D(); EndTextureMode();
             Image image = LoadImageFromTexture(target.texture); ImageFlipVertical(&image);
             const bool saved = ExportImage(image, (output / filename).string().c_str());
             UnloadImage(image); UnloadRenderTexture(target);
+            SetWindowSize(1280,720);
             if (!saved) throw std::runtime_error("Cannot export render");
         };
+        if(!art.HasTexasSkill2Effects())throw std::runtime_error("Combat flipbook sheets missing");
+        render("combat-flipbook-frames.png", [&] {
+            for(int i=0;i<8;++i) {
+                const float x=80+i*158.0F,progress=i/8.0F;
+                art.DrawCombatImpact({x,100},progress,84,1);
+                art.DrawCombatImpact({x,240},progress,84,-1);
+                art.DrawCombatSlash({x,400},progress,150,1);
+                art.DrawCombatSlash({x,560},progress,150,-1);
+                DrawText(TextFormat("%02d",int(progress*65)),int(x)-10,650,18,RAYWHITE);
+            }
+        });
         render("menu.png", [&] { menu.Draw(font, art); });
         CheckTexasAttackRendering(art, render);
         CheckEnemyRendering(font, render);
@@ -52,6 +68,8 @@ int main() {
         render("home.png", [&] { menu.Draw(font, art); });
         menu.OpenCharacterSelect();
         render("character-select.png", [&] { menu.Draw(font, art); });
+        render("character-select-1920.png", [&] { menu.Draw(font, art); },1920,1080);
+        render("character-select-960.png", [&] { menu.Draw(font, art); },960,540);
         menu.OpenStageSelect();
         render("stage.png", [&] { menu.Draw(font, art); });
         menu.OpenArchive();
@@ -60,6 +78,10 @@ int main() {
         render("equipment.png", [&] { menu.Draw(font, art); });
         menu.OpenSettings();
         render("settings.png", [&] { menu.Draw(font, art); });
+        render("settings-960.png", [&] { menu.Draw(font, art); },960,540);
+        menu.OpenWorldMap();
+        render("world-map.png", [&] { menu.Draw(font, art); });
+        render("world-map-1920.png", [&] { menu.Draw(font, art); },1920,1080);
         CheckMenuInteraction(output, [&](const char* name, const MainMenu& subject) {
             render(name, [&] { subject.Draw(font, art); });
         });

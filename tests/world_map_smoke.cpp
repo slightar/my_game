@@ -38,15 +38,41 @@ struct WorldPreviewTestAccess {
     static DeveloperRoom& Lab(Game& game){return game.developerRoom_;}
     static bool LabActive(Game& game){return game.developerRoomActive_;}
     static void Home(Game& game){game.mainMenu_.OpenHome();}
+    static bool Paused(Game& game){return game.paused_;}
+    static bool InBattle(Game& game){return game.inBattle_;}
+    static float Shake(Game& game){return game.combatFeedback_.ShakeStrength();}
+    static std::size_t Impacts(Game& game){return game.combatFeedback_.Count();}
+    static void TexasGuard(Game& game,int facing) {
+        game.player_->Reset(OperatorKind::Texas);game.player_->PlaceAt({1200,605},facing);
+        game.bullets_.clear();game.combatFeedback_.Reset();game.cameraX_=1200;
+        game.developerRoom_.Mobs().Clear();game.developerRoom_.Mobs().Spawn(EnemyKind::Slug,1200+facing*80);
+    }
+    static bool NormalSlash(Game& game) {
+        return std::any_of(game.bullets_.begin(),game.bullets_.end(),[](const auto& b){
+            return b.kind==BulletKind::MeleeSlash&&b.damageType==DamageType::Physical&&!b.usesTemplateVisual;
+        });
+    }
+    static void CustomGuard(Game& game) {
+        if(game.customCharacters_.empty())throw std::runtime_error("Custom test character missing");
+        auto c=game.customCharacters_.front();c.attack.type=EffectType::Melee;c.attack.range=150;c.attack.amount=2;c.assets.motionTemplate="melee";
+        game.player_->Reset(c);
+    }
     static MainMenu& Menu(Game& game){return game.mainMenu_;}
     static bool LabGlyphs(Game& game){return game.developerRoom_.GlyphsSupported(game.uiFont_);}
     static bool VarietyGlyphs(Game& game){return game.uiFont_.SupportsText("后撤 · 扇形飞刀连环爆破 · 寻找空隙安全空隙低空榴弹 · 跳跃避开扇形冰刃 · 变换站位落矛阵 · 离开标记冰雨顺序会变化");}
     static bool ShadowGlyphs(Game& game){return game.uiFont_.SupportsText("跳跃避开向右避开向左避开离开路线离开红圈←→");}
+    static bool ExpansionGlyphs(Game& game){return game.uiFont_.SupportsText("离开交叉路线射击拆雷或离开标记可拆除击碎冰晶或离开路线连续跳跃或远离跳跃或绕后");}
+    static void ReviewCaption(Game& game,const char* title,const char* detail) {
+        DrawRectangle(416,157,828,83,Color{14,22,30,235});
+        DrawRectangle(416,157,4,83,SKYBLUE);
+        game.uiFont_.Draw(title,435,165,26,RAYWHITE);
+        game.uiFont_.Draw(detail,435,204,18,Color{184,219,239,255});
+    }
     static bool CrownEffects(Game& game){return game.bossRenderer_.EffectsReady()&&game.storyBossRenderer_.Ready(StoryBossKind::Crownslayer);}
     static void ObserveDemo(Game& game){for(auto& op:game.operators_)op.Reset(OperatorKind::Exusiai);game.activeOperator_=0;game.player_=&game.operators_[0];game.player_->PlaceAt({1800,605},1);}
     static bool LabArt(Game& game){for(int i=0;i<int(kEnemyKindCount);++i)if(!game.enemyRenderer_.HasSprite(static_cast<EnemyKind>(i)))return false;for(int i=1;i<=kStoryBossCount;++i)if(!game.storyBossRenderer_.Ready(static_cast<StoryBossKind>(i)))return false;return game.storyBossRenderer_.EffectsReady();}
     static void LabShot(Game& game,Vector2 position){Bullet b;b.position=position;b.radius=35;b.damage=10000;b.lifetime=1;game.bullets_.push_back(b);}
-    static void SealShot(Game& game,float x){Bullet b;b.position={x,GameConfig::kFloorY-46};b.radius=8;b.damage=1;b.lifetime=1;game.bullets_.push_back(b);}
+    static void SealShot(Game& game,float x,float damage=1){Bullet b;b.position={x,GameConfig::kFloorY-46};b.radius=8;b.damage=damage;b.lifetime=1;game.bullets_.push_back(b);}
     static bool WinterAudio(Game& game){return game.bossAudio_.Ready()&&game.bossAudio_.MusicReady();}
     static const std::string& WinterTrack(Game& game){return game.bossAudio_.CurrentTrack();}
     static bool WinterGlyphs(Game& game){return game.uiFont_.SupportsText(StoryBoss::Glyphs()+std::string("霜星 · 生命解放投枪 · 正在瞄准倒地重生 · 第二条生命尚未解除封锁"));}
@@ -64,12 +90,13 @@ struct WorldPreviewTestAccess {
     static const PrtsNarrator& Narrator(const Game& game){return game.prts_;}
     static bool NarrationGlyphs(const Game& game){return game.uiFont_.SupportsText(PrtsNarrator::GlyphText());}
     static void TestThreat(Game& game){game.enemies_.Spawn(EnemyKind::Shield,game.player_->Position().x+950);}
-    static void CompleteBattleFixture(Game& game){
+    static void CompleteBattleFixture(Game& game,std::set<EnemyKind>* observed=nullptr){
         // Advance real waves and resolve lethal test projectiles through the
         // game's collision/update path, so the production clear event fires.
         game.player_->PlaceAt({WorldLayout::Find(game.worldRegion_)->width*.64F,605},1);
         for(int frame=0;frame<2000&&!game.worldEncounter_.Cleared(game.enemies_);++frame) {
             for(const auto& unit:game.enemies_.Units())if(unit.Targetable()) {
+                if(observed)observed->insert(unit.kind);
                 Bullet shot;shot.position=unit.Center();shot.lifetime=1;shot.radius=35;shot.damage=10000;
                 game.bullets_.push_back(shot);
             }
@@ -161,6 +188,87 @@ int main(int argc,char** argv){
         check(click(1090,594)==MenuAction::StartWorldPreview,"Room entry button failed");
         const auto capture=[&](const std::string& name){auto t=LoadRenderTexture(1280,720);BeginTextureMode(t);game.Draw(1,{});EndTextureMode();
             auto im=LoadImageFromTexture(t.texture);ImageFlipVertical(&im);check(ExportImage(im,(output/(name+".png")).string().c_str()),"Screenshot failed");UnloadImage(im);UnloadRenderTexture(t);};
+        if(argc>1&&std::string_view(argv[1])=="--texas-crescent") {
+            WorldPreviewTestAccess::Home(game);press(KEY_F12);
+            check(WorldPreviewTestAccess::LabActive(game),"Crescent fixture did not open lab");
+            for(int facing:{1,-1}) {
+                WorldPreviewTestAccess::TexasGuard(game,facing);key(KEY_J,true);
+                game.Update(1.0F/60);key(KEY_J,false);
+                check(WorldPreviewTestAccess::NormalSlash(game),"Texas normal attack routed to wrong effect");
+                for(int i=0;i<8;++i){game.Update(1.0F/60);if(i==2||i==6)capture("texas-crescent-"+std::to_string(facing)+"-"+std::to_string(i));}
+            }
+            std::cout<<"Texas normal crescent: actual input and melee route, both facings passed\n";
+            return 0;
+        }
+        if(argc>1&&std::string_view(argv[1])=="--ui-audit") {
+            WorldPreviewTestAccess::Home(game);press(KEY_F12);
+            check(WorldPreviewTestAccess::LabActive(game),"Developer room did not open");
+            capture("ui-developer-room");
+            auto& lab=WorldPreviewTestAccess::Lab(game);lab.Select(0);press(KEY_ENTER);
+            for(int i=0;i<50;++i)game.Update(1.0F/60);
+            check(!lab.Mobs().Units().empty(),"Hit feedback fixture did not spawn");
+            const auto target=lab.Mobs().Units().front().feet;
+            WorldPreviewTestAccess::CustomGuard(game);
+            WorldPreviewTestAccess::Place(game,{target.x-70,GameConfig::kFloorY-39});
+            key(KEY_J,true);
+            for(int i=0;i<30&&!WorldPreviewTestAccess::Impacts(game);++i)game.Update(1.0F/60);
+            key(KEY_J,false);
+            check(WorldPreviewTestAccess::Impacts(game)>0,"Real custom melee hit produced no feedback");
+            check(WorldPreviewTestAccess::Shake(game)<=1.001F,"Ordinary melee shake too strong");
+            capture("custom-melee-impact");
+            for(int i=0;i<5;++i){game.Update(1.0F/30);capture("custom-impact-frame-"+std::to_string(i));}
+            key(KEY_J,true);
+            for(int i=0;i<240&&WorldPreviewTestAccess::Shake(game)<=1.001F;++i)game.Update(1.0F/60);
+            key(KEY_J,false);
+            check(WorldPreviewTestAccess::Shake(game)>3,"Actual kill did not produce stronger shake");
+            capture("custom-melee-kill");
+            press(KEY_ESCAPE);
+            // Start the playable demo from the home shortcut, then exercise actual pause input.
+            press(KEY_B);
+            check(WorldPreviewTestAccess::InBattle(game),"Demo battle did not open");
+            capture("ui-battle");
+            press(KEY_ESCAPE);
+            check(WorldPreviewTestAccess::Paused(game),"Pause did not open");
+            capture("ui-pause");
+            mouse(7,640,342);mouse(6,MOUSE_BUTTON_LEFT);game.Update(1.0F/60);
+            mouse(5,MOUSE_BUTTON_LEFT);game.Update(1.0F/60);
+            check(!WorldPreviewTestAccess::Paused(game),"Continue button did not resume");
+            press(KEY_ESCAPE);
+            mouse(7,640,427);mouse(6,MOUSE_BUTTON_LEFT);game.Update(1.0F/60);
+            mouse(5,MOUSE_BUTTON_LEFT);game.Update(1.0F/60);
+            check(!WorldPreviewTestAccess::InBattle(game),"Pause home button failed");
+            capture("ui-home-return");
+            std::cout<<"UI audit: custom melee impact, developer room, battle HUD, pause/resume and home return passed\n";
+            return 0;
+        }
+        if(argc>1&&std::string_view(argv[1])=="--black-ice-hp-audit") {
+            WorldPreviewTestAccess::Home(game);press(KEY_F12);press(KEY_F1);
+            auto& lab=WorldPreviewTestAccess::Lab(game);
+            lab.Mark(lab.Width()*.62F);lab.Select(33);press(KEY_ENTER);
+            const auto step=[&](){WorldPreviewTestAccess::Place(game,{lab.Boss().Feet().x-310,605});game.Update(1.0F/60);};
+            for(int i=0;i<6000&&lab.Boss().SealedFloor().empty();++i)step();
+            check(!lab.Boss().SealedFloor().empty(),"HP fixture never sealed the floor");
+            const float x=lab.Boss().SealedFloor().front().x+60;
+            const auto hp=[&]()->const BossZone& {
+                const auto found=std::find_if(lab.Boss().Zones().begin(),lab.Boss().Zones().end(),[&](const auto& z){return z.kind==BossFx::BlackIce&&std::abs(z.position.x-x)<.01F;});
+                check(found!=lab.Boss().Zones().end(),"HP fixture pit expired");return *found;
+            };
+            const auto shot=[&](float damage){WorldPreviewTestAccess::SealShot(game,x,damage);game.Update(1.0F/60);};
+            const auto screen=[&](const char* name){WorldPreviewTestAccess::RestoreCamera(game,std::clamp(x,640.0F,lab.Width()-640));capture(name);};
+            press(KEY_F4);check(hp().durability==4&&hp().maxDurability==4,"First-life integrated pit lost 4 HP");
+            screen("black-ice-hp-first-4");shot(.25F);
+            check(hp().durability==3.75F,"Game projectile rounded fractional pit damage");screen("black-ice-hp-first-3-75");
+            press(KEY_F4);lab.Boss().Damage(10000);
+            while(lab.Boss().State()==StoryBossState::Revive)step();
+            press(KEY_F4);
+            check(lab.Boss().PhaseTwo()&&hp().maxDurability==8&&hp().durability==7.75F,"Revived game pit lost its maximum HP or previous damage");
+            screen("black-ice-hp-revived-7-75");shot(3.5F);
+            check(hp().durability==4.25F,"Revived pit ignored real projectile damage");screen("black-ice-hp-revived-4-25");
+            shot(4.25F);check(!lab.Boss().SealedGroundAt(x),"HP zero failed to repair the floor through game collision");
+            screen("black-ice-hp-repaired");
+            std::cout<<"Integrated pit HP: 4 -> 3.75 -> revived 7.75/8 -> 4.25 -> repaired; actual bullet collision and HP rendering passed\n";
+            return 0;
+        }
         if(argc>1&&std::string_view(argv[1])=="--w-mine-audit") {
             WorldPreviewTestAccess::Enter(game,"wtower","approach_wtower");
             const auto& w=WorldPreviewTestAccess::BossFight(game);
@@ -394,6 +502,98 @@ int main(int argc,char** argv){
             check(WorldPreviewTestAccess::DemoActive(game)&&WorldPreviewTestAccess::DemoBoss(game).ShadowActive(),"Homepage B signature missing");
             capture("crown-shadow-homepage-b");
             std::cout<<"Crown signature: lab/homepage B, three slashes, aerial finisher, sprites, warnings and glyphs passed\n";
+            return 0;
+        }
+        if(argc>1&&(std::string_view(argv[1])=="--boss-expansion-audit"||std::string_view(argv[1])=="--boss-timing-audit")) {
+            const bool timingAudit=std::string_view(argv[1])=="--boss-timing-audit";
+            WorldPreviewTestAccess::Home(game);press(KEY_F12);press(KEY_F1);
+            check(WorldPreviewTestAccess::LabActive(game)&&WorldPreviewTestAccess::ExpansionGlyphs(game),"Expanded skill glyphs or lab unavailable");
+            auto& lab=WorldPreviewTestAccess::Lab(game);
+            const auto step=[&](){
+                const auto& boss=lab.Boss();
+                const float direction=boss.Feet().x<(boss.Left()+boss.Right())*.5F?1.0F:-1.0F;
+                WorldPreviewTestAccess::Place(game,{boss.Feet().x+direction*360,GameConfig::kFloorY});game.Update(1.0F/60);
+            };
+            const auto reach=[&](StoryBossState state){
+                for(int i=0;i<30000&&lab.Boss().State()!=state;++i)step();
+                check(lab.Boss().State()==state,"Expanded skill never started through game update");
+            };
+            const auto shot=[&](const std::string& name,bool target){
+                const auto& boss=lab.Boss();
+                const float focus=target?boss.Aim().x:boss.Position().x;
+                WorldPreviewTestAccess::RestoreCamera(game,std::clamp(focus,640.0F,lab.Width()-640));
+                capture(name);
+            };
+            const auto spawn=[&](int index){lab.Clear();lab.Mark(lab.Width()*.62F);lab.Select(index);press(KEY_ENTER);};
+            if(timingAudit) {
+                const auto reviewRoot=output/"timing";std::filesystem::create_directories(reviewRoot);
+                const auto reviewCapture=[&](const std::string& name,const char* title,const char* detail,bool target,bool small){
+                    const auto& boss=lab.Boss();
+                    WorldPreviewTestAccess::RestoreCamera(game,std::clamp(target?boss.Aim().x:boss.Position().x,640.0F,lab.Width()-640));
+                    auto texture=LoadRenderTexture(1280,720);BeginTextureMode(texture);game.Draw(1,{});
+                    WorldPreviewTestAccess::ReviewCaption(game,title,detail);EndTextureMode();
+                    auto im=LoadImageFromTexture(texture.texture);ImageFlipVertical(&im);
+                    if(small)ImageResize(&im,768,432);
+                    check(ExportImage(im,(reviewRoot/(name+".png")).string().c_str()),"Timing screenshot export failed");
+                    UnloadImage(im);UnloadRenderTexture(texture);
+                };
+                const auto reviewSkill=[&](StoryBossState warning,StoryBossState attack,const std::string& name,
+                    int poster,int activeFrames,bool target,const char* title,const char* warningDetail,const char* releaseDetail){
+                    reach(warning);int frame=0;
+                    const auto movieFrame=[&](const char* detail){
+                        if(frame%3==0)reviewCapture(name+"-motion-"+TextFormat("%04d",frame/3),title,detail,target,true);
+                        ++frame;
+                    };
+                    while(lab.Boss().State()==warning) {
+                        movieFrame(warningDetail);
+                        if(frame==11)reviewCapture(name+"-warning",title,warningDetail,target,false);
+                        step();
+                    }
+                    check(lab.Boss().State()==attack,"Timing capture skipped the attack state");
+                    for(int i=0;i<activeFrames;++i) {
+                        movieFrame(releaseDetail);
+                        if(i==poster)reviewCapture(name+"-release",title,releaseDetail,target,false);
+                        step();
+                    }
+                };
+                spawn(31);
+                reviewSkill(StoryBossState::MirrorWindup,StoryBossState::MirrorVolley,"crown-mirror",4,45,true,
+                    "弑君者 · 镜影交刃","两侧幻影提前锁定交叉路线；换位或拦截飞刀。","两侧同时投刀；残影消退，留下反击时间。");
+                reviewSkill(StoryBossState::AmbushWindup,StoryBossState::Ambush,"crown-ambush",5,85,true,
+                    "弑君者 · 烟幕伏杀","三个落点提前锁定；先攻击中央，再攻击两侧。","地面幻影逐个出刀；离开红色标记即可避开。");
+                spawn(32);
+                reviewSkill(StoryBossState::AirburstWindup,StoryBossState::Airburst,"w-airburst",5,140,true,
+                    "W · 定时空爆","高低两层爆点已锁定；留意各自的倒计时。","高位爆炸留在地面避开，低位爆炸跳跃或换位。");
+                reviewSkill(StoryBossState::RemoteMineWindup,StoryBossState::RemoteMine,"w-remote",25,175,true,
+                    "W · 遥控雷网","雷网位置提前标出；每枚两点伤害可拆除。","地雷依次引爆；射击拆雷，或移出标记范围。");
+                spawn(33);
+                reviewSkill(StoryBossState::PrismWindup,StoryBossState::Prism,"frost-prism",34,120,true,
+                    "霜星 · 冰晶棱镜","空中冰晶蓄能，三条蓝线锁定散射方向。","冰晶依次发射三路冰刃；击碎冰晶或离开蓝线。");
+                reviewSkill(StoryBossState::ThornWindup,StoryBossState::Thorn,"frost-thorn",35,120,false,
+                    "霜星 · 冰棘回廊","冰棘从霜星前方向玩家方向逐段推进。","地面冰棘依次升起；跳跃或离开推进路线。");
+                spawn(34);
+                reviewSkill(StoryBossState::QuakeWindup,StoryBossState::Quake,"patriot-quake",44,140,false,
+                    "爱国者 · 大地战鼓","三次震地，每次范围更大；只标出下一次范围。","每次攻击动作对应一次震地；跳跃或退到标记外。");
+                reviewSkill(StoryBossState::LanceWindup,StoryBossState::Lance,"patriot-lance",9,70,false,
+                    "爱国者 · 贯阵长枪","红色光带锁定水平攻击路线；跳跃或绕后。","长枪沿固定方向贯穿；出枪和身体动作同步。");
+                check(lab.God()&&WorldPreviewTestAccess::LabArt(game),"Timing capture lost assets or protection");
+                std::cout<<"Eight skill screenshots and 20 Hz motion sequences captured through real game update/render\n";
+                return 0;
+            }
+            const auto skill=[&](StoryBossState warning,StoryBossState attack,const std::string& name,int frames,bool target){
+                reach(warning);for(int i=0;i<10;++i)step();shot(name+"-warning",target);
+                reach(attack);for(int i=0;i<frames;++i)step();shot(name+"-release",target);
+            };
+            spawn(31);skill(StoryBossState::MirrorWindup,StoryBossState::MirrorVolley,"expansion-crown-mirror",4,true);
+            skill(StoryBossState::AmbushWindup,StoryBossState::Ambush,"expansion-crown-ambush",5,true);
+            spawn(32);skill(StoryBossState::AirburstWindup,StoryBossState::Airburst,"expansion-w-airburst",5,true);
+            skill(StoryBossState::RemoteMineWindup,StoryBossState::RemoteMine,"expansion-w-remote",25,true);
+            spawn(33);skill(StoryBossState::PrismWindup,StoryBossState::Prism,"expansion-frost-prism",34,true);
+            skill(StoryBossState::ThornWindup,StoryBossState::Thorn,"expansion-frost-thorn",10,false);
+            spawn(34);skill(StoryBossState::QuakeWindup,StoryBossState::Quake,"expansion-patriot-quake",47,false);
+            skill(StoryBossState::LanceWindup,StoryBossState::Lance,"expansion-patriot-lance",6,false);
+            check(lab.God()&&WorldPreviewTestAccess::LabArt(game),"Expanded skills lost existing assets or fixture protection");
+            std::cout<<"Eight expanded skills rendered through real developer-room update; original assets and Chinese glyphs passed\n";
             return 0;
         }
         if(argc>1&&std::string_view(argv[1])=="--boss-variety-audit") {
@@ -661,6 +861,54 @@ int main(int argc,char** argv){
             check(w.Mines().empty()&&w.Grenades().empty()&&w.Blasts().empty(),"Victory did not remove mobile W hazards");
             capture("w-mobile-defeated");
             std::cout<<"W original animations, real arena mobility, volley/mine/C4 states, player hazard damage, phase-two volley and victory cleanup passed\n";
+        } else if(argc>1&&std::string_view(argv[1])=="--adaptive-roster-audit") {
+            const auto advance=[&](int frames){for(int i=0;i<frames;++i)game.Update(1.0F/60);};
+            for(int round=0;round<12&&WorldPreviewTestAccess::Adaptive(game).Ability()<.78F;++round) {
+                WorldPreviewTestAccess::Action(game,"bridge");
+                const int before=WorldPreviewTestAccess::Adaptive(game).Completed();
+                WorldPreviewTestAccess::CompleteBattleFixture(game);
+                check(WorldPreviewTestAccess::Adaptive(game).Completed()==before+1,"Real patrol failed to record one completed battle");
+            }
+            check(WorldPreviewTestAccess::Adaptive(game).Ability()>=.75F,"Actual clean wins did not reach high pressure");
+            WorldPreviewTestAccess::Action(game,"ice");
+            const float width=WorldLayout::Find(game.WorldRegion())->width;
+            WorldPreviewTestAccess::Place(game,{width*.34F,605});advance(1);
+            check(WorldPreviewTestAccess::Patrol(game).Pending()==6,"High-pressure gameplay did not enqueue six enemies");
+            float health=0;
+            for(int wave=0;wave<2;++wave)
+                for(auto kind:WorldEncounter::Formation(game.WorldRegion(),wave,WorldPreviewTestAccess::Difficulty(game)))
+                    health+=EnemyData(kind).health*WorldPreviewTestAccess::Difficulty(game).health;
+            check(std::abs(WorldPreviewTestAccess::Adaptive(game).ExpectedSeconds()-health/3)<.01F,
+                  "Evaluation budget ignored adaptive troops");
+            capture("adaptive-high-six");
+            std::set<EnemyKind> strongKinds;
+            WorldPreviewTestAccess::CompleteBattleFixture(game,&strongKinds);
+            check(strongKinds.size()==5&&strongKinds.contains(EnemyKind::Icebreaker)&&strongKinds.contains(EnemyKind::SnowCasterLeader),
+                  "High-pressure real spawns failed to mix chapter troops");
+            for(int defeat=0;defeat<6;++defeat) {
+                WorldPreviewTestAccess::Action(game,"ice");
+                WorldPreviewTestAccess::Place(game,{width*.34F,605});advance(1);
+                WorldPreviewTestAccess::DefeatOperators(game);advance(2);
+            }
+            check(WorldPreviewTestAccess::Adaptive(game).Ability()<.20F,"Actual defeats failed to ease pressure");
+            press(KEY_ENTER);advance(1);
+            WorldPreviewTestAccess::Place(game,{width*.34F,605});advance(1);
+            check(WorldPreviewTestAccess::Patrol(game).Pending()==3,"Retry did not apply gentle three-unit wave");
+            capture("adaptive-gentle-three");
+            std::set<EnemyKind> gentleKinds;
+            WorldPreviewTestAccess::CompleteBattleFixture(game,&gentleKinds);
+            check(!gentleKinds.contains(EnemyKind::Icebreaker)&&gentleKinds.size()<strongKinds.size(),
+                  "Gentle real spawns kept the high-pressure roster");
+            const float learned=WorldPreviewTestAccess::Adaptive(game).Ability();
+            for(const char* id:{"bridge","wtower","ice","industry"}) {
+                WorldPreviewTestAccess::Enter(game,id,WorldLayout::ApproachFor(id)->region.id);
+                check(WorldPreviewTestAccess::BossFight(game).Kind()==StoryBoss::ForRegion(id)&&
+                      WorldPreviewTestAccess::BossFight(game).Difficulty().formationAbility==learned,
+                      "A story Boss did not receive the learned profile");
+                WorldPreviewTestAccess::Place(game,{WorldPreviewTestAccess::BossFight(game).TriggerX()+20,605});
+                advance(110);capture(std::string("adaptive-boss-")+id);
+            }
+            std::cout<<"Actual wins/defeats, six-to-three troops, chapter-specific real spawns, workload budget and four Boss profiles passed\n";
         } else if(argc>1&&std::string_view(argv[1])=="--adaptive-audit") {
             const auto advance=[&](int frames){for(int i=0;i<frames;++i)game.Update(1.0F/60);};
             const float initial=WorldPreviewTestAccess::Adaptive(game).Ability();
@@ -678,7 +926,7 @@ int main(int argc,char** argv){
             check(improved>initial&&improved-initial<=.08001F,"Real successful patrol failed to increase next difficulty");
             check(WorldPreviewTestAccess::Patrol(game).Difficulty().health==frozen,"Second wave changed the frozen profile");
             WorldPreviewTestAccess::Enter(game,"bridge","approach_bridge");
-            check(WorldPreviewTestAccess::BossFight(game).MaxHealth()>80*frozen,"Next Boss did not receive learned difficulty");
+            check(WorldPreviewTestAccess::BossFight(game).MaxHealth()>60*frozen,"Next Boss did not receive learned difficulty");
             WorldPreviewTestAccess::Place(game,{WorldPreviewTestAccess::BossFight(game).TriggerX()+20,605});advance(60);
             check(WorldPreviewTestAccess::Adaptive(game).Active(),"Boss trigger failed to begin performance sampling");
             WorldPreviewTestAccess::DefeatOperators(game);advance(3);

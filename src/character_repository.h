@@ -23,6 +23,8 @@ public:
     void Save(const Character& character) override;
     // Copies local artwork into managed storage before committing metadata.
     Character Import(const std::filesystem::path& jsonFile);
+    // Removes only the local definition from the roster; artwork remains recoverable.
+    std::filesystem::path Remove(const std::string& id);
     [[nodiscard]] const std::filesystem::path& Root() const { return root_; }
 private:
     std::filesystem::path root_;

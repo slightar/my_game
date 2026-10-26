@@ -38,6 +38,10 @@ public:
                           int row, float time, Color tint = WHITE) const;
     void DrawAnimatedCharacter(const Character& character, Vector2 feet, int facing,
                                const CharacterAnimator& animator, Color tint = WHITE) const;
+    [[nodiscard]] bool HasTexasNormalSlash() const;
+    void DrawTexasNormalSlash(Vector2 pivot, int facing, float age, float size, Color tint=WHITE) const;
+    void DrawCombatImpact(Vector2 center, float progress, float width, int facing=1, Color tint=WHITE) const;
+    void DrawCombatSlash(Vector2 center, float progress, float width, int facing=1, Color tint=WHITE) const;
     void DrawCustomSkill(const std::string& id, int slot, Rectangle destination) const;
 
     [[nodiscard]] bool HasPortrait() const;
@@ -121,5 +125,6 @@ private:
     Texture2D texasSkill2Arc_{};
     Texture2D texasSkill2Impact_{};
     Texture2D texasSword_{};
+    Texture2D texasNormalSlash_{};
     Texture2D texasSkillIcons_[2]{};
 };

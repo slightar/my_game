@@ -9,11 +9,12 @@
 #include <array>
 #include <string>
 #include <vector>
+#include <set>
 
 class UiFont;
 class CharacterArt;
 
-enum class MenuAction { None, StartBattle, StartEnemyTrial, StartWorldPreview, StartDeveloperRoom, Quit };
+enum class MenuAction { None, StartBattle, StartEnemyTrial, StartWorldPreview, StartDeveloperRoom, CreateCharacter, DeleteCharacter, Quit };
 enum class MenuFeedback { None, Select, Confirm, Back, Denied };
 
 class MainMenu {
@@ -37,6 +38,8 @@ public:
     void OpenSettings() { page_ = Page::Settings; }
     void OpenCharacterSelect();
     void SetCustomCharacters(std::vector<Character> characters);
+    void SetDeletableCharacters(std::set<std::string> ids) { deletableCharacters_=std::move(ids); }
+    const std::string& RequestedDeletion() const { return deletingCharacter_; }
     [[nodiscard]] int SelectedCharacterIndex(int slot) const;
     [[nodiscard]] const Character* CharacterForSelection(int selection) const;
     [[nodiscard]] std::string CharacterNameForSelection(int selection) const;
@@ -92,6 +95,9 @@ private:
     std::array<int, 2> characterLineup_{0, 1};
     std::array<int, 2> draftCharacterLineup_{0, 1};
     std::vector<Character> customCharacters_;
+    std::set<std::string> deletableCharacters_;
+    std::string deletingCharacter_;
+    bool confirmingDeletion_=false;
     int archiveCategory_ = 0, archiveSelection_ = 0;
     int equipmentSlot_ = 0, equipmentSelection_ = 0;
     int settingsSelection_ = 0, keySelection_ = 0;

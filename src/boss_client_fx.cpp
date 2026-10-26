@@ -16,7 +16,20 @@ float Envelope(float progress,float attack=.12F){
     return Saturate(progress/attack)*Saturate((1-progress)/(1-attack));
 }
 }
-BossClientFx::BossClientFx() {
+BossClientFx::BossClientFx() : resources_(AcquireResources()),
+    timelines_(resources_->timelines_), textures_(resources_->textures_) {}
+
+std::shared_ptr<BossClientFx::Resources> BossClientFx::AcquireResources() {
+    static std::weak_ptr<Resources> cache;
+    auto resources = cache.lock();
+    if (!resources) {
+        resources = std::make_shared<Resources>();
+        cache = resources;
+    }
+    return resources;
+}
+
+BossClientFx::Resources::Resources() {
     const auto root=Utf8Path(GetApplicationDirectory())/"assets/enemies/bosses/effects";
     for(const auto& layerRoot:{root,root/"crown_client",root/"w_client"}) {
         try {
@@ -71,7 +84,8 @@ bool BossClientFx::TimelineLayer(const char* clip,const char* name,float seconds
     if(additive)EndBlendMode();
     return true;
 }
-BossClientFx::~BossClientFx(){for(auto& [name,t]:textures_)UnloadTexture(t);}
+BossClientFx::~BossClientFx() = default;
+BossClientFx::Resources::~Resources(){for(auto& [name,t]:textures_)UnloadTexture(t);}
 bool BossClientFx::Ready() const {
     return ReadyFor(StoryBossKind::FrostNova)&&ReadyFor(StoryBossKind::Patriot);
 }
@@ -242,6 +256,7 @@ void BossClientFx::DrawStory(const StoryBoss& b,const UiFont& font) const {
         return;
     }
     if(b.Kind()!=StoryBossKind::W)return;
+    DrawExpansion(b,font);
     for(const auto& v:b.Visuals()) {
         if(v.kind==BossFx::WExplosion||v.kind==BossFx::WC4Explosion)
             ExplosionSmoke(v.position,85*v.scale,v.age,v.kind==BossFx::WC4Explosion);
@@ -263,6 +278,7 @@ void BossClientFx::DrawStory(const StoryBoss& b,const UiFont& font) const {
         font.Draw(mine.fuse>=0?TextFormat("地雷 %.1fs",mine.fuse):mine.age<.8F?"待激活":"地雷",p.x-27,p.y-43,14,color);
     }
     for(const auto& blast:b.Blasts()) {
+        if(blast.airburst)continue;
         if(blast.timer>0) {
             const Color color=blast.tracking>0?ORANGE:RED;
             BeginBlendMode(BLEND_ADDITIVE);
@@ -312,6 +328,7 @@ void BossClientFx::DrawStory(const StoryBoss& b,const UiFont& font) const {
 }
 void BossClientFx::Draw(const StoryBoss& b,const UiFont& font) const {
     if(!b.TwoLives()||!b.Active())return;const auto f=b.Feet();const bool frost=b.Kind()==StoryBossKind::FrostNova;
+    DrawExpansion(b,font);
     if(b.State()==StoryBossState::Revive)Revival(b,b.StateTime(),.75F);
     else if(b.Invulnerability()>0)Revival(b,b.Elapsed(),.65F);
     if(frost&&b.PhaseTwo()) {
@@ -350,7 +367,7 @@ void BossClientFx::Draw(const StoryBoss& b,const UiFont& font) const {
                 Quad("water_05",{z.position.x,z.position.y-8},z.radius*2,42,0,Fade(Ice,.24F+.24F*growth));
                 EndBlendMode();
                 TerminalUi::Surface({z.position.x-57,z.position.y-92,114,24},Fade(TerminalUi::Ink,.88F),Ice);
-                font.Draw(TextFormat("攻击修复 %.0f/4",std::ceil(z.durability)),z.position.x-51,z.position.y-88,13,Ice);
+                font.Draw(TextFormat("HP %.2f/%.0f",z.durability,z.maxDurability),z.position.x-51,z.position.y-88,13,Ice);
             }
         }
         if(z.kind==BossFx::IceRain&&z.remaining>0) {
@@ -403,7 +420,7 @@ void BossClientFx::Draw(const StoryBoss& b,const UiFont& font) const {
         }
     }
     for(const auto& m:b.Missiles())if(m.life>0) {
-        if(m.kind==BossFx::Spear) {
+        if(m.kind==BossFx::Spear||m.kind==BossFx::SpearLance) {
             const float angle=std::atan2(m.velocity.y,m.velocity.x)*180/3.14159265F+90;
             const float length=std::max(1.0F,std::hypot(m.velocity.x,m.velocity.y));
             const Vector2 direction{m.velocity.x/length,m.velocity.y/length};
@@ -524,6 +541,7 @@ void BossClientFx::Draw(const StoryBoss& b,const UiFont& font) const {
 }
 void BossClientFx::DrawForeground(const StoryBoss& b) const {
     if(!b.Active())return;
+    DrawExpansionForeground(b);
     for(const auto& v:b.Visuals()) {
         const float rotation=v.facing>0?0.0F:180.0F;
         if(v.kind==BossFx::WMuzzle) {

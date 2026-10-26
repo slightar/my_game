@@ -48,6 +48,7 @@ public:
         ShadowPause,
         ShadowFinalWindup,
         ShadowFinal,
+        MirrorWindup, MirrorVolley, AmbushWindup, Ambush,
         Recover,
         Defeated
     };
@@ -61,6 +62,9 @@ public:
     std::size_t DartCount() const {return darts_.size();}
     Vector2 ShadowAim() const {return shadowAim_;}
     Vector2 ShadowLanding() const {return shadowLanding_;}
+    struct Echo {Vector2 position{};float delay=0,remaining=.20F,age=0;bool consumed=false;};
+    const std::vector<Echo>& Echoes() const {return echoes_;}
+    Vector2 EchoAim() const {return fanAim_;}
     static constexpr float ShadowSlashDuration(int strike) {return strike<2?.30F:.18F;}
     int ShadowStrike() const {return shadowStrike_;}
     bool ShadowActive() const;
@@ -88,6 +92,9 @@ private:
     struct ShadowTrace {Vector2 from{},to{};float age=0;int facing=1;bool final=false;};
     struct BladeSweep {Vector2 from{},to{};int strike=0;};
     void LaunchFan();
+    void StartMirror(Vector2 player);
+    void StartAmbush(Vector2 player);
+    void LaunchMirror();
     void LaunchDarts();
     void UpdateDarts(float deltaTime);
     void DrawBattleSprite(Texture2D battleSprite_) const;
@@ -125,6 +132,9 @@ private:
     std::vector<BladeSweep> bladeSweeps_;
     unsigned effectRevision_=0;
     EffectCue effectCue_=EffectCue::Charge;
+    std::vector<Echo> echoes_;
+    float mirrorCooldown_=12,ambushCooldown_=19;
+    int mirrorHalf_=1;
 };
 
 // Texture ownership stays outside the reusable, headless combat simulation.

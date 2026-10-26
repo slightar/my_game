@@ -62,10 +62,11 @@ void MainMenu::DrawCityStage(const UiFont& font) const {
     font.Skin().Draw("stage_bg",{0,91,1280,562});
     DrawRectangleGradientH(0,153,880,490,Fade(Ink,.15F),Fade(Ink,.52F));
     const int chapter=Chapter(mapScroll_+220);
-    for(int i=0;i<6;++i){const auto r=PressedRect(Tab(i));DrawRectangleRec(r,Fade(Ink,.75F));
-        font.Draw(TextFormat("SECTOR  %02d",i),r.x+12,r.y+8,11,Paper);
-        Fit(font,tabs[i],{r.x+12,r.y+23,r.width-24,20},14,Paper);PressedVeil(Tab(i));}
-    const auto tab=Tab(chapter);DrawRectangle(int(tab.x),int(tab.y+tab.height-3),int(tab.width),3,Orange);
+    for(int i=0;i<6;++i){const auto r=PressedRect(Tab(i));const bool active=i==chapter;
+        DrawRectangleRec(r,active?Paper:Fade(Ink,.9F));
+        font.Draw(TextFormat("SECTOR  %02d",i),r.x+12,r.y+8,11,active?OnPaper:Muted);
+        Fit(font,tabs[i],{r.x+12,r.y+23,r.width-24,20},14,active?Ink:Paper);PressedVeil(Tab(i));}
+    const auto tab=Tab(chapter);DrawRectangle(int(tab.x),int(tab.y+tab.height-3),int(tab.width),3,Blue);
     const std::string art="stage_scene_main_"+std::to_string(chapter);
     font.Skin().Draw(art.c_str(),{55,171,310,247},Fade(WHITE,.17F));
     for(const auto& route:WorldLayout::Routes){
@@ -91,9 +92,9 @@ void MainMenu::DrawCityStage(const UiFont& font) const {
         font.Draw(visited?"已探索":available?"可进入":"尚未抵达",d.x+38,d.y+75,12,available?Paper:Muted);PressedVeil(r);
     }
     const auto* selected=WorldLayout::Find(mapPreview_);
-    font.Skin().Draw("stage_btn_shadow",{876,160,372,484});
+    Surface({887,171,347,463},Ink);
     if(selected&&progress_.RegionVisible(selected->id)){
-        font.Skin().Draw("stage_sprite_background",{887,171,347,463});
+        Surface({887,171,347,463},Paper);
         const std::string picture="stage_main_"+std::to_string(Chapter(CityPosition(selected->id).x));
         font.Skin().Draw(picture.c_str(),{899,181,323,191});font.Skin().Draw("stage_btn_close",PressedRect(Close));PressedVeil(Close);
         Fit(font,selected->name,{909,380,300,34},28,Ink);
@@ -103,7 +104,7 @@ void MainMenu::DrawCityStage(const UiFont& font) const {
         font.Draw("区域探索 / 切城行动",909,494,16,Ink);
         const bool available=progress_.RegionAvailable(selected->id);
         font.Draw(available?"进入区域，沿出口继续探索":"沿已开放的主线出口抵达此区域",909,530,14,Ink);
-        const auto start=PressedRect(Start);font.Skin().DrawRegion("stage_bkg_hilight",{18,10,130,34},start,available?WHITE:Fade(WHITE,.4F));
+        const auto start=PressedRect(Start);Surface(start,available?Blue:Panel);
         font.Skin().Draw("stage_confirm_icon",{start.x+15,start.y+10,32,32},Paper);
         Fit(font,available?"开始行动":"尚未抵达",{start.x+64,start.y,start.width-84,start.height},27,Paper);PressedVeil(Start);
     }else{font.Skin().Draw(art.c_str(),{889,198,343,273});font.Draw("请选择行动节点",970,493,21,Paper);}

@@ -1,6 +1,7 @@
 #include "adaptive_difficulty.h"
 #include "enemy_system.h"
 #include "story_boss.h"
+#include "world_encounter.h"
 #include <iostream>
 #include <stdexcept>
 #include <limits>
@@ -32,8 +33,57 @@ int main(){try {
     Check(d.Ability()==0&&d.Profile().health>=.9F,"Repeated failures escaped floor");
     Check(high.health<=1.55F&&high.movement<=1.25F&&high.recovery>=.70F&&high.spawnInterval>=.70F,"Unsafe parameter bounds");
     Check(std::isfinite(CombatDifficulty::FromAbility(std::numeric_limits<float>::quiet_NaN()).health),"Invalid estimate created NaN");
+    Check(CombatDifficulty::FromAbility(std::numeric_limits<float>::quiet_NaN()).FormationTier()==1,
+          "Invalid estimate created an unsafe roster");
+
+    AdaptiveDifficulty progression;
+    Check(WorldEncounter::Formation("approach_bridge",0,progression.Profile()).size()==4,
+          "Initial battle did not keep standard roster");
+    for(int i=0;i<3;++i)Win(progression,12);
+    Check(WorldEncounter::Formation("approach_bridge",0,progression.Profile()).size()==5,
+          "Actual clean wins failed to unlock additional troop roles");
+    for(int i=0;i<5;++i)Win(progression,12);
+    Check(WorldEncounter::Formation("approach_bridge",0,progression.Profile()).size()==6,
+          "Sustained clean wins failed to increase wave size");
+    for(int i=0;i<6;++i){progression.Begin(30,6);progression.Finish(false);}
+    Check(WorldEncounter::Formation("approach_bridge",0,progression.Profile()).size()==3,
+          "Repeated defeats failed to reduce troops");
 
     const auto low=CombatDifficulty::FromAbility(0),hard=CombatDifficulty::FromAbility(1);
+    for(const char* region:{"bridge","wtower","ice","industry"}) {
+        StoryBoss gentleBoss,hardBoss;
+        gentleBoss.Enter(region,4000,low);hardBoss.Enter(region,4000,hard);
+        Check(hardBoss.MaxHealth()>gentleBoss.MaxHealth(),"A story Boss ignored adaptive health");
+        gentleBoss.TryStart(gentleBoss.TriggerX());hardBoss.TryStart(hardBoss.TriggerX());
+        gentleBoss.Update(.25F,{1200,605});hardBoss.Update(.25F,{1200,605});
+        Check(gentleBoss.State()==hardBoss.State()&&gentleBoss.StateTime()==hardBoss.StateTime(),
+              "Adaptive health changed Boss arrival animation timing");
+    }
+    WorldEncounter patrol;
+    EnemySystem waves;
+    auto chosen=hard;
+    const float width=WorldLayout::Find("approach_ice")->width;
+    patrol.Enter("approach_ice",waves,chosen);
+    patrol.Update(width*.29F,waves);
+    Check(waves.Pending()==0,"Adaptive roster spawned before player advancement");
+    patrol.Update(width*.34F,waves);
+    Check(waves.Pending()==6,"World encounter failed to enqueue adaptive six-unit wave");
+    waves.Update(.25F,{100,605});
+    Check(waves.Units().empty(),"Adaptive roster removed the first-spawn warning");
+    chosen=low;
+    for(int frame=0;frame<2400&&!waves.Cleared();++frame) {
+        waves.Update(1.0F/60,{100,605});
+        for(const auto& unit:waves.Units())if(unit.Targetable())
+            waves.Damage(unit.id,10000,DamageType::Arts,{unit.feet.x-100,605});
+    }
+    Check(waves.Cleared(),"First adaptive wave could not be completed");
+    patrol.Update(width*.70F,waves);
+    Check(waves.Pending()==6&&waves.Difficulty().health==hard.health,
+          "Second wave changed frozen troop count or strength");
+    patrol.Enter("approach_ice",waves,chosen);
+    patrol.Update(width*.34F,waves);
+    Check(waves.Pending()==3&&waves.Difficulty().health==low.health,
+          "Retry ignored lower strength and troop count");
     EnemySystem easy,challenging;
     easy.ResetEncounter({EnemyKind::Soldier,EnemyKind::Soldier},1800,80,2700,low);
     challenging.ResetEncounter({EnemyKind::Soldier,EnemyKind::Soldier},1800,80,2700,hard);
@@ -62,5 +112,5 @@ int main(){try {
     for(int i=0;i<300&&w.State()!=StoryBossState::C4;++i)w.Update(1.0F/60,player);
     Check(w.PhaseTwo()&&w.Blasts().size()==3,"Scaled W lost half-health C4");
     Check(w.Blasts()[0].timer>3.19F&&w.Blasts()[0].tracking>1.69F,"Hard mode shortened C4 dodge warning");
-    std::cout<<"Adaptive evaluation, frozen profiles, success/failure limits, mob pacing and Boss warnings passed\n";
+    std::cout<<"Adaptive performance learning, 3/4/5/6 troops, frozen waves, all four Bosses, retries and warning timing passed\n";
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

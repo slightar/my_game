@@ -21,9 +21,14 @@ enum class StoryBossState { Dormant, Arrival, Hunt, MeleeWindup, Strike,
     RushWindup, Rush, AirSlashWindup, AirSlash, DartWindup, FanRetreat,
     ShadowWindup, ShadowSlash, ShadowPause, ShadowFinalWindup, ShadowFinal,
     BarrageWindup, Barrage, FrostFanWindup, SpearRainWindup, SpearRain,
-    FrostStepWindup, FrostStep, LeapWindup, Leap };
+    FrostStepWindup, FrostStep, LeapWindup, Leap,
+    MirrorWindup, MirrorVolley, AmbushWindup, Ambush,
+    AirburstWindup, Airburst, RemoteMineWindup, RemoteMine,
+    PrismWindup, Prism, ThornWindup, Thorn,
+    QuakeWindup, Quake, LanceWindup, Lance };
 enum class BossFx { FrostBolt, IceRing, BlackIce, ColdWave, Revival, PatriotSlash, Spear, Ritual, Impact,
-    IceRain, GroundWave, WExplosion, WC4Explosion, CrownSlash, SpearRain, FrostTrail, WMuzzle };
+    IceRain, GroundWave, WExplosion, WC4Explosion, CrownSlash, SpearRain, FrostTrail, WMuzzle,
+    FrostPrism, FrostThorn, PatriotQuake, SpearLance };
 struct BossMissile {
     BossFx kind=BossFx::FrostBolt;
     Vector2 position{},previous{},velocity{};
@@ -35,6 +40,9 @@ struct BossZone {
     float radius=100,delay=0,remaining=.6F,age=0,pulse=0;
     bool consumed=false;
     float durability=0;
+    Vector2 target{};
+    bool visualStarted=false;
+    float maxDurability=0;
 };
 struct BossVisual {
     BossFx kind=BossFx::Impact;
@@ -52,10 +60,13 @@ struct BossBlast {
     float radius=85,timer=0,tracking=0,offset=0,remaining=.35F;
     bool c4=false,consumed=false;
     bool visualStarted=false;
+    bool airburst=false;
 };
 struct BossMine {
     Vector2 position{};
     float age=0, fuse=-1;
+    bool remote=false;
+    float durability=2;
 };
 
 // Main-story encounter simulation and excursion progress. No textures, audio or input.
@@ -105,6 +116,7 @@ public:
     bool PhaseTwo() const {return phaseTwo_;}
     float AnimationTime() const {return animation_;}
     float StateTime() const {return stateTime_;}
+    float StateDuration() const {return stateDuration_;}
     float Flash() const {return flash_;}
     float StunTime() const {return stun_;}
     float BlinkTarget() const {return blinkX_;}
@@ -114,6 +126,7 @@ public:
     float EvadeTarget() const {return evadeTarget_;}
     float GuardIntegrity() const {return guardIntegrity_;}
     int VolleyCount() const {return volleyCount_;}
+    int RemoteMineCount() const {return remoteMineCount_;}
     bool LowArcVolley() const {return lowArcVolley_;}
     std::vector<Vector2> FrostFanVelocities() const;
     StoryBossKind Kind() const {return kind_;}
@@ -156,6 +169,14 @@ private:
     void LaunchSpear();
     void LaunchGroundWave(float impactScale=1);
     void AddVisual(BossFx kind,Vector2 position,float duration,float scale=1);
+    void StartAirburst(Vector2 player);
+    void StartRemoteMines(Vector2 player);
+    void DeployRemoteMines();
+    void StartPrism(Vector2 player);
+    void StartThorns(Vector2 player);
+    bool StartPatriotExpansion(Vector2 player);
+    void TickExpansionHazards();
+    bool HitExpansionObject(Bullet& bullet,Vector2 previous);
     StoryBossKind kind_=StoryBossKind::None;
     StoryBossState state_=StoryBossState::Dormant;
     StoryBossState recoveryFrom_=StoryBossState::Hunt;
@@ -163,7 +184,7 @@ private:
     std::set<std::string> cleared_;
     Vector2 feet_{},aim_{};
     float health_=0,trigger_=0,left_=0,right_=0;
-    float timer_=0,stateTime_=0,animation_=0,skillCooldown_=0,blinkX_=0;
+    float timer_=0,stateTime_=0,stateDuration_=0,animation_=0,skillCooldown_=0,blinkX_=0;
     float stun_=0,flash_=0;
     float evadeCooldown_=0,mineCooldown_=0,firePressure_=0,evadeStart_=0,evadeTarget_=0,fallVelocity_=0;
     int attackSerial_=0,volleyFired_=0,strafeDirection_=1,volleyCount_=3,mineCount_=2;
@@ -188,4 +209,6 @@ private:
     std::vector<BossMissile> missiles_;
     std::vector<BossZone> zones_;
     std::vector<BossVisual> visuals_;
+    std::array<float,2> expansionCooldown_{10,18};
+    int remoteMineCount_=3;
 };

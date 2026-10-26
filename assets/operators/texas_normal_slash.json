@@ -1,0 +1,19 @@
+{
+  "asset": "texas_normal_slash.png",
+  "columns": 4,
+  "rows": 3,
+  "frames": 12,
+  "duration": 0.17,
+  "source": "Generated with built-in imagegen; visual approximation, not an original client texture.",
+  "references": [
+    "https://prts.wiki/w/德克萨斯/spine",
+    "https://prts.wiki/w/德克萨斯"
+  ],
+  "direction": "right-facing open semicircle; mirror horizontally for left",
+  "stages": [
+    "ignition",
+    "crescent sweep",
+    "dissipation"
+  ],
+  "scope": "Texas normal melee and sword-wave visuals only"
+}

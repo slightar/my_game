@@ -4,14 +4,18 @@
 #include <string>
 class UiFont;
 
-// Menu-only design tokens. Battle HUD keeps its existing TacticalUi theme.
+// Shared terminal palette. Page composition carries the contrast, not decoration.
 namespace TerminalUi {
 inline constexpr Color Ink{28, 31, 34, 255};
 inline constexpr Color Paper{239, 240, 237, 255};
 inline constexpr Color Muted{157, 166, 172, 255};
-inline constexpr Color Blue{0, 153, 204, 255};
-inline constexpr Color Orange{221, 112, 45, 255};
+inline constexpr Color Blue{0, 116, 153, 255};
+inline constexpr Color Orange{196, 88, 30, 255};
 inline constexpr Color Warm{190, 144, 129, 255};
+inline constexpr Color Canvas{18, 22, 26, 255};
+inline constexpr Color Panel{36, 42, 47, 255};
+inline constexpr Color SoftPaper{218, 224, 225, 255};
+inline constexpr Color OnPaper{75, 86, 93, 255};
 inline constexpr Rectangle Back{28, 22, 98, 48};
 inline constexpr Rectangle HomeButtons[] = {
     {720, 157, 492, 147}, {720, 407, 238, 99}, {974, 407, 238, 99},
@@ -24,6 +28,10 @@ inline constexpr Rectangle CharacterSlots[] = {
     {840, 183, 176, 78}, {1032, 183, 176, 78}};
 inline constexpr Rectangle CharacterAssign{840, 553, 176, 50};
 inline constexpr Rectangle CharacterConfirm{1032, 553, 176, 50};
+inline constexpr Rectangle CharacterDelete{816,94,198,27};
+inline constexpr Rectangle DeleteCancel{430,426,190,52}, DeleteConfirm{650,426,200,52};
+inline constexpr Rectangle RosterRow(int row) { return {60, 183.0F + row*67, 250, 57}; }
+inline constexpr Rectangle SettingsRow(int row) { return {304,166.0F+row*88,895,71}; }
 inline constexpr Rectangle MapArea{85, 184, 1110, 412};
 inline constexpr Rectangle MapTask{219, 606, 300, 32};
 inline constexpr Rectangle Confirm{790, 545, 385, 52};
@@ -33,6 +41,9 @@ inline constexpr Rectangle ResetConfirm{737, 438, 310, 57};
 inline constexpr Rectangle Category(int i) { return {56, 150.0F + i * 74, 243, 62}; }
 void Background(const UiFont& font, const char* title, const char* subtitle, bool back = true);
 void Surface(Rectangle rect, Color fill = Ink, Color stripe = BLANK);
+void HomeSurface(Rectangle rect, Color fill = Ink);
+void SectionHeading(const UiFont& font, Rectangle rect, const char* title,
+                    const char* subtitle, bool light = false);
 void Button(const UiFont& font, Rectangle rect, const char* title, bool selected = false,
             Color fill = Paper, Color text = Ink);
 void SetPointerState(const UiPointer& pointer);

@@ -1,5 +1,6 @@
 #include "story_boss_renderer.h"
 #include "ui_font.h"
+#include "boss_animation_timing.h"
 #include "ui_theme.h"
 #include "file_path.h"
 #include "nlohmann/json.hpp"
@@ -71,25 +72,31 @@ void StoryBossRenderer::Draw(const StoryBoss& boss,const UiFont& font) const {
     const float moveRate=w&&boss.Moving()?1.65F:1;
     int row=boss.Moving()?1:0,frame=int(boss.AnimationTime()*moveRate*20/std::max(.01F,art.durations[row]))%20;
     const auto progress=[](float time,float duration,int first,int last){return std::clamp(first+int(time/duration*(last-first+1)),first,last);};
+    const auto ready=[&](float pose=.35F,float contact=.60F){return BossAnimationTiming::Frame(BossAnimationTiming::Windup(boss.StateTime(),boss.StateDuration(),pose,contact),20);};
+    const auto release=[&](float contact=.60F,float duration=.55F){return BossAnimationTiming::Frame(BossAnimationTiming::Release(boss.StateTime(),contact,duration),20);};
     switch(boss.State()) {
     case Arrival:if(!w){row=4;frame=progress(boss.StateTime(),.75F,0,19);}break;
     case MeleeWindup:row=2;frame=progress(boss.StateTime(),.60F,0,8);break;
     case Strike:row=2;frame=progress(boss.StateTime(),.22F,9,15);break;
     case Disappear:row=3;frame=progress(boss.StateTime(),.40F,0,19);break;
     case Appear:row=4;frame=progress(boss.StateTime(),.38F,0,19);break;
-    case GrenadeWindup:row=2;frame=progress(boss.StateTime(),.85F,0,12);break;
-    case VolleyWindup:row=2;frame=progress(boss.StateTime(),.85F,0,12);break;
-    case BarrageWindup:row=2;frame=progress(boss.StateTime(),1.1F,0,10);break;
-    case Barrage:row=2;frame=progress(boss.StateTime(),1.8F,11,19);break;
-    case Volley:row=2;frame=4+int(boss.StateTime()/.24F*9)%9;break;
+    case GrenadeWindup:
+    case AirburstWindup:row=2;frame=ready();break;
+    case Airburst:row=2;frame=release();break;
+    case RemoteMineWindup:row=3;frame=ready(.35F,.65F);break;
+    case RemoteMine:row=3;frame=release(.65F,1.25F);break;
+    case VolleyWindup:row=2;frame=ready(.35F,.46F);break;
+    case BarrageWindup:row=2;frame=ready(.35F,.60F);break;
+    case Barrage:row=2;frame=release();break;
+    case Volley:row=2;frame=BossAnimationTiming::Frame(BossAnimationTiming::Pulse(boss.StateTime(),.24F,.46F,.60F,.42F),20);break;
     case MineWindup:row=3;frame=progress(boss.StateTime(),.70F,0,10);break;
     case EvadeWindup:row=1;frame=0;break;
     case Evade:row=1;break;
-    case C4:row=3;frame=progress(boss.StateTime(),3.2F,0,19);break;
+    case C4:row=3;frame=progress(boss.StateTime(),boss.StateDuration(),0,19);break;
     case Recover:
         if(w&&boss.Moving())break;
         if(boss.RecoveryFrom()==Strike){row=2;frame=progress(boss.StateTime(),.60F*boss.Difficulty().recovery,16,19);}
-        else if(boss.RecoveryFrom()==GrenadeWindup){row=2;frame=progress(boss.StateTime(),1.2F*boss.Difficulty().recovery,13,19);}
+        else if(boss.RecoveryFrom()==GrenadeWindup){row=2;frame=release();}
         break;
     case Defeated:row=w?4:5;if(boss.StateTime()>art.durations[row])return;frame=progress(boss.StateTime(),art.durations[row],0,19);break;
     default:break;

@@ -18,7 +18,9 @@ void Reach(StoryBoss& b,StoryBossState state,Vector2 p){
 int Seals(const StoryBoss& b){return int(std::count_if(b.Zones().begin(),b.Zones().end(),[](auto& z){return z.kind==BossFx::BlackIce&&z.remaining>0;}));}
 Rectangle Body(float x,float feet=GameConfig::kFloorY){return {x-19,feet-78,38,78};}
 void PhaseTwo(StoryBoss& b,Vector2 p){
-    b.Damage(10000);Check(b.State()==StoryBossState::Revive&&!b.Defeated()&&!b.PhaseTwo(),"First death cleared encounter");
+    Bullet phaseHit;phaseHit.kind=BulletKind::MeleeSlash;phaseHit.position=b.Position();phaseHit.radius=40;phaseHit.damage=10000;phaseHit.lifetime=1;
+    Check(b.ResolveBullet(phaseHit,phaseHit.position)&&phaseHit.impactEvents.size()==1&&!phaseHit.impactEvents.front().killed,"Boss revival triggered kill feedback");
+    Check(b.State()==StoryBossState::Revive&&!b.Defeated()&&!b.PhaseTwo(),"First death cleared encounter");
     Check(!b.Targetable()&&!b.Damage(10000),"Reviving Boss took damage");
     Tick(b,b.RevivalDuration()-.1F,p);Check(!b.PhaseTwo(),"Revival completed prematurely");
     Tick(b,.12F,p);Check(b.PhaseTwo()&&b.Health()==b.MaxHealth(),"Revival failed to refill second life");
@@ -151,6 +153,43 @@ int main(int argc,char** argv){try {
     Check(!b.SealedGroundAt(sealX)&&Seals(b)==1,"Four attacks failed to restore ground support");
     Tick(b,19.0F,{220,605});
     Check(!b.SealedGroundAt(otherSealX),"Sealed floor never thawed after its duration");
+    {
+        // Real HP: fractional damage stays fractional, and a heavy hit can repair a pit immediately.
+        b.Reset();Start(b,StoryBossKind::FrostNova);
+        Reach(b,StoryBossState::BlackIceWindup,p);Tick(b,2.5F,p);
+        const float x=b.SealedFloor().front().x+60;
+        const auto pit=[&](float at)->const BossZone& {
+            const auto found=std::find_if(b.Zones().begin(),b.Zones().end(),[&](const auto& zone){return zone.kind==BossFx::BlackIce&&std::abs(zone.position.x-at)<.01F;});
+            Check(found!=b.Zones().end(),"HP fixture lost its pit");return *found;
+        };
+        const auto hit=[&](float at,float damage) {
+            Bullet shot{{at-95,GameConfig::kFloorY-55},{1050,0},1,7.5F,damage};
+            const auto previous=shot.position;shot.position.x=at;
+            Check(b.BreakSeal(shot,previous)&&shot.hasHit&&shot.lifetime==0,"Valid HP damage failed to consume the projectile");
+            Check(!b.BreakSeal(shot,previous),"The same hit damaged a pit more than once");
+        };
+        Check(pit(x).durability==4&&pit(x).maxDurability==4,"First-life pit did not start at 4 HP");
+        for(float damage:{0.0F,-2.0F}) {
+            Bullet shot{{x,GameConfig::kFloorY-55},{},1,7.5F,damage};
+            Check(!b.BreakSeal(shot,shot.position)&&!shot.hasHit&&pit(x).durability==4,"Non-damaging hit changed pit HP");
+        }
+        hit(x,.25F);Check(pit(x).durability==3.75F,"Low damage was rounded into a fixed hit count");
+        hit(x,2);Check(pit(x).durability==1.75F&&b.SealedGroundAt(x),"A strong hit did not deduct its real damage");
+        b.Damage(10000);Tick(b,b.RevivalDuration()+.05F,p);
+        Check(b.PhaseTwo()&&pit(x).maxDurability==8&&pit(x).durability==5.75F,
+              "Revival failed to harden the surviving pit while preserving previous damage");
+        hit(x,5.75F);Check(!b.SealedGroundAt(x),"Enough damage did not immediately restore the floor");
+        Reach(b,StoryBossState::BlackIceWindup,{750,605});
+        const auto freshIt=std::find_if(b.Zones().begin(),b.Zones().end(),[](const auto& zone){return zone.kind==BossFx::BlackIce&&zone.delay>0;});
+        Check(freshIt!=b.Zones().end(),"Second-life cast did not create a new pit");
+        const auto fresh=*freshIt;
+        Check(fresh.durability==8&&fresh.maxDurability==8,"New revived pit did not start at 8 HP");
+        Tick(b,2.5F,{750,605});
+        hit(fresh.position.x,3);hit(fresh.position.x,.125F);
+        Check(pit(fresh.position.x).durability==4.875F,"Second-life HP did not retain fractional damage");
+        hit(fresh.position.x,4.875F);
+        Check(!b.SealedGroundAt(fresh.position.x),"Second-life pit required a fixed number of hits instead of 8 damage");
+    }
     b.Reset();Start(b,StoryBossKind::FrostNova);
     bool volley=false;
     for(int i=0;i<10000&&!volley;++i) {
@@ -230,7 +269,9 @@ int main(int argc,char** argv){try {
     Reach(b,StoryBossState::Combo,{b.Feet().x-100,605});Check(b.ComboCount()==4,"Marching four-hit combo missing");
     int hits=0;for(int i=0;i<170;++i){b.Update(Step,{b.Feet().x-100,605});if(b.AttackHits(Body(b.Feet().x-100),Body(b.Feet().x-100),source,&impact))++hits;}
     Check(hits==4,"Marching combo did not resolve four separate attacks");
-    b.Damage(10000);Check(b.State()==StoryBossState::Revive,"Patriot skipped revival");
+    Bullet phaseHit;phaseHit.kind=BulletKind::MeleeSlash;phaseHit.position=b.Position();phaseHit.radius=40;phaseHit.damage=10000;phaseHit.lifetime=1;
+    Check(b.ResolveBullet(phaseHit,phaseHit.position)&&phaseHit.impactEvents.size()==1&&!phaseHit.impactEvents.front().killed,"Boss revival triggered kill feedback");
+    Check(b.State()==StoryBossState::Revive,"Patriot skipped revival");
     Tick(b,1.1F,{1000,605});
     Check(!b.AttackHits(Body(b.Feet().x,GameConfig::kFloorY-100),Body(b.Feet().x,GameConfig::kFloorY-100),source,&impact),"Jump did not avoid revival sacrifice");
     Check(b.AttackHits(Body(b.Feet().x),Body(b.Feet().x),source,&impact)&&!impact.cold,"Patriot revival sacrifice dealt no damage");

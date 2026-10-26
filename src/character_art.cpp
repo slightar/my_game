@@ -156,11 +156,20 @@ void CharacterArt::DrawAnimatedCharacter(const Character& c, Vector2 feet, int f
         (a.animationMode == "auto" && (a.columns > 1 || a.rows > 1)));
     const int row = animator.Row(a);
     auto pose = animator.Pose();
-    const float strength = frames && row >= 0 ? 0 : a.motionStrength;
+    const bool hasActionFrames = frames && row >= 0 && row < static_cast<int>(textures.frames.size()) &&
+        !textures.frames[row].empty();
+    const float strength = hasActionFrames ? 0 : a.motionStrength;
     pose.scale = {1 + (pose.scale.x - 1) * strength, 1 + (pose.scale.y - 1) * strength};
     const float rootAngle = pose.angle * strength * facing;
     const Vector2 base{feet.x + pose.offset.x * a.height * strength * facing,
                        feet.y + pose.offset.y * a.height * strength};
+    // Authored flipbook cues for single-image characters; no geometric stand-ins.
+    // Melee is drawn at its actual bullet/hitbox by Game::DrawBullets.
+    if (animator.Attacking() && strength > 0 && animator.MotionStyle()!=CharacterMotionStyle::Melee) {
+        const float progress=animator.AttackProgress();
+        DrawCombatImpact({base.x+.45F*a.height*facing,base.y-.60F*a.height},
+                         progress,a.height*.34F,facing,tint);
+    }
     const auto rotate = [](Vector2 point, float degrees) {
         const float angle = degrees * DEG2RAD;
         return Vector2{point.x * std::cos(angle) - point.y * std::sin(angle),
@@ -297,6 +306,11 @@ CharacterArt::CharacterArt() {
         texasSkill2Battle_ = LoadTexture(texasSkill2BattlePath.c_str());
         SetTextureFilter(texasSkill2Battle_, TEXTURE_FILTER_BILINEAR);
     }
+    const std::string normalSlashPath=AssetPath("assets/operators/texas_normal_slash.png");
+    if(FileExists(normalSlashPath.c_str())) {
+        texasNormalSlash_=LoadTexture(normalSlashPath.c_str());
+        SetTextureFilter(texasNormalSlash_,TEXTURE_FILTER_BILINEAR);
+    }
     const char* texasEffectPaths[9] = {
         "assets/operators/texas_skill2_aura.png",
         "assets/operators/texas_skill2_slash_a.png",
@@ -348,6 +362,7 @@ void CharacterArt::ClearCustomCharacters() {
 }
 
 CharacterArt::~CharacterArt() {
+    if(IsTextureValid(texasNormalSlash_))UnloadTexture(texasNormalSlash_);
     if (facingRing_.id) UnloadTexture(facingRing_);
     if (facingArrow_.id) UnloadTexture(facingArrow_);
     ClearCustomCharacters();
@@ -872,6 +887,41 @@ void CharacterArt::DrawTexasSkill2TransitionOverlay(
         -14.0F * direction,
         Fade(Color{220, 237, 255, 255}, impactAlpha));
     EndBlendMode();
+}
+
+bool CharacterArt::HasTexasNormalSlash() const {
+    return IsTextureValid(texasNormalSlash_)&&texasNormalSlash_.width>=4&&texasNormalSlash_.height>=3;
+}
+void CharacterArt::DrawTexasNormalSlash(Vector2 pivot,int facing,float age,float size,Color tint) const {
+    constexpr float duration=.17F;
+    if(!HasTexasNormalSlash()||age<0||age>=duration)return;
+    const int frame=std::min(11,static_cast<int>(age/duration*12));
+    const float w=texasNormalSlash_.width/4.0F,h=texasNormalSlash_.height/3.0F;
+    const Rectangle source{(frame%4)*w,(frame/4)*h,facing<0?-w:w,h};
+    // Fixed blade pivot: only the painted frame changes, never a rotating polygon.
+    DrawTexturePro(texasNormalSlash_,source,{pivot.x,pivot.y,size,size*.82F},
+                   {size*.5F,size*.41F},0,ColorTint(tint,Color{255,219,48,255}));
+}
+
+// Both atlases contain 65 independently rendered cells (8 columns, 430x215).
+// Sample the source sequence, rather than rotating/scaling a static effect over time.
+void CharacterArt::DrawCombatImpact(Vector2 center,float progress,float width,int facing,Color tint) const {
+    if(!IsTextureValid(texasSkill2HitComposite_)||progress<0||progress>=1)return;
+    const int frame=std::min(64,static_cast<int>(progress*65));
+    const float cell=texasSkill2HitComposite_.width/8.0F;
+    // Crop transparent padding and anchor the painted contact burst on the target.
+    Rectangle source{(frame%8)*cell+cell*.55F,(frame/8)*cell*.5F+cell*.12F,cell*.45F,cell*.38F};
+    if(facing<0)source.width=-source.width;
+    const float height=width*.38F/.45F;
+    DrawTexturePro(texasSkill2HitComposite_,source,{center.x,center.y,width,height},{width*.5F,height*.5F},0,tint);
+}
+void CharacterArt::DrawCombatSlash(Vector2 center,float progress,float width,int facing,Color tint) const {
+    if(!IsTextureValid(texasSkill2Composite_)||progress<0||progress>=1)return;
+    const int frame=std::min(64,static_cast<int>(progress*65));
+    const float cell=texasSkill2Composite_.width/8.0F;
+    Rectangle source{(frame%8)*cell,(frame/8)*cell*.5F,cell,cell*.5F};
+    if(facing<0)source.width=-source.width;
+    DrawTexturePro(texasSkill2Composite_,source,{center.x,center.y,width,width*.5F},{width*.5F,width*.25F},0,tint);
 }
 
 void CharacterArt::DrawTexasSkill2Slash(Vector2 center, int facingDirection,

@@ -6,11 +6,17 @@
 // authored reference tests unchanged; only main-story gameplay opts in.
 struct CombatDifficulty {
     float health=1, movement=1, projectile=1, recovery=1, spawnInterval=1, cooldown=1;
+    // Neutral standalone encounters retain the authored four-unit formation.
+    float formationAbility=.30F;
+    int FormationTier() const {
+        const float a=std::isfinite(formationAbility)?std::clamp(formationAbility,0.0F,1.0F):.30F;
+        return a<.20F?0:a<.48F?1:a<.75F?2:3;
+    }
     static CombatDifficulty FromAbility(float ability) {
         if(!std::isfinite(ability))ability=.30F;
         const float a=std::clamp(ability,0.0F,1.0F);
         return {.90F+.65F*a,.95F+.30F*a,.95F+.30F*a,
-                1.12F-.42F*a,1.12F-.42F*a,1.12F-.42F*a};
+                1.12F-.42F*a,1.12F-.42F*a,1.12F-.42F*a,a};
     }
 };
 
@@ -22,6 +28,7 @@ public:
     float Ability() const {return ability_;}
     bool Active() const {return active_;}
     float Seconds() const {return seconds_;}
+    float ExpectedSeconds() const {return expected_;}
     int Completed() const {return completed_;}
     const char* Label() const {
         return ability_<.20F?"缓和":ability_<.48F?"标准":ability_<.75F?"进阶":"高压";

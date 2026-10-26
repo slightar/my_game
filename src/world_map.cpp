@@ -103,16 +103,14 @@ MenuAction MainMenu::UpdateWorldMap() {
 void MainMenu::DrawWorldMap(const UiFont& font) const {
     using namespace WorldLayout;
     using TerminalUi::Fit;
-    DrawRectangle(0,0,1280,720,Background);
-    TerminalUi::Button(font,TerminalUi::Back,"< 返回",pointer_.Hit(TerminalUi::Back),Panel,Text);
-    font.Draw("切尔诺伯格 / 城区横截面",146,27,28,Text);
-    font.Draw("区域规划 · 20 个区域 · 6 个层级",827,39,16,Muted);
-    DrawRectangleRec({30,88,1208,49},Color{42,37,53,255});
-    font.Draw("序章异常接入：诊疗所 → 魔王王座 → 茧笼断线 → 诊疗所重生",45,97,17,Pink);
-    font.Draw("王座属于非物理空间；终章由数据根系接入。",737,116,13,Muted);
+    TerminalUi::Background(font,"切尔诺伯格 / 城区横截面","REGION NETWORK / 20 REGIONS / 6 LAYERS");
+    DrawRectangleRec({30,98,1208,39},TerminalUi::Panel);
+    DrawRectangleRec({30,98,3,39},TerminalUi::Blue);
+    font.Draw("序章异常接入：诊疗所 → 魔王王座 → 茧笼断线 → 诊疗所重生",45,108,15,Text);
+    font.Draw("王座属于非物理空间；终章由数据根系接入。",860,111,12,Muted);
     for(int i=0;i<5;++i)TerminalUi::Button(font,Jump(i),JumpLabels[i],pointer_.Hit(Jump(i)),Panel,Text);
     for(int layer=0;layer<6;++layer) {
-        DrawRectangleRec({30,Y(layer)-31,896,62},layer%2?Color{19,32,43,255}:Panel);
+        DrawRectangleRec({30,Y(layer)-31,896,62},layer%2?TerminalUi::Canvas:TerminalUi::Panel);
         Fit(font,Layers[layer],{37,Y(layer)-10,90,24},14,layer==5?Pink:Muted);
     }
     // Clip in actual screen pixels, including letterboxing for non-1280 windows.
@@ -124,33 +122,36 @@ void MainMenu::DrawWorldMap(const UiFont& font) const {
         const auto box=Card(r,worldScroll_);const bool selected=worldRegion_==r.id;
         if(box.x+box.width<View.x||box.x>View.x+View.width)continue;
         const Color accent=Accent(r);
-        DrawRectangleRec(box,selected?Color{48,66,76,255}:Color{27,43,54,255});
+        DrawRectangleRec(box,selected?TerminalUi::Paper:TerminalUi::Panel);
         DrawRectangleLinesEx(box,selected?2:1,Fade(accent,selected?1:.70F));
         DrawRectangleRec({box.x,box.y,4,box.height},accent);
-        Fit(font,r.name,{box.x+12,box.y+7,132,21},18,Text);
-        Fit(font,r.subtitle,{box.x+12,box.y+30,132,15},12,accent);
+        Fit(font,r.name,{box.x+12,box.y+7,132,21},18,selected?TerminalUi::Ink:Text);
+        Fit(font,r.subtitle,{box.x+12,box.y+30,132,15},12,selected?TerminalUi::OnPaper:accent);
         TerminalUi::PressedVeil(box);
     }
     EndScissorMode();
     const auto& selected=*Find(worldRegion_);
-    DrawRectangleRec({943,152,307,490},Panel);
+    TerminalUi::Surface({943,152,307,490},TerminalUi::Paper);
+    DrawRectangleRec({943,152,307,39},TerminalUi::Ink);
     const Color accent=Accent(selected);
     DrawRectangleRec({943,152,307,3},accent);
-    font.Draw("区域信息",958,172,13,Muted);
-    Fit(font,selected.name,{957,198,280,36},29,Text);
-    font.Draw(Layers[selected.layer],958,244,16,accent);
-    Fit(font,selected.subtitle,{957,270,280,23},17,Muted);
-    TerminalUi::Wrap(font,selected.note,{957,303,280,56},15,Text);
+    font.Draw("区域信息",958,164,17,TerminalUi::Paper);
+    font.Draw("REGION / FILE",1120,168,10,Muted);
+    Fit(font,selected.name,{957,198,280,36},29,TerminalUi::Ink);
+    font.Draw(Layers[selected.layer],958,244,16,TerminalUi::OnPaper);
+    Fit(font,selected.subtitle,{957,270,280,23},17,TerminalUi::OnPaper);
+    TerminalUi::Wrap(font,selected.note,{957,303,280,56},15,TerminalUi::Ink);
     const auto ports=Ports(worldRegion_);
     for(int i=0;i<int(ports.size());++i) {
         const auto& port=ports[i];const Rectangle box{957,369+i*36.0F,280,30};
-        DrawRectangleRec(box,Color{32,49,60,255});
-        Fit(font,std::string(port.returning?"返回 / ":"前往 / ")+port.target->name,{box.x+9,box.y+5,260,21},15,RouteColor(port.route->kind));
+        DrawRectangleRec(box,TerminalUi::SoftPaper);
+        DrawRectangleRec({box.x,box.y,3,box.height},RouteColor(port.route->kind));
+        Fit(font,std::string(port.returning?"返回 / ":"前往 / ")+port.target->name,{box.x+9,box.y+5,260,21},15,TerminalUi::Ink);
         TerminalUi::PressedVeil(box);
     }
-    if(ports.empty())font.Draw("已抵达终点",958,380,18,Pink);
-    font.Draw("内部细节待建设 · 当前可自由预览",957,548,13,Muted);
-    TerminalUi::Button(font,Enter,"进入空白区域",pointer_.Hit(Enter),Color{38,102,112,255},Text);
+    if(ports.empty())font.Draw("已抵达终点",958,380,18,TerminalUi::OnPaper);
+    font.Draw("内部细节待建设 · 当前可自由预览",957,548,13,TerminalUi::OnPaper);
+    TerminalUi::Button(font,Enter,"进入空白区域",pointer_.Hit(Enter),TerminalUi::Blue,TerminalUi::Paper);
     TerminalUi::Button(font,{132,612,44,28},"<",false,Panel,Text);
     TerminalUi::Button(font,{184,612,44,28},">",false,Panel,Text);
     DrawRectangle(248,624,193,3,Color{42,58,70,255});

@@ -1,6 +1,7 @@
 #pragma once
 #include "main_menu.h"
 #include "action_map.h"
+#include "character_generation.h"
 #include "nlohmann/json.hpp"
 #include <filesystem>
 #include <fstream>
@@ -24,7 +25,7 @@ void CheckMenuInteraction(const std::filesystem::path& output, Capture capture) 
         // below used to fail with "Mouse action completion failed" no matter what the UI
         // actually did.
         event(MousePosition, x, y); event(MouseDown, MOUSE_BUTTON_LEFT);
-        menu.Update(); event(MouseUp, MOUSE_BUTTON_LEFT); menu.Update();
+        menu.Update(); event(MouseUp, MOUSE_BUTTON_LEFT); return menu.Update();
     };
     MainMenu menu(directory); menu.OpenHome();
     const auto legacyDebug = [&](MainMenu& m) {
@@ -45,6 +46,15 @@ void CheckMenuInteraction(const std::filesystem::path& output, Capture capture) 
     click(menu, 860, 200);
     require(menu.Settings().MasterVolume() >= 48 && menu.Settings().MasterVolume() <= 50, "Volume slider click failed");
     capture("settings-pointer.png", menu);
+    click(menu, 130, 460); // Decorative sidebar is no longer an action row.
+    require(menu.Settings().MasterVolume() >= 48 && menu.Settings().MasterVolume() <= 50,
+            "Settings sidebar changed volume");
+    click(menu, 600, 370); // Open key bindings using the relocated action row.
+    capture("key-bindings.png", menu);
+    click(menu, 70, 44); // Back to settings.
+    click(menu, 600, 460); // Reset confirmation; do not confirm.
+    capture("reset-confirmation.png", menu);
+    click(menu, 70, 44); // Cancel reset -> settings.
     click(menu, 70, 44); // Back -> home.
     click(menu, 840, 211); // Player stage selection has separate integration coverage.
     menu.OpenLegacyStageSelect();
@@ -135,4 +145,21 @@ void CheckMenuInteraction(const std::filesystem::path& output, Capture capture) 
     click(overview,1060,583);
     require(ProgressSystem(directory).SelectedNode()=="chapter1_clocktower","Dragging selected the node under the pointer");
     capture("map-drag-released.png",overview);
+    MainMenu roster(directory);
+    auto first=MakeGeneratedCharacter("local_a","测试近卫",0),second=MakeGeneratedCharacter("local_b","测试术师",2);
+    roster.SetCustomCharacters({first,second});roster.SetDeletableCharacters({first.id,second.id});roster.OpenCharacterSelect();
+    click(roster,160,407);click(roster,920,575); // B in slot 1.
+    click(roster,1100,220);click(roster,160,340);click(roster,920,575);click(roster,1110,575);
+    require(roster.SelectedCharacterIndex(0)==3&&roster.SelectedCharacterIndex(1)==2,"Custom roster setup failed");
+    roster.OpenCharacterSelect();click(roster,160,340);click(roster,900,107);
+    capture("character-delete-confirm.png",roster);
+    require(click(roster,520,450)==MenuAction::None,"Cancel issued a deletion");
+    click(roster,900,107);
+    require(click(roster,745,450)==MenuAction::DeleteCharacter&&roster.RequestedDeletion()==first.id,"Confirm did not request selected stable id");
+    roster.SetCustomCharacters({second});roster.SetDeletableCharacters({second.id});
+    require(roster.SelectedCharacterIndex(0)==2&&roster.CharacterForSelection(2)->id==second.id&&roster.SelectedCharacterIndex(1)==1,
+            "Deleting earlier entry changed surviving deployed character");
+    capture("character-after-delete.png",roster);
+    click(roster,160,205);
+    require(click(roster,900,107)==MenuAction::None&&click(roster,745,450)==MenuAction::None,"Built-in character could be deleted");
 }

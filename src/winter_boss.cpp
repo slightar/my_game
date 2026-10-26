@@ -1,7 +1,7 @@
 #include "story_boss.h"
 #include <algorithm>
 #include <cmath>
-namespace {constexpr float kSealWarning=2.4F,kSealLifetime=18.0F;}
+namespace {constexpr float kSealWarning=2.4F,kSealLifetime=18.0F,kSealFirstHealth=4,kSealRevivedHealth=8;}
 
 const char* StoryBossName(StoryBossKind k) {
     switch(k){case StoryBossKind::Crownslayer:return "弑君者";case StoryBossKind::W:return "W";
@@ -37,10 +37,17 @@ void StoryBoss::BeginRevival() {
 }
 void StoryBoss::FinishRevival() {
     phaseTwo_=true;health_=MaxHealth();invulnerability_=kind_==StoryBossKind::FrostNova?3.0F:2.5F;
+    if(kind_==StoryBossKind::FrostNova)for(auto& zone:zones_)
+        if(zone.kind==BossFx::BlackIce&&zone.remaining>0) {
+            // Harden surviving pits while preserving damage already dealt to them.
+            zone.durability+=kSealRevivedHealth-zone.maxDurability;
+            zone.maxDurability=kSealRevivedHealth;
+        }
     ringCooldown_=1.2F;sealCooldown_=3;rainCooldown_=2.8F;waveCooldown_=1;
     skillCooldown_=2;guardCooldown_=4;guardIntegrity_=0;ritualTimer_=0;
     frostFanCooldown_=4;spearRainCooldown_=7;frostSkillCursor_=0;frostNeedsBasic_=false;
     mobilityCooldown_=3;
+    expansionCooldown_={6,11};
     SetState(StoryBossState::Hunt,.7F);AddVisual(BossFx::Revival,feet_,1.8F,1.4F);
 }
 void StoryBoss::TickWinterHazards(float dt,Vector2 player) {
@@ -50,24 +57,27 @@ void StoryBoss::TickWinterHazards(float dt,Vector2 player) {
         zone.age+=dt;
         if(zone.delay>0)zone.delay=std::max(0.0F,zone.delay-dt);
         else zone.remaining-=dt;
-        if(zone.kind==BossFx::SpearRain&&zone.delay<=0&&!zone.consumed) {
+        if(zone.remaining>0&&zone.kind==BossFx::SpearRain&&zone.delay<=0&&!zone.consumed) {
             const Vector2 start{zone.position.x,GameConfig::kFloorY-430};
             missiles_.push_back({BossFx::Spear,start,start,{0,850*difficulty_.projectile},1.0F});
             zone.consumed=true;
         }
     }
     std::erase_if(zones_,[](const auto& z){return z.remaining<=0;});
+    TickExpansionHazards();
     for(auto& m:missiles_) {
         if(m.life<=0)continue;
         m.age+=dt;m.life-=dt;m.position.x+=m.velocity.x*dt;m.position.y+=m.velocity.y*dt;
-        if(m.kind==BossFx::Spear && (m.position.y>=GameConfig::kFloorY || m.position.x<left_ || m.position.x>right_)) {
+        if((m.kind==BossFx::Spear||m.kind==BossFx::SpearLance) && (m.position.y>=GameConfig::kFloorY || m.position.x<left_ || m.position.x>right_)) {
             const Vector2 landing{std::clamp(m.position.x,left_,right_),std::min(m.position.y,GameConfig::kFloorY)};
             zones_.push_back({BossFx::Impact,landing,65,0,.4F});AddVisual(BossFx::Impact,landing,.8F);m.life=0;
         }
     }
     std::erase_if(missiles_,[&](const auto& m){return m.life<=0||m.position.x<left_-120||m.position.x>right_+120;});
     if(kind_==StoryBossKind::Patriot&&(phaseTwo_||state_==StoryBossState::Revive)&&
-       state_!=StoryBossState::LeapWindup&&state_!=StoryBossState::Leap) {
+       state_!=StoryBossState::LeapWindup&&state_!=StoryBossState::Leap&&
+       state_!=StoryBossState::QuakeWindup&&state_!=StoryBossState::Quake&&
+       state_!=StoryBossState::LanceWindup&&state_!=StoryBossState::Lance) {
         ritualTimer_-=dt;
         if(ritualTimer_<=0) {
             ritualTimer_=.8F;
@@ -131,7 +141,9 @@ void StoryBoss::AddBlackIce(Vector2 player) {
             auto oldest=std::find_if(zones_.begin(),zones_.end(),[](const auto& z){return z.kind==BossFx::BlackIce;});
             zones_.erase(oldest);
         }
-        zones_.push_back({BossFx::BlackIce,{x,GameConfig::kFloorY},tile/2,kSealWarning,kSealLifetime,0,0,false,4});
+        const float hp=phaseTwo_?kSealRevivedHealth:kSealFirstHealth;
+        BossZone seal{BossFx::BlackIce,{x,GameConfig::kFloorY},tile/2,kSealWarning,kSealLifetime,0,0,false,hp};
+        seal.maxDurability=hp;zones_.push_back(seal);
     }
 }
 void StoryBoss::AddIceRain(Vector2 player) {
@@ -190,6 +202,7 @@ void StoryBoss::TickWinter(float dt,Vector2 player) {
     mobilityCooldown_=std::max(0.0F,mobilityCooldown_-dt);
     frostFanCooldown_=std::max(0.0F,frostFanCooldown_-dt);
     spearRainCooldown_=std::max(0.0F,spearRainCooldown_-dt);
+    for(auto& cooldown:expansionCooldown_)cooldown=std::max(0.0F,cooldown-dt);
     skillCooldown_=std::max(0.0F,skillCooldown_-dt);timer_-=dt;
     const float dx=player.x-feet_.x,distance=std::abs(dx);
     switch(state_) {
@@ -214,12 +227,14 @@ void StoryBoss::TickWinter(float dt,Vector2 player) {
         } else {
             if(timer_<=0&&mobilityCooldown_<=0&&distance>430) {
                 StartPatriotLeap(player);
-            } else if(phaseTwo_&&timer_<=0&&skillCooldown_<=0&&distance>190) {
-                aim_=player;SetState(StoryBossState::SpearWindup,2.0F);
-                skillCooldown_=6.5F*difficulty_.cooldown;
             } else if(phaseTwo_&&timer_<=0&&spearRainCooldown_<=0&&distance>180) {
                 AddSpearRain(player);SetState(StoryBossState::SpearRainWindup,1.15F);
                 spearRainCooldown_=14.0F*difficulty_.cooldown;
+            } else if(timer_<=0&&StartPatriotExpansion(player)) {
+                // New attacks share the same encounter and recovery rules.
+            } else if(phaseTwo_&&timer_<=0&&skillCooldown_<=0&&distance>190) {
+                aim_=player;SetState(StoryBossState::SpearWindup,2.0F);
+                skillCooldown_=6.5F*difficulty_.cooldown;
             } else if(timer_<=0&&guardCooldown_<=0&&distance>80&&distance<620) {
                 SetState(StoryBossState::GuardWindup,.9F);
                 guardCooldown_=(phaseTwo_?11.0F:13.0F)*difficulty_.cooldown;
@@ -236,6 +251,29 @@ void StoryBoss::TickWinter(float dt,Vector2 player) {
                 moving_=next!=feet_.x;feet_.x=next;
             }
         }
+        break;
+    case StoryBossState::PrismWindup:
+        if(timer_<=0)SetState(StoryBossState::Prism,1.6F);
+        break;
+    case StoryBossState::ThornWindup:
+        if(timer_<=0)SetState(StoryBossState::Thorn,1.7F);
+        break;
+    case StoryBossState::QuakeWindup:
+        if(timer_<=0)SetState(StoryBossState::Quake,1.8F);
+        break;
+    case StoryBossState::LanceWindup:
+        if(timer_<=0) {
+            const Vector2 start{feet_.x+facing_*48.0F,feet_.y-92};
+            missiles_.push_back({BossFx::SpearLance,start,start,{facing_*1100.0F*difficulty_.projectile,0},.7F});
+            AddVisual(BossFx::PatriotSlash,start,.6F,1.3F);
+            SetState(StoryBossState::Lance,.55F);
+        }
+        break;
+    case StoryBossState::Prism:
+    case StoryBossState::Thorn:
+    case StoryBossState::Quake:
+    case StoryBossState::Lance:
+        if(timer_<=0)SetState(StoryBossState::Recover,1.1F*difficulty_.recovery);
         break;
     case StoryBossState::FrostStepWindup:
         if(timer_<=0){mobilityTrail_=0;SetState(StoryBossState::FrostStep,.60F);}
@@ -346,7 +384,8 @@ void StoryBoss::TickWinter(float dt,Vector2 player) {
 bool StoryBoss::WinterAttackHits(Rectangle body,Rectangle projectileBody,Vector2& source,BossImpact* impact) {
     const auto assign=[&](int damage,bool cold,bool shatter){if(impact)*impact={damage,cold,shatter};};
     for(auto& m:missiles_)if(m.life>0) {
-        const float radius=m.kind==BossFx::ColdWave?48:m.kind==BossFx::GroundWave?29:m.kind==BossFx::Spear?15:13;
+        const bool spear=m.kind==BossFx::Spear||m.kind==BossFx::SpearLance;
+        const float radius=m.kind==BossFx::ColdWave?48:m.kind==BossFx::GroundWave?29:spear?15:13;
         const float dx=m.position.x-m.previous.x,dy=m.position.y-m.previous.y;
         const int steps=std::clamp(int(std::hypot(dx,dy)/8)+1,1,256);
         bool hit=false;for(int i=0;i<=steps&&!hit;++i) {
@@ -354,9 +393,9 @@ bool StoryBoss::WinterAttackHits(Rectangle body,Rectangle projectileBody,Vector2
             hit=CheckCollisionCircleRec({m.previous.x+dx*t,m.previous.y+dy*t},radius,projectileBody);
         }
         if(hit) {
-            source=m.position;assign(m.kind==BossFx::Spear?2:1,
+            source=m.position;assign(spear?2:1,
                 m.kind==BossFx::ColdWave||m.kind==BossFx::FrostBolt,false);
-            AddVisual(m.kind==BossFx::Spear||m.kind==BossFx::GroundWave?BossFx::Impact:BossFx::FrostBolt,m.position,.6F);m.life=0;return true;
+            AddVisual(spear||m.kind==BossFx::GroundWave?BossFx::Impact:BossFx::FrostBolt,m.position,.6F);m.life=0;return true;
         }
     }
     if(kind_==StoryBossKind::Patriot&&state_==StoryBossState::Charge&&!strikeConsumed_&&
@@ -364,14 +403,15 @@ bool StoryBoss::WinterAttackHits(Rectangle body,Rectangle projectileBody,Vector2
         strikeConsumed_=true;source=feet_;assign(phaseTwo_?2:1,false,false);
         AddVisual(BossFx::PatriotSlash,feet_,.4F,1.5F);return true;
     }
-    for(auto& z:zones_)if(z.delay<=0&&z.remaining>0&&!z.consumed&&z.kind!=BossFx::BlackIce&&z.kind!=BossFx::SpearRain) {
-        const bool ground=z.kind==BossFx::Ritual||z.kind==BossFx::IceRing;
+    for(auto& z:zones_)if(z.delay<=0&&z.remaining>0&&!z.consumed&&z.kind!=BossFx::BlackIce&&z.kind!=BossFx::SpearRain&&z.kind!=BossFx::FrostPrism) {
+        const bool ground=z.kind==BossFx::Ritual||z.kind==BossFx::IceRing||z.kind==BossFx::FrostThorn||z.kind==BossFx::PatriotQuake;
         if(ground&&body.y+body.height<GameConfig::kFloorY-(z.kind==BossFx::IceRing?130:85))continue;
         const Rectangle area{z.position.x-z.radius,z.position.y-(z.kind==BossFx::IceRain?310:ground?145:70),
             z.radius*2,z.kind==BossFx::IceRain?315.0F:ground?150.0F:140.0F};
         if(!CheckCollisionRecs(body,area))continue;
         z.consumed=true;z.pulse=1.5F;source=z.position;
-        assign(1,z.kind==BossFx::IceRing||z.kind==BossFx::IceRain,z.kind==BossFx::IceRing);
+        assign(z.kind==BossFx::PatriotQuake&&phaseTwo_?2:1,
+            z.kind==BossFx::IceRing||z.kind==BossFx::IceRain||z.kind==BossFx::FrostThorn,z.kind==BossFx::IceRing);
         return true;
     }
     return false;
@@ -397,8 +437,8 @@ float StoryBoss::SafeGroundX(float x) const {
 
 bool StoryBoss::StartFrostSkill(Vector2 player) {
     const float distance=std::abs(player.x-feet_.x);
-    for(int offset=0;offset<5;++offset) {
-        const int skill=(frostSkillCursor_+offset)%5;
+    for(int offset=0;offset<7;++offset) {
+        const int skill=(frostSkillCursor_+offset)%7;
         if(skill==0&&ringCooldown_<=0) {
             SetState(StoryBossState::IceRingWindup,1.15F);
             ringCooldown_=(phaseTwo_?5.2F:6.8F)*difficulty_.cooldown;
@@ -414,8 +454,12 @@ bool StoryBoss::StartFrostSkill(Vector2 player) {
             frostFanCooldown_=(phaseTwo_?9.0F:12.0F)*difficulty_.cooldown;
         } else if(skill==4&&StartFrostStep(player)) {
             // A movement skill participates in the normal rotation as well as reacting to range.
+        } else if(skill==5&&expansionCooldown_[0]<=0&&distance<850) {
+            StartPrism(player);
+        } else if(skill==6&&expansionCooldown_[1]<=0&&distance<850) {
+            StartThorns(player);
         } else continue;
-        frostSkillCursor_=(skill+1)%5;
+        frostSkillCursor_=(skill+1)%7;
         return true;
     }
     return false;

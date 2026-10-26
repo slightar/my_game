@@ -52,8 +52,9 @@ void DeveloperRoom::DrawControls(const UiFont& font) const {
     using namespace DeveloperUi;
     SetPointerState(pointer_);
     Surface({447,20,797,122},Fade(Ink,.95F),Blue);
-    font.Draw("开发者房间",465,31,27,Paper);
-    font.Draw("SANDBOX / ENEMY LAB",692,42,13,Muted);
+    DrawRectangleRec({447,20,797,43},Paper);
+    font.Draw("开发者房间",465,28,27,Ink);
+    font.Draw("SANDBOX / ENEMY LAB",692,39,13,OnPaper);
     const auto& boss=Boss();
     font.Draw(TextFormat("小怪 %d / %d · 领袖 %s · 测试 %.1fs",mobs_.Remaining(),kMaxMobs,
         boss.Active()?StoryBossName(boss.Kind()):"--",seconds_),465,75,16,Paper);
@@ -75,15 +76,15 @@ void DeveloperRoom::DrawControls(const UiFont& font) const {
         Button(font,DeveloperUi::God,god_?"无敌开启 / F9":"无敌关闭 / F9",god_,Ink,Paper);
         Button(font,Restore,"恢复角色 / F3",pointer_.Hit(Restore),Ink,Paper);
         Button(font,DeveloperUi::Clear,"清空敌人 / Delete",pointer_.Hit(DeveloperUi::Clear),Ink,Paper);
-        Surface(Panel,Fade(Ink,.95F),Blue);
+        Surface(DeveloperUi::Panel,Fade(Ink,.95F),Blue);
         const char* filters[]{"全部","小怪","领袖"};
         for(int i=0;i<3;++i)Button(font,Filter(i),filters[i],int(filter_)==i,int(filter_)==i?Blue:Ink,Paper);
         const auto list=VisibleCatalog();const int start=ListStart();
         for(int i=0;i<kPageSize&&start+i<int(list.size());++i) {
             const int index=list[start+i];const char* name=index<int(kEnemyKindCount)?EnemyData(static_cast<EnemyKind>(index)).name:StoryBossName(static_cast<StoryBossKind>(index-int(kEnemyKindCount)+1));
             const auto row=Row(i);const bool selected=index==selected_;
-            Surface(PressedRect(row),selected?Blue:Color{44,51,58,255});
-            Fit(font,std::string(index<int(kEnemyKindCount)?"ENEMY / ":"BOSS / ")+name,{row.x+8,row.y+4,row.width-16,20},17,Paper);
+            Surface(PressedRect(row),selected?Paper:Color{44,51,58,255});
+            Fit(font,std::string(index<int(kEnemyKindCount)?"ENEMY / ":"BOSS / ")+name,{row.x+8,row.y+4,row.width-16,20},17,selected?Ink:Paper);
             PressedVeil(row);
         }
         Button(font,Previous,"<",pointer_.Hit(Previous),Ink,Paper);Button(font,Next,">",pointer_.Hit(Next),Ink,Paper);

@@ -29,6 +29,7 @@ struct CharacterAssets {
     float height = 112.0F;
     std::string animationMode = "auto"; // auto, procedural, frames, rig
     float motionStrength = 1.0F;
+    std::string motionTemplate = "auto"; // auto, melee, ranged, caster; shared by sprites and rigs
     int jumpRow = -1, fallRow = -1, dodgeRow = -1, hurtRow = -1;
     std::map<std::string, CharacterPart> parts;
 };

@@ -7,6 +7,7 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include <cstring>
 
 namespace {
 
@@ -29,7 +30,16 @@ constexpr const char* kUiGlyphs =
     "当前继续退出分类选择返回主页面左右上下切换按键确定指令归档"
     // Character lineup page.
     "编队预览仅影响输出擅长持续与幕压制范围查看详情位置"
-    "红门敌方入口增援场上待入场结束";
+    "红门敌方入口增援场上待入场结束"
+    "离开交叉路线射击拆雷或离开标记可拆除击碎冰晶或离开路线连续跳跃或远离跳跃或绕后"
+    "冰晶锁定散射击碎或换位冰棘沿地面推进三次震地范围逐次扩大跳跃避开或远离标记水平贯穿"
+    "镜影交刃烟幕伏杀定时空爆遥控雷网棱镜回廊大地战鼓贯阵长枪两侧幻影提前锁定交叉路线换位或拦截飞刀"
+    "同时投刀残影消退留下反击时间三个落点先攻击中央再攻击两侧地面幻影逐个出刀离开红色标记即可避开"
+    "高低两层爆点已锁定留意各自倒计时高位爆炸留在地面低位跳跃雷网每枚两点伤害可拆除地雷依次引爆射击拆雷或移出范围"
+    "空中冰晶蓄能三条蓝线锁定散射方向依次发射三路冰刃从霜星前方向玩家逐段推进升起每次范围更大只标下一次对应震地退到标记外"
+    "红色光带锁定水平攻击路线长枪沿固定方向贯穿出枪和身体动作同步"
+    "系统配置音量与操作设置图片创建角色干员档案战术配置行动准备记录检索征"
+    "删除自定义角色只能本地创建或导入删除后将退出编队文件保留在本地回收区失败请检查目录权限取消";
 
 constexpr int kFontAtlasSize = 128;
 
@@ -57,8 +67,9 @@ const char* FindFontPath() {
 
 }  // namespace
 
-UiFont::UiFont() : font_(GetFontDefault()) {
-    SetAdditionalText("");
+UiFont::UiFont(bool deferFontLoad) : font_(GetFontDefault()) {
+    IndexGlyphs();
+    if (!deferFontLoad) SetAdditionalText("");
 }
 
 void UiFont::SetAdditionalText(const std::string& text) {
@@ -73,9 +84,10 @@ void UiFont::SetAdditionalText(const std::string& text) {
     std::vector<int> unique(codepoints, codepoints + glyphCount);
     std::sort(unique.begin(), unique.end());
     unique.erase(std::unique(unique.begin(), unique.end()), unique.end());
+    UnloadCodepoints(codepoints);
+    if (ownsFont_ && unique == loadedCodepoints_) return;
     const Font loadedFont =
         LoadFontEx(fontPath, kFontAtlasSize, unique.data(), static_cast<int>(unique.size()));
-    UnloadCodepoints(codepoints);
 
     if (loadedFont.texture.id != 0 &&
         loadedFont.texture.id != GetFontDefault().texture.id) {
@@ -84,6 +96,8 @@ void UiFont::SetAdditionalText(const std::string& text) {
         ownsFont_ = true;
         GenTextureMipmaps(&font_.texture);
         SetTextureFilter(font_.texture, TEXTURE_FILTER_TRILINEAR);
+        loadedCodepoints_ = std::move(unique);
+        IndexGlyphs();
     }
 }
 
@@ -94,25 +108,85 @@ UiFont::~UiFont() {
 }
 
 void UiFont::Draw(const char* text, float x, float y, float size, Color color) const {
-    DrawTextEx(font_, text, {x, y}, size, 1.0F, color);
+    if (text == nullptr || font_.glyphCount == 0) return;
+    // raylib's line spacing is global and has no getter. Delegate multiline
+    // text to it so SetTextLineSpacing continues to work exactly as before.
+    if (std::strchr(text, '\n')) {
+        DrawTextEx(font_, text, {x, y}, size, 1.0F, color);
+        return;
+    }
+    const float scale = size / font_.baseSize;
+    float offset = 0;
+    for (int i = 0, length = TextLength(text); i < length;) {
+        int bytes = 0;
+        const int codepoint = GetCodepointNext(text + i, &bytes);
+        const int index = GlyphIndex(codepoint);
+        const auto& glyph = font_.glyphs[index];
+        const auto& rec = font_.recs[index];
+        if (codepoint != ' ' && codepoint != '\t') {
+            // Same rectangles and arithmetic as raylib 5.5 DrawTextCodepoint;
+            // replace only its two linear glyph searches per character.
+            const Rectangle destination{
+                x + offset + glyph.offsetX * scale - float(font_.glyphPadding) * scale,
+                y + glyph.offsetY * scale - float(font_.glyphPadding) * scale,
+                (rec.width + 2.0F * font_.glyphPadding) * scale,
+                (rec.height + 2.0F * font_.glyphPadding) * scale};
+            const Rectangle source{rec.x - float(font_.glyphPadding), rec.y - float(font_.glyphPadding),
+                rec.width + 2.0F * font_.glyphPadding, rec.height + 2.0F * font_.glyphPadding};
+            DrawTexturePro(font_.texture, source, destination, {}, 0, color);
+        }
+        if (glyph.advanceX == 0) offset += rec.width * scale + 1.0F;
+        else offset += float(glyph.advanceX) * scale + 1.0F;
+        i += bytes;
+    }
 }
 
 float UiFont::Measure(const char* text, float size) const {
-    return MeasureTextEx(font_, text, size, 1.0F).x;
+    if (text == nullptr || text[0] == '\0' || font_.texture.id == 0) return 0;
+    int count = 0, longestCount = 0;
+    float width = 0, longestWidth = 0;
+    for (int i = 0, length = TextLength(text); i < length;) {
+        ++count;
+        int bytes = 0;
+        const int codepoint = GetCodepointNext(text + i, &bytes);
+        const int index = GlyphIndex(codepoint);
+        i += bytes;
+        if (codepoint != '\n') {
+            const auto& glyph = font_.glyphs[index];
+            if (glyph.advanceX > 0) width += glyph.advanceX;
+            else width += font_.recs[index].width + glyph.offsetX;
+        } else {
+            longestWidth = std::max(longestWidth, width);
+            count = 0;
+            width = 0;
+        }
+        longestCount = std::max(longestCount, count);
+    }
+    longestWidth = std::max(longestWidth, width);
+    return longestWidth * (size / float(font_.baseSize)) + float(longestCount - 1);
 }
 
 bool UiFont::SupportsText(const std::string& text) const {
-    int count = 0;
-    int* codepoints = LoadCodepoints(text.c_str(), &count);
-    bool supported = true;
-    for (int i = 0; i < count; ++i) {
-        const int glyph = GetGlyphIndex(font_, codepoints[i]);
-        if (glyph < 0 || glyph >= font_.glyphCount ||
-            font_.glyphs[glyph].value != codepoints[i]) {
-            supported = false;
-            break;
-        }
+    for (int i = 0, length = TextLength(text.c_str()); i < length;) {
+        int bytes = 0;
+        const int codepoint = GetCodepointNext(text.c_str() + i, &bytes);
+        if (!glyphIndices_.contains(codepoint)) return false;
+        i += bytes;
     }
-    UnloadCodepoints(codepoints);
-    return supported;
+    return true;
+}
+
+void UiFont::IndexGlyphs() {
+    glyphIndices_.clear();
+    glyphIndices_.reserve(font_.glyphCount);
+    fallbackGlyph_ = 0;
+    for (int i = 0; i < font_.glyphCount; ++i) {
+        glyphIndices_.emplace(font_.glyphs[i].value, i);
+        if (font_.glyphs[i].value == '?') fallbackGlyph_ = i;
+    }
+}
+
+int UiFont::GlyphIndex(int codepoint) const {
+    const auto found = glyphIndices_.find(codepoint);
+    return found != glyphIndices_.end() ? found->second : fallbackGlyph_;
 }

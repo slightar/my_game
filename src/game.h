@@ -16,8 +16,10 @@
 #include "story_boss.h"
 #include "story_boss_renderer.h"
 #include "character_repository.h"
+#include "character_creator.h"
 #include "developer_room.h"
 #include "boss_audio.h"
+#include "combat_feedback.h"
 
 #include <vector>
 #include <array>
@@ -28,6 +30,7 @@ public:
 
     void Update(float deltaTime);
     void Draw(float displayScale, Vector2 displayOffset) const;
+    void RenderFrame() const;
     [[nodiscard]] bool ShouldQuit() const;
     [[nodiscard]] int RemainingTrialEnemies() const { return enemyTrial_ ? enemies_.Remaining() : 0; }
     [[nodiscard]] int PendingTrialEnemies() const { return enemyTrial_ ? enemies_.Pending() : 0; }
@@ -66,6 +69,8 @@ private:
     UiFont uiFont_;
     CharacterArt characterArt_;
     MainMenu mainMenu_;
+    CharacterCreator characterCreator_;
+    std::string characterGlyphs_, creatorGlyphs_;
     std::vector<Character> customCharacters_;
     std::array<Player, 2> operators_;
     Player* player_ = &operators_[0];
@@ -81,6 +86,7 @@ private:
     EnemyRenderer enemyRenderer_;
     bool enemyTrial_ = false;
     std::vector<Bullet> bullets_;
+    CombatFeedback combatFeedback_;
     bool inBattle_ = false;
     WorldScenery worldScenery_;
     float worldTime_ = 0;

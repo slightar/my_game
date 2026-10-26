@@ -312,8 +312,9 @@ void Player::Update(float deltaTime, Vector2 enemyPosition, float enemyRadius,
             if(character_->Definition().attack.type==EffectType::Melee)++actions_.melee;else ++actions_.ranged;
             audio.Play(character_->Definition().attack.type == EffectType::Melee ? AudioCue::Slash : AudioCue::Gunshot);
         }
-        animator_.Update(deltaTime, {velocity_, !overSealedFloor&&position_.y + kHitboxHeight / 2 >= GameConfig::kFloorY - 0.5F,
-            dodgeTimer_ > 0, character_->PerformedAction(), false, character_->Definition().attack.type == EffectType::Melee});
+        animator_.Update(deltaTime, {velocity_, onPlatform || (!overSealedFloor&&position_.y + kHitboxHeight / 2 >= GameConfig::kFloorY - 0.5F),
+            dodgeTimer_ > 0, character_->PerformedAction(), false, character_->Definition().attack.type == EffectType::Melee,
+            ResolveCharacterMotionStyle(character_->Definition())});
         attackAnimationTime_ = firing_ ? attackAnimationTime_ + deltaTime : 0;
         return;
     }
@@ -721,9 +722,10 @@ void Player::DrawHud(const UiFont& font, const CharacterArt& art,
     const Rectangle statusPanel{32.0F, 28.0F, 405.0F, 116.0F};
     TacticalUi::DrawCutPanel(statusPanel, TacticalUi::kPanel,
                              Fade(RAYWHITE, 0.22F), 18.0F, 1.0F);
-    font.Skin().Draw("panel", statusPanel);
-    font.Draw(role, 53.0F, 39.0F, 13.0F, TacticalUi::kMuted);
-    font.Draw(displayName, 53.0F, 58.0F, 27.0F, TacticalUi::kPaper);
+    DrawRectangleRec({32,28,405,61},TacticalUi::kPaper);
+    DrawRectangleRec({32,28,4,61},Color{0,116,153,255});
+    font.Draw(role, 53.0F, 39.0F, 13.0F, Color{75,86,93,255});
+    font.Draw(displayName, 53.0F, 58.0F, 27.0F, TacticalUi::kInk);
     font.Draw(TextFormat("HP  %i / %i", health_, maxHealth),
               53.0F, 97.0F, 15.0F, TacticalUi::kPaper);
     TacticalUi::DrawProgressLine(

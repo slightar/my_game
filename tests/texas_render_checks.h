@@ -12,6 +12,17 @@
 template<class Render>
 void CheckTexasAttackRendering(const CharacterArt& art, Render render) {
     if (!art.HasTexasBattle()) throw std::runtime_error("Texas client battle sheet missing or malformed");
+    if(!art.HasTexasNormalSlash())throw std::runtime_error("Texas normal crescent atlas missing");
+    render("texas-normal-crescent.png",[&] {
+        DrawText("TEXAS / NORMAL CRESCENT / LEFT + RIGHT",30,24,24,SKYBLUE);
+        for(int facing:{1,-1})for(int i=0;i<6;++i) {
+            const Vector2 feet{90+i*210.0F,facing==1?290.0F:560.0F};
+            const float age=(i*2+.5F)/12*.17F;
+            art.DrawTexasNormalSlash({feet.x+facing*19,feet.y-47},facing,age,178);
+            art.DrawTexas(feet,facing,ChibiAnimation::Idle,true,false,0,age,0);
+            DrawText(TextFormat("%.3fs",age),int(feet.x)-25,int(feet.y)+22,18,LIGHTGRAY);
+        }
+    });
     AudioSystem audio;
     GameSettings settings(std::filesystem::path(GetApplicationDirectory()) / "texas-fixture");
     const auto key=[](int code,bool down) {PlayAutomationEvent({0,down?2U:1U,{code,0,0,0}});};
@@ -21,6 +32,21 @@ void CheckTexasAttackRendering(const CharacterArt& art, Render render) {
         auto image=LoadImageFromTexture(target.texture);ImageFlipVertical(&image);
         UnloadRenderTexture(target);return image;
     };
+    // Alpha coverage catches missing/expired frames and a backwards-facing crescent.
+    for(int facing:{1,-1}) {
+        const auto coverage=[&](float age) {
+            auto image=snapshot([&]{art.DrawTexasNormalSlash({640,360},facing,age,178);});
+            auto pixels=LoadImageColors(image);int front=0,back=0;
+            for(int y=0;y<720;++y)for(int x=0;x<1280;++x)if(pixels[y*1280+x].a>80) {
+                if((x-640)*facing>=0)++front;else ++back;
+            }
+            UnloadImageColors(pixels);UnloadImage(image);return std::pair{front,back};
+        };
+        const auto peak=coverage(.08F);
+        if(peak.first<200||peak.first<peak.second*3)throw std::runtime_error("Normal crescent missing or points behind player");
+        const auto expired=coverage(.17F);
+        if(expired.first+expired.second!=0)throw std::runtime_error("Normal crescent outlived hit window");
+    }
     const auto checkPose=[&](const Player& player,bool attack,float time) {
         auto actual=snapshot([&]{player.Draw(art);});
         const auto box=player.Hitbox();const Vector2 feet{player.Position().x,box.y+box.height};

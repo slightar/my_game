@@ -21,22 +21,7 @@ int main() {
             const float deltaTime = std::min(GetFrameTime(), 1.0F / 30.0F);
             game.Update(deltaTime);
 
-            const float displayScale = std::min(
-                static_cast<float>(GetScreenWidth()) /
-                    static_cast<float>(GameConfig::kScreenWidth),
-                static_cast<float>(GetScreenHeight()) /
-                    static_cast<float>(GameConfig::kScreenHeight));
-            const Vector2 displayOffset{
-                (static_cast<float>(GetScreenWidth()) -
-                 static_cast<float>(GameConfig::kScreenWidth) * displayScale) /
-                    2.0F,
-                (static_cast<float>(GetScreenHeight()) -
-                 static_cast<float>(GameConfig::kScreenHeight) * displayScale) /
-                    2.0F};
-            BeginDrawing();
-            ClearBackground(BLACK);
-            game.Draw(displayScale, displayOffset);
-            EndDrawing();
+            game.RenderFrame();
         }
     }
 

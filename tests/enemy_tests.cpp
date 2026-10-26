@@ -29,6 +29,17 @@ int main(){try {
         Check(s(EnemyKind::Slug)<s(EnemyKind::Soldier),"源石虫 cell should be smaller than 士兵's");
     }
     EnemySystem s;
+    {
+        const auto first=s.Spawn(EnemyKind::Soldier,1200);
+        Bullet hit;hit.kind=BulletKind::MeleeSlash;hit.position=Unit(s,first).Center();hit.radius=100;hit.damage=1;hit.lifetime=1;
+        Check(s.ResolveBullet(hit,hit.position)&&hit.impactEvents.size()==1&&!hit.impactEvents.front().killed,"Nonlethal hit classified as kill");
+        hit.impactEvents.clear();Check(!s.ResolveBullet(hit,hit.position)&&hit.impactEvents.empty(),"Same swing repeated impact");
+        s.Spawn(EnemyKind::Soldier,1230);
+        Bullet kill;kill.kind=BulletKind::MeleeSlash;kill.position=hit.position;kill.radius=100;kill.damage=1000;kill.lifetime=1;
+        Check(s.ResolveBullet(kill,kill.position)&&kill.impactEvents.size()==2,"Cleave lost target impacts");
+        Check(kill.impactEvents[0].killed&&kill.impactEvents[1].killed,"Lethal damage did not report kills");
+        s.Clear();
+    }
     s.ResetTrial();
     const int roster=static_cast<int>(EnemyDefinitions().size());
     Check(s.Units().empty()&&s.Pending()==roster&&s.Remaining()==roster,

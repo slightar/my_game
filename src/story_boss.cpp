@@ -35,6 +35,7 @@ void StoryBoss::Enter(std::string_view region,float width,CombatDifficulty diffi
     if(kind_==StoryBossKind::Crownslayer) {ResetCrown();if(Defeated())crown_.TakeDamage(MaxHealth());}
     health_=Defeated()?0:MaxHealth();facing_=-1;phaseTwo_=false;moving_=false;
     timer_=stateTime_=animation_=stun_=flash_=0;strikeConsumed_=false;
+    stateDuration_=0;
     recoveryFrom_=StoryBossState::Hunt;
     if(Defeated())animation_=stateTime_=4;
     skillCooldown_=kind_==StoryBossKind::W?6.0F:1.2F;
@@ -53,13 +54,15 @@ void StoryBoss::Enter(std::string_view region,float width,CombatDifficulty diffi
     rainCooldown_=5.5F;guardCooldown_=5.0F;guardIntegrity_=guardPulse_=guardPressure_=0;
     stillTime_=0;lastPlayerX_=0;
     comboFired_=0;comboCount_=4;frostCastSerial_=0;actionRevision_=0;elapsed_=0;
+    expansionCooldown_={10,18};
+    remoteMineCount_=3;
 }
 void StoryBoss::SetState(StoryBossState state,float duration) {
     ++actionRevision_;
     if(state==StoryBossState::VolleyWindup)volleyCount_=phaseTwo_?5:3;
     if(state==StoryBossState::MineWindup)mineCount_=phaseTwo_?3:2;
     if(state==StoryBossState::Recover)recoveryFrom_=state_;
-    state_=state;timer_=duration;stateTime_=animation_=0;strikeConsumed_=false;moving_=false;
+    state_=state;timer_=stateDuration_=duration;stateTime_=animation_=0;strikeConsumed_=false;moving_=false;
 }
 void StoryBoss::StartSandbox(StoryBossKind kind,float width,float x,CombatDifficulty difficulty) {
     Reset();Enter(StoryBossRegion(kind),width,difficulty);
@@ -107,6 +110,7 @@ void StoryBoss::Tick(float dt,Vector2 player) {
     for(auto& visual:visuals_)visual.age+=dt;
     std::erase_if(visuals_,[](const auto& visual){return visual.age>=visual.duration;});
     for(auto& mine:mines_) {
+        if(mine.age>=12)continue;
         mine.age+=dt;
         if(mine.fuse<0&&mine.age>=.8F&&std::abs(player.x-mine.position.x)<92&&player.y>GameConfig::kFloorY-145)
             mine.fuse=.8F;
@@ -146,6 +150,7 @@ void StoryBoss::Tick(float dt,Vector2 player) {
     evadeCooldown_=std::max(0.0F,evadeCooldown_-dt);mineCooldown_=std::max(0.0F,mineCooldown_-dt);
     firePressure_=std::max(0.0F,firePressure_-2*dt);
     skillCooldown_=std::max(0.0F,skillCooldown_-dt);timer_-=dt;
+    for(auto& cooldown:expansionCooldown_)cooldown=std::max(0.0F,cooldown-dt);
     const float dx=player.x-feet_.x,distance=std::abs(dx);
     switch(state_) {
     case StoryBossState::Arrival:
@@ -153,7 +158,9 @@ void StoryBoss::Tick(float dt,Vector2 player) {
         break;
     case StoryBossState::Hunt:
         facing_=dx>=0?1:-1;
-        if(distance<720&&skillCooldown_<=0&&timer_<=0)StartC4(player);
+        if(timer_<=0&&expansionCooldown_[0]<=0&&distance<800)StartAirburst(player);
+        else if(timer_<=0&&expansionCooldown_[1]<=0&&distance<800)StartRemoteMines(player);
+        else if(distance<720&&skillCooldown_<=0&&timer_<=0)StartC4(player);
         else if(WantsEvade(player))StartEvade(player);
         else {
             MoveW(dt,player);
@@ -167,6 +174,18 @@ void StoryBoss::Tick(float dt,Vector2 player) {
                 else SetState(StoryBossState::GrenadeWindup,.85F);
             }
         }
+        break;
+    case StoryBossState::AirburstWindup:
+        if(timer_<=0)SetState(StoryBossState::Airburst,2.0F);
+        break;
+    case StoryBossState::Airburst:
+        if(timer_<=0)SetState(StoryBossState::Recover,1.1F*difficulty_.recovery);
+        break;
+    case StoryBossState::RemoteMineWindup:
+        if(timer_<=0){DeployRemoteMines();SetState(StoryBossState::RemoteMine,2.9F);}
+        break;
+    case StoryBossState::RemoteMine:
+        if(timer_<=0)SetState(StoryBossState::Recover,1.1F*difficulty_.recovery);
         break;
     case StoryBossState::GrenadeWindup:
         if(timer_<=0){LaunchGrenade(aim_);SetState(StoryBossState::Recover,1.20F*difficulty_.recovery);}
@@ -207,7 +226,9 @@ void StoryBoss::Tick(float dt,Vector2 player) {
             feet_={evadeTarget_,GameConfig::kFloorY};facing_=player.x>=feet_.x?1:-1;
             if(skillCooldown_<=0&&std::abs(player.x-feet_.x)<720){StartC4(player);break;}
             aim_={std::clamp(player.x,left_+40,right_-40),GameConfig::kFloorY-4};
-            lowArcVolley_=false;
+            const int counterPattern=attackSerial_++%5;
+            if(counterPattern==3){StartBarrage(player);break;}
+            lowArcVolley_=counterPattern==4;
             SetState(StoryBossState::VolleyWindup,.85F);
         }
         break;
@@ -335,6 +356,7 @@ bool StoryBoss::Damage(float amount,float stun,DamageType type) {
     return true;
 }
 bool StoryBoss::ResolveBullet(Bullet& bullet,Vector2 previous) {
+    if(HitExpansionObject(bullet,previous))return true;
     if(!Targetable()||bullet.hasHit||bullet.lifetime<=0||bullet.activationDelay>0)return false;
     const bool melee=bullet.kind==BulletKind::MeleeSlash;
     if(!(melee?CheckCollisionCircleRec(bullet.position,bullet.radius,Hitbox()):Sweep(previous,bullet.position,Hitbox(),bullet.radius)))return false;
@@ -346,14 +368,17 @@ bool StoryBoss::ResolveBullet(Bullet& bullet,Vector2 previous) {
         if(guardIntegrity_<=0){SetState(StoryBossState::Recover,1.0F);AddVisual(BossFx::Impact,feet_,.75F);}
     }
     if(!Damage(damage,bullet.stunDuration,bullet.damageType))return false;
+    bullet.impactPoint=Position();bullet.hasImpact=true;
+    bullet.impactEvents.push_back({Position(),Defeated()});
     bullet.hasHit=true;if(!melee)bullet.lifetime=0;return true;
 }
 bool StoryBoss::BreakSeal(Bullet& bullet,Vector2 previous) {
-    if(kind_!=StoryBossKind::FrostNova||!Active()||bullet.hasHit||bullet.lifetime<=0||bullet.activationDelay>0)return false;
+    if(kind_!=StoryBossKind::FrostNova||!Active()||bullet.hasHit||bullet.lifetime<=0||bullet.activationDelay>0||
+       !std::isfinite(bullet.damage)||bullet.damage<=0)return false;
     for(auto& zone:zones_)if(zone.kind==BossFx::BlackIce&&zone.delay<=0&&zone.remaining>0) {
         const Rectangle target{zone.position.x-zone.radius,GameConfig::kFloorY-92,zone.radius*2,104};
         if(!Sweep(previous,bullet.position,target,bullet.radius))continue;
-        zone.durability-=std::max(.5F,bullet.damage);
+        zone.durability=std::max(0.0F,zone.durability-bullet.damage);
         bullet.hasHit=true;
         if(bullet.kind!=BulletKind::MeleeSlash)bullet.lifetime=0;
         if(zone.durability<=0) {
@@ -366,6 +391,13 @@ bool StoryBoss::BreakSeal(Bullet& bullet,Vector2 previous) {
 }
 bool StoryBoss::DestroyProjectile(Vector2 p,float radius) {
     if(kind_==StoryBossKind::Crownslayer)return crown_.DestroyProjectileAt(p,radius);
+    for(auto& mine:mines_)if(mine.remote&&mine.age<12&&CheckCollisionCircles(p,radius,{mine.position.x,mine.position.y-18},22)) {
+        mine.age=13;mine.fuse=-1;AddVisual(BossFx::WMuzzle,mine.position,.5F);return true;
+    }
+    for(auto& z:zones_)if(z.kind==BossFx::FrostPrism&&z.delay>0&&z.remaining>0&&
+        CheckCollisionCircles(p,radius,z.position,26)) {
+        z.remaining=0;AddVisual(BossFx::FrostTrail,z.position,.7F);return true;
+    }
     for(auto& missile:missiles_)if(missile.kind==BossFx::FrostBolt&&missile.life>0&&CheckCollisionCircles(p,radius,missile.position,12)){missile.life=0;return true;}
     for(auto& g:grenades_)if(g.lifetime>0&&CheckCollisionCircles(p,radius,g.position,7)){g.lifetime=0;return true;}
     return false;
@@ -422,6 +454,10 @@ void StoryBoss::SyncCrown() {
     case S::ShadowPause:next=StoryBossState::ShadowPause;break;
     case S::ShadowFinalWindup:next=StoryBossState::ShadowFinalWindup;break;
     case S::ShadowFinal:next=StoryBossState::ShadowFinal;break;
+    case S::MirrorWindup:next=StoryBossState::MirrorWindup;break;
+    case S::MirrorVolley:next=StoryBossState::MirrorVolley;break;
+    case S::AmbushWindup:next=StoryBossState::AmbushWindup;break;
+    case S::Ambush:next=StoryBossState::Ambush;break;
     case S::Recover:next=StoryBossState::Recover;break;
     case S::Defeated:next=StoryBossState::Defeated;break;
     }
@@ -430,4 +466,6 @@ void StoryBoss::SyncCrown() {
     health_=crown_.Health();facing_=crown_.Facing();animation_=crown_.AnimationTime();
     stun_=crown_.StunTime();blinkX_=crown_.BlinkTarget();phaseTwo_=health_<=MaxHealth()*.5F;
     moving_=next==StoryBossState::Rush||next==StoryBossState::AirSlash||next==StoryBossState::FanRetreat;
+    if(next==StoryBossState::MirrorWindup||next==StoryBossState::MirrorVolley||
+       next==StoryBossState::AmbushWindup||next==StoryBossState::Ambush)aim_=crown_.EchoAim();
 }
